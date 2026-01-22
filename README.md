@@ -1,1 +1,1 @@
-### updated version of https://github.com/karlosmatos/sauto-scraper.git
+### original version of scrapper nad author: https://github.com/karlosmatos/sauto-scraper.git
