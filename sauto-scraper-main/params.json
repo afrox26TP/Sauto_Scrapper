@@ -1,0 +1,16 @@
+{
+  "limit": "1000",
+  "offset": "0",
+
+  "category_id": "838",
+
+  "manufacturer_seo_name": "volkswagen",
+  "model_seo_name": "golf",
+
+  "condition_seo": "nove,ojete,predvadeci",
+  "operating_lease": "false",
+  "seller_type": "soukromy",
+
+  "price_from": "0",
+  "price_to": "300000"
+}
