@@ -1,12 +1,12 @@
 import scrapy
 import json
 from urllib.parse import urlencode
-
 import datetime
 import logging
+import re
+import requests
+import os
 
-
-# Set up logger once at module level to prevent handler accumulation
 _url_logger = logging.getLogger(f"{__name__}.url_logger")
 _url_logger.setLevel(logging.INFO)
 if not _url_logger.handlers:
@@ -14,7 +14,6 @@ if not _url_logger.handlers:
     _handler.setLevel(logging.INFO)
     _handler.setFormatter(logging.Formatter("%(message)s"))
     _url_logger.addHandler(_handler)
-
 
 def log_url(func):
     def wrapper(self, *args, **kwargs):
@@ -24,13 +23,149 @@ def log_url(func):
             yield request
     return wrapper
 
-
 class SautoSpider(scrapy.Spider):
     name = "sauto"
     BASE_URL = "https://www.sauto.cz/api/v1/items/search?"
-
-    # pokud by detail endpoint nefungoval -> upravíme jen tenhle řádek
     DETAIL_API_URL = "https://www.sauto.cz/api/v1/items/{}"
+
+    # --- DISCORD ---
+    DISCORD_WEBHOOK_URL = 'https://discordapp.com/api/webhooks/1478178620991209615/dmix_llEFt-_C_K4KCKSwBe4tvR37XmDvzrdUhMh2UFOduZ0mua-6tGiSFizXvgn5m_U'
+    NOTIFIED_FILE = 'notified_ids.json'
+
+    # --- FILTRY ---
+    BLACKLIST = ['bez stk', 'na díly', 'na nahradni dily', 'exekuce', 
+                 'ťuklé', 'klepe', 'žere olej', 'nutný přepis', 'závada', 'projekt']
+
+    PLUSOVE_BODY = {
+        r'po dědovi|pozůstalost|dědictví': 100,
+        r'garážováno|v zimě nejeto|v zimě neježděno': 50,
+        r'servisní knížka|pravidelný servis': 30,
+        r'nevyužité|stojí v garáži': 40,
+        r'bez koroze|bez rzi': 40
+    }
+
+    MINUSOVE_BODY = {
+        r'čip|chip|chiptuning|chiptunning': -50,
+        r'zavařeno|zavařený diferenciál': -100,
+        r'žere olej|klepe': -200
+    }
+
+    def __init__(self, *args, **kwargs):
+        super(SautoSpider, self).__init__(*args, **kwargs)
+        self.notified_ids = set()
+        if os.path.exists(self.NOTIFIED_FILE):
+            with open(self.NOTIFIED_FILE, 'r') as f:
+                self.notified_ids = set(json.load(f))
+                
+        self.items_scraped = 0
+        self.scored_cars = []
+
+    def _save_notified(self):
+        with open(self.NOTIFIED_FILE, 'w') as f:
+            json.dump(list(self.notified_ids), f)
+
+    def _send_discord(self, msg):
+        payload = {"content": msg}
+        try:
+            requests.post(self.DISCORD_WEBHOOK_URL, json=payload, timeout=5)
+        except Exception as e:
+            self.logger.error(f"Discord error: {e}")
+
+    def _evaluate_and_store(self, item):
+        ad_id = str(item.get("id"))
+        detail_raw = item.get("detail_raw", {})
+        
+        # Sauto vrací data pod klíčem "result"
+        result = detail_raw.get("result")
+        if not result:
+            return
+
+# 1. Extrakce přesných dat s ochranou proti hodnotám "null" (None)
+        popis = (result.get("description") or "").lower()
+        nazev = (result.get("name") or "").lower()
+        vykon_kw = result.get("engine_power") or 0
+        cena = result.get("price") or 0
+        
+        tachometr = result.get("tachometer")
+        tachometr = tachometr if tachometr is not None else 999999
+        
+        prevodovka_dict = result.get("gearbox_cb") or {}
+        prevodovka = (prevodovka_dict.get("name") or "").lower()
+        
+        prvni_majitel = result.get("first_owner", False)
+        nebourano = result.get("crashed_in_past") is False
+        
+        rok_vyroby_str = result.get("manufacturing_date") or "2000"
+        rok_vyroby = int(rok_vyroby_str.split("-")[0]) if rok_vyroby_str else 2000
+        
+        vybava_seznam = [eq.get("name", "").lower() for eq in (result.get("equipment_cb") or []) if eq.get("name")]
+        vybava_str = " ".join(vybava_seznam)
+
+        # 2. Tvrdé filtry (Vyhazovač)
+        if "automat" in prevodovka:
+            return
+            
+        for bad_word in self.BLACKLIST:
+            if bad_word in popis or bad_word in nazev:
+                return
+
+        # 3. Skórování
+        skore = 0
+        duvody = []
+
+        # A) Klíčová slova v popisu
+        for vzor, body in self.PLUSOVE_BODY.items():
+            if re.search(vzor, popis):
+                skore += body
+                duvody.append(f"+{body} ({vzor.split('|')[0]})")
+                
+        for vzor, body in self.MINUSOVE_BODY.items():
+            if re.search(vzor, popis) or re.search(vzor, vybava_str):
+                skore += body
+                duvody.append(f"{body} (Tuning/úpravy)")
+
+        # B) Bodování metadat z databáze
+        if prvni_majitel:
+            skore += 100
+            duvody.append("+100 (1. majitel dle dat)")
+            
+        if nebourano:
+            skore += 20
+            duvody.append("+20 (Nebouráno)")
+            
+        if tachometr < 50000:
+            skore += 150
+            duvody.append("+150 (Nájezd pod 50k)")
+        elif tachometr < 100000:
+            skore += 80
+            duvody.append("+80 (Nájezd pod 100k)")
+            
+        if (2026 - rok_vyroby) >= 15 and tachometr < 120000:
+            skore += 150
+            duvody.append("+150 (Youngtimer uloženka)")
+
+        # C) Výkonové anomálie (Hot Hatche & Ztracené specifikace)
+        if vykon_kw >= 140 and cena > 0 and cena <= 150000:
+            skore += 200
+            duvody.append(f"+200 (Anomálie: {vykon_kw}kW za {cena}Kč)")
+            
+        if any(x in nazev for x in ['gti', 'rs', 'st', 'type r', 'mps', 'cupra']) and cena <= 200000:
+            skore += 100
+            duvody.append("+100 (Dostupný Hot Hatch)")
+
+        # Uložíme výsledek pro závěrečný report
+        url = item.get("url", "Odkaz chybí")
+        nazev_k_zobrazeni = result.get("name", item.get("manufacturer_name", ""))
+        
+        self.scored_cars.append({
+            'ad_id': ad_id,
+            'nazev': nazev_k_zobrazeni,
+            'cena': cena,
+            'vykon': vykon_kw,
+            'skore': skore,
+            'duvody': duvody,
+            'url': url
+        })
 
     @staticmethod
     def read_params_from_json(file_path: str) -> dict:
@@ -47,20 +182,11 @@ class SautoSpider(scrapy.Spider):
         return s
 
     def _load_strict_filters(self, params: dict):
-        # bere přesně z params.json (jak máš na obrázku)
         self.strict_manufacturer_seo = self._norm_str(params.get("manufacturer_seo_name"))
         self.strict_model_seo = self._norm_str(params.get("model_seo_name"))
-        self.strict_seller_type = self._norm_str(params.get("seller_type"))  # "soukromy" / "bazar"
-
-        self.logger.info(
-            f"Strict filter loaded: manufacturer={self.strict_manufacturer_seo}, "
-            f"model={self.strict_model_seo}, seller_type={self.strict_seller_type}"
-        )
+        self.strict_seller_type = self._norm_str(params.get("seller_type")) 
 
     def _passes_strict_filter(self, item: dict) -> bool:
-        """
-        Tohle je to, co ti garantuje že nikdy neprojde Škoda/Opel atd.
-        """
         m_cb = item.get("manufacturer_cb") or {}
         mo_cb = item.get("model_cb") or {}
 
@@ -88,7 +214,6 @@ class SautoSpider(scrapy.Spider):
             ("data", "total"),
             ("total",),
         ]
-
         for path in candidates:
             cur = data
             ok = True
@@ -103,18 +228,12 @@ class SautoSpider(scrapy.Spider):
                     return int(cur)
                 except Exception:
                     pass
-
         return -1
 
     @log_url
     def start_requests(self):
         params = self.read_params_from_json("params.json")
-
-        # načti strict filtry (lokální ochrana proti mixování značek)
         self._load_strict_filters(params)
-
-        # IMPORTANT: params posíláme na API tak jak jsou
-        # (jen vynutíme offset string)
         params["offset"] = str(params.get("offset", "0"))
 
         url = f"{self.BASE_URL}{urlencode(params)}"
@@ -127,9 +246,6 @@ class SautoSpider(scrapy.Spider):
             dont_filter=True,
         )
 
-    # -------------------------
-    # SEARCH PARSE + pagination
-    # -------------------------
     def parse_search(self, response):
         try:
             data = json.loads(response.text)
@@ -139,7 +255,6 @@ class SautoSpider(scrapy.Spider):
 
         results = data.get("results", []) or []
 
-        # 1) zpracuj výsledky (ale jen ty co projdou strict filtrem)
         for r in results:
             if not self._passes_strict_filter(r):
                 continue
@@ -150,7 +265,6 @@ class SautoSpider(scrapy.Spider):
 
             r["manufacturer_name"] = (r.get("manufacturer_cb") or {}).get("name")
             r["model_name"] = (r.get("model_cb") or {}).get("name")
-
             r["seller_type"] = "bazar" if r.get("premise") else "soukromy"
 
             if manufacturer and model and ad_id:
@@ -158,7 +272,6 @@ class SautoSpider(scrapy.Spider):
             else:
                 r["url"] = None
 
-            # ---- DETAIL FETCH ----
             if ad_id:
                 detail_url = self.DETAIL_API_URL.format(ad_id)
                 yield scrapy.Request(
@@ -174,15 +287,12 @@ class SautoSpider(scrapy.Spider):
                 r["detail_raw"] = None
                 yield r
 
-        # 2) pagination (offset + limit)
         params = (response.meta.get("params") or {}).copy()
         limit = int(params.get("limit", 35))
         offset = int(params.get("offset", 0))
-
         total = self._extract_total(data)
 
         if total == -1:
-            # fallback: pokračuj dokud chodí plný stránky
             if len(results) == limit and limit > 0:
                 params["offset"] = str(offset + limit)
                 next_url = f"{self.BASE_URL}{urlencode(params)}"
@@ -209,9 +319,6 @@ class SautoSpider(scrapy.Spider):
                 dont_filter=True,
             )
 
-    # -------------------------
-    # DETAIL PARSE (store full json)
-    # -------------------------
     def parse_detail(self, response):
         base_item = response.meta.get("base_item") or {}
 
@@ -225,6 +332,10 @@ class SautoSpider(scrapy.Spider):
 
         base_item["detail_fetch_ok"] = True
         base_item["detail_raw"] = detail
+        
+        self._evaluate_and_store(base_item)
+        self.items_scraped += 1
+        
         yield base_item
 
     def handle_detail_error(self, failure):
@@ -237,3 +348,43 @@ class SautoSpider(scrapy.Spider):
     def handle_error(self, failure):
         request = failure.request
         self.logger.error(f"Request failed: {request.url}, Error: {failure.value}")
+
+    def closed(self, reason):
+        znacka = self.strict_manufacturer_seo or "Vše"
+        model = self.strict_model_seo or "Vše"
+        typ_prodejce = self.strict_seller_type or "Všichni"
+
+        zprava = (
+            f"🏁 **SCRAPE DOKONČEN** (`{reason}`)\n"
+            f"⚙️ **Filtry:** Značka: {znacka} | Model: {model} | Prodejce: {typ_prodejce}\n"
+            f"📊 **Zkontrolováno inzerátů:** {self.items_scraped}\n"
+            "───────────────────\n"
+        )
+
+        top_kousky = sorted(self.scored_cars, key=lambda x: x['skore'], reverse=True)
+        top_kousky = [auto for auto in top_kousky if auto['skore'] > 0][:5]
+
+        if not top_kousky:
+            zprava += "Nenašlo se vůbec nic zajímavého. Žádné auto nezískalo plusové body."
+        else:
+            zprava += "🏆 **TOP NALEZENÉ KOUSKY:**\n\n"
+            for i, auto in enumerate(top_kousky, 1):
+                if auto['ad_id'] not in self.notified_ids:
+                    self.notified_ids.add(auto['ad_id'])
+                    novinka = "🆕 "
+                else:
+                    novinka = ""
+
+                # Vypíšeme si všechny důvody, díky kterým to nasbíralo body
+                duvody_text = ", ".join(auto['duvody']) if auto['duvody'] else "Bez důvodu"
+                
+                zprava += (
+                    f"{i}. {novinka}**{auto['nazev']}** — {auto['cena']} Kč\n"
+                    f"   🐎 {auto['vykon']} kW | 📊 Skóre: **{auto['skore']}**\n"
+                    f"   📌 {duvody_text}\n"
+                    f"   🔗 {auto['url']}\n\n"
+                )
+            
+            self._save_notified()
+
+        self._send_discord(zprava)
