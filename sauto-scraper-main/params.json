@@ -1,16 +1,27 @@
 {
-  "limit": "1000",
+  "limit": "35",
   "offset": "0",
-
   "category_id": "838",
-
-  "manufacturer_seo_name": "volkswagen",
-  "model_seo_name": "golf",
-
   "condition_seo": "nove,ojete,predvadeci",
   "operating_lease": "false",
   "seller_type": "soukromy",
-
   "price_from": "0",
-  "price_to": "300000"
+  "price_to": "300000",
+
+  "interesting_min_score": "90",
+  "interesting_top_n": "10",
+  "interesting_min_price": "20000",
+  "allow_automatic": "true",
+  "market_min_cohort_size": "6",
+  "market_expected_km_per_year": "16000",
+  "target_annual_km": "15000",
+  "prefer_gearbox": "any",
+  "prefer_drive": "any",
+  "model_price_min_samples": "5",
+  "undervalue_ratio_threshold": "0.88",
+  "deep_undervalue_ratio_threshold": "0.75",
+  "overprice_ratio_threshold": "1.18",
+
+  "discord_notify_only_new": "true",
+  "discord_webhook_url": "https://discordapp.com/api/webhooks/1478178620991209615/dmix_llEFt-_C_K4KCKSwBe4tvR37XmDvzrdUhMh2UFOduZ0mua-6tGiSFizXvgn5m_U"
 }
