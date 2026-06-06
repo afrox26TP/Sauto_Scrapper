@@ -1,0 +1,1 @@
+python -m scrapy crawl sauto -O data/sauto.json

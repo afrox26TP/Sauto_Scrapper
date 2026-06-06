@@ -149,6 +149,10 @@ dmypy.json
 # pytype static type analyzer
 .pytype/
 
+# Web UI (React/Vite)
+web-ui/node_modules/
+web-ui/dist/
+
 # Cython debug symbols
 cython_debug/
 

@@ -175,6 +175,41 @@ python -m scrapy crawl sauto -O data/sauto.jl
 
 ---
 
+## Web Mode (React + API)
+
+This repository now includes a web control panel:
+
+- `web-api/` = FastAPI wrapper around the existing Scrapy spider
+- `web-ui/` = React (Vite) frontend for editing params and launching scraper runs
+
+### 1. Start API backend
+
+```bash
+cd sauto-scraper-main
+uvicorn web-api.app:app --reload --port 8000
+```
+
+### 2. Start React frontend
+
+```bash
+cd sauto-scraper-main/web-ui
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173`.
+
+### Available API endpoints
+
+- `GET /api/health`
+- `GET /api/params`
+- `PUT /api/params`
+- `POST /api/run`
+- `GET /api/status`
+- `GET /api/results`
+
+---
+
 ## Logs
 
 The scraper logs all scraped URLs with timestamps to `sauto_spider.log` for debugging and monitoring purposes.
