@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const API_BASE = "http://localhost:8000";
 
@@ -65,6 +65,8 @@ const PARAM_GROUPS = [
   },
 ];
 
+const BASIC_GROUPS = PARAM_GROUPS.slice(0, 3);
+const ADVANCED_GROUPS = PARAM_GROUPS.slice(3);
 const IGNORED_KEYS = new Set(PARAM_GROUPS.flatMap((g) => g.fields.map((f) => f.key)));
 
 function fmtVal(val, fmt) {
@@ -147,8 +149,32 @@ export default function App() {
   const [params, setParams] = useState({});
   const [status, setStatus] = useState(null);
   const [items, setItems] = useState([]);
+  const [logs, setLogs] = useState([]);
+  const [markedIds, setMarkedIds] = useState([]);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [resultsPath, setResultsPath] = useState("data/sauto_interesting.json");
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [runPhase, setRunPhase] = useState("idle");
+  const [showLogsModal, setShowLogsModal] = useState(false);
+  const [popupLog, setPopupLog] = useState(null);
+  const [apiHealth, setApiHealth] = useState(null);
+  const fileInputRef = useRef(null);
+  const logsModalBodyRef = useRef(null);
+  const prevIsRunningRef = useRef(null);
+
+  const isRunning = Boolean(status?.running);
+  const busy = loading || initialLoading || isRunning || runPhase !== "idle";
+
+  function fmtUptime(s) {
+    if (!s && s !== 0) return "—";
+    if (s < 60) return `${s}s`;
+    if (s < 3600) return `${Math.floor(s / 60)}m ${s % 60}s`;
+    return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`;
+  }
+  const selectedCount = selectedIds.length;
 
   async function fetchParams() {
     const res = await fetch(`${API_BASE}/api/params`);
@@ -163,19 +189,166 @@ export default function App() {
   }
 
   async function fetchResults() {
-    const res = await fetch(`${API_BASE}/api/results?path=data/sauto_interesting.json`);
+    const res = await fetch(`${API_BASE}/api/results?path=${encodeURIComponent(resultsPath)}`);
     const data = await res.json();
     setItems(data.items || []);
+    setMarkedIds(data.marked_ids || []);
+    setResultsPath(data.path || resultsPath);
+    setSelectedIds((prev) => prev.filter((id) => (data.items || []).some((item) => String(item.ad_id) === String(id))));
+  }
+
+  async function fetchLogs() {
+    const res = await fetch(`${API_BASE}/api/logs?limit=160`);
+    const data = await res.json();
+    setLogs(data.lines || []);
+  }
+
+  async function fetchApiHealth() {
+    try {
+      const res = await fetch(`${API_BASE}/api/health`, { signal: AbortSignal.timeout(4000) });
+      const data = await res.json();
+      setApiHealth(data);
+    } catch {
+      setApiHealth({ status: "error" });
+    }
+  }
+
+  async function refreshAll() {
+    await Promise.all([fetchParams(), fetchStatus(), fetchResults(), fetchLogs(), fetchApiHealth()]);
+  }
+
+  function resultKey(item) {
+    return String(item.ad_id || item.id || item.url || item.name || "");
+  }
+
+  function toggleSelected(id) {
+    const key = String(id);
+    setSelectedIds((prev) =>
+      prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key],
+    );
+  }
+
+  function toggleSelectVisible() {
+    const visibleIds = items.slice(0, 100).map((item) => resultKey(item)).filter(Boolean);
+    if (visibleIds.length === 0) return;
+    const allSelected = visibleIds.every((id) => selectedIds.includes(id));
+    setSelectedIds(allSelected ? selectedIds.filter((id) => !visibleIds.includes(id)) : Array.from(new Set([...selectedIds, ...visibleIds])));
+  }
+
+  async function postResultAction(url, body) {
+    const res = await fetch(`${API_BASE}${url}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || "Akce selhala.");
+    }
+    return res.json();
+  }
+
+  async function deleteSelected() {
+    if (selectedCount === 0) return;
+    setLoading(true);
+    try {
+      await postResultAction("/api/results/delete", { ids: selectedIds, path: resultsPath });
+      setMessage(`Smazáno ${selectedCount} záznamů.`);
+      setSelectedIds([]);
+      await refreshAll();
+    } catch (e) {
+      setMessage(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function clearAllResults() {
+    if (!window.confirm("Opravdu vymazat všechna výsledky?")) return;
+    setLoading(true);
+    try {
+      await postResultAction("/api/results/clear", { path: resultsPath });
+      setMessage("Výsledky byly smazány.");
+      setSelectedIds([]);
+      await refreshAll();
+    } catch (e) {
+      setMessage(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function markSelected(marked) {
+    if (selectedCount === 0) return;
+    setLoading(true);
+    try {
+      await postResultAction("/api/results/mark", { ids: selectedIds, marked });
+      setMessage(marked ? "Výsledky označeny." : "Označení zrušeno.");
+      await fetchResults();
+    } catch (e) {
+      setMessage(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function exportResults(scope) {
+    const visible = items.slice(0, 100);
+    const exportItems = scope === "selected"
+      ? visible.filter((item) => selectedIds.includes(resultKey(item)))
+      : visible;
+
+    const blob = new Blob([JSON.stringify(exportItems, null, 2)], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = scope === "selected" ? "sauto_selected.json" : "sauto_export.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function importResultsFile(file) {
+    if (!file) return;
+    setLoading(true);
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const itemsToImport = Array.isArray(parsed) ? parsed : parsed.items;
+      if (!Array.isArray(itemsToImport)) {
+        throw new Error("Soubor musí obsahovat JSON pole nebo objekt s položkou items.");
+      }
+      await postResultAction("/api/results/import", { items: itemsToImport, path: resultsPath });
+      setMessage(`Importováno ${itemsToImport.length} záznamů.`);
+      setSelectedIds([]);
+      await refreshAll();
+    } catch (e) {
+      setMessage(e.message);
+    } finally {
+      setLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   }
 
   useEffect(() => {
-    Promise.all([fetchParams(), fetchStatus(), fetchResults()]).catch(() =>
-      setMessage("API není dostupné — spusť backend na portu 8000.")
-    );
+    setInitialLoading(true);
+    refreshAll()
+      .catch(() => setMessage("API není dostupné — spusť backend na portu 8000."))
+      .finally(() => setInitialLoading(false));
   }, []);
 
   useEffect(() => {
     const t = setInterval(() => fetchStatus().catch(() => null), 2000);
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    const t = setInterval(() => fetchLogs().catch(() => null), 1500);
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    fetchApiHealth().catch(() => null);
+    const t = setInterval(() => fetchApiHealth().catch(() => null), 10000);
     return () => clearInterval(t);
   }, []);
 
@@ -203,6 +376,7 @@ export default function App() {
 
   async function run() {
     setLoading(true);
+    setRunPhase("saving");
     setMessage("");
     try {
       const saveRes = await fetch(`${API_BASE}/api/params`, {
@@ -211,6 +385,7 @@ export default function App() {
         body: JSON.stringify({ params }),
       });
       if (!saveRes.ok) throw new Error("Uložení parametrů selhalo.");
+      setRunPhase("starting");
       const res = await fetch(`${API_BASE}/api/run`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -221,33 +396,135 @@ export default function App() {
         throw new Error(err.detail || "Spuštění selhalo.");
       }
       setMessage("Scraper spuštěn.");
-      await fetchStatus();
+      setRunPhase("running");
+      await refreshAll();
     } catch (e) {
       setMessage(e.message);
+      setRunPhase("error");
     } finally {
       setLoading(false);
     }
   }
 
-  const isRunning = status?.running;
+  // Advance runPhase UI state when scraper finishes
+  useEffect(() => {
+    if (runPhase === "idle") return;
+    if (isRunning) return;
+
+    if (runPhase === "running") {
+      setRunPhase("refreshing");
+      fetchResults()
+        .catch(() => null)
+        .finally(() => setRunPhase("done"));
+      return;
+    }
+
+    if (runPhase === "done" || runPhase === "error") {
+      const t = setTimeout(() => setRunPhase("idle"), 1800);
+      return () => clearTimeout(t);
+    }
+  }, [isRunning, runPhase]);
+
+  // Poll results every 3s while scraper is running (driven by live status, not runPhase)
+  useEffect(() => {
+    if (!isRunning) return;
+    const t = setInterval(() => fetchResults().catch(() => null), 3000);
+    return () => clearInterval(t);
+  }, [isRunning]);
+
+  // When scraper stops (even externally), fetch final results once
+  useEffect(() => {
+    if (prevIsRunningRef.current === true && isRunning === false) {
+      fetchResults().catch(() => null);
+    }
+    prevIsRunningRef.current = isRunning;
+  }, [isRunning]);
+
+  function statusLabel() {
+    if (initialLoading) return "Načítám data…";
+    if (runPhase === "saving") return "Ukládám parametry…";
+    if (runPhase === "starting") return "Spouštím scraper…";
+    if (runPhase === "running") return "Scraper běží…";
+    if (runPhase === "refreshing") return "Aktualizuji výsledky…";
+    if (runPhase === "done") return "Hotovo.";
+    if (runPhase === "error") return "Spuštění selhalo.";
+    if (isRunning) return "Scraper běží…";
+    return "Připraveno.";
+  }
 
   // Extra params from params.json that aren't in PARAM_GROUPS (e.g. discord webhook)
   const extraKeys = Object.keys(params).filter((k) => !IGNORED_KEYS.has(k));
+  const visibleItems = items.slice(0, 100);
+  const allVisibleSelected = visibleItems.length > 0 && visibleItems.every((item) => selectedIds.includes(resultKey(item)));
 
   return (
+    <>
     <div className="app">
       <div className="topbar">
         <h1>Sauto Scraper</h1>
-        <span className={`status-dot${isRunning ? " running" : ""}`}>
-          {isRunning ? "Běží" : "Nečinný"}
+        <span className={`status-dot${busy ? " running" : ""}`}>
+          {statusLabel()}
         </span>
+        <div className="topbar-spacer" />
+        {apiHealth && (
+          <div className={`api-status-chip${apiHealth.status === "ok" ? " up" : " down"}`}>
+            <span className="api-status-dot" />
+            <span className="api-status-label">API {apiHealth.status === "ok" ? "UP" : "DOWN"}</span>
+            {apiHealth.status === "ok" && (
+              <>
+                <span className="api-status-sep">|</span>
+                <span className="api-status-meta">v{apiHealth.version}</span>
+                <span className="api-status-sep">·</span>
+                <span className="api-status-meta">Python {apiHealth.python}</span>
+                <span className="api-status-sep">·</span>
+                <span className="api-status-meta">↑ {fmtUptime(apiHealth.uptime_s)}</span>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="hero-card">
+        <div>
+          <div className="hero-title">Webové ovládání scraperu</div>
+          <div className="hero-subtitle">
+            Uprav parametry, spusť scraping a sleduj průběh i výsledky na jedné stránce.
+          </div>
+        </div>
+        <div className={`hero-badge${busy ? " busy" : ""}`}>
+          <span className="hero-badge-dot" />
+          {statusLabel()}
+        </div>
       </div>
 
       <div className="layout">
         {/* Sidebar */}
         <aside className="sidebar">
-          {PARAM_GROUPS.map((group) => (
-            <div key={group.label} className="param-group">
+          {initialLoading && (
+            <div className="loading-panel">
+              <div className="loading-ring" />
+              <div>
+                <div className="loading-title">Načítám parametry a poslední výsledky</div>
+                <div className="loading-text">Prosím vyčkej, za okamžik se objeví aktuální stav.</div>
+              </div>
+            </div>
+          )}
+
+          {!initialLoading && (
+            <div className="status-panel">
+              <div className="status-panel-row">
+                <span className={`mini-dot${isRunning ? " running" : ""}`} />
+                <strong>{statusLabel()}</strong>
+              </div>
+              <div className="status-panel-meta">
+                <span>PID: {status?.pid || "—"}</span>
+                <span>Exit: {status?.last_exit_code ?? "—"}</span>
+              </div>
+            </div>
+          )}
+
+          {BASIC_GROUPS.map((group) => (
+            <div key={group.label} className="param-group card-section">
               <div className="group-label">{group.label}</div>
               {group.fields.map((def) => (
                 <Field key={def.key} def={def} value={params[def.key]} onChange={setParam} />
@@ -255,33 +532,67 @@ export default function App() {
             </div>
           ))}
 
-          {extraKeys.length > 0 && (
-            <div className="param-group">
-              <div className="group-label">Ostatní</div>
-              {extraKeys.map((k) => (
-                <div key={k} className="field">
-                  <label>{k}</label>
-                  <input type="text" value={params[k] ?? ""}
-                    onChange={(e) => setParam(k, e.target.value)} />
+          <div className="advanced-toggle-row">
+            <button className="link-btn" onClick={() => setShowAdvanced((v) => !v)}>
+              {showAdvanced ? "Skrýt advanced nastavení" : "Zobrazit advanced nastavení"}
+            </button>
+            <span className="muted">{ADVANCED_GROUPS.length} sekcí</span>
+          </div>
+
+          {showAdvanced && (
+            <div className="advanced-panel">
+              {ADVANCED_GROUPS.map((group) => (
+                <div key={group.label} className="param-group card-section advanced-card">
+                  <div className="group-label">{group.label}</div>
+                  {group.fields.map((def) => (
+                    <Field key={def.key} def={def} value={params[def.key]} onChange={setParam} />
+                  ))}
                 </div>
               ))}
+
+              {extraKeys.length > 0 && (
+                <div className="param-group card-section advanced-card">
+                  <div className="group-label">Ostatní</div>
+                  {extraKeys.map((k) => (
+                    <div key={k} className="field">
+                      <label>{k}</label>
+                      <input type="text" value={params[k] ?? ""}
+                        onChange={(e) => setParam(k, e.target.value)} />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
-          <div className="actions">
-            <button className="btn-primary" onClick={run} disabled={loading || isRunning}>
-              {isRunning ? "Běží…" : "Spustit"}
+          <div className="actions sticky-actions">
+            <button className="btn-primary" onClick={run} disabled={busy}>
+              {busy ? "Pracuji…" : "Spustit"}
             </button>
-            <button onClick={save} disabled={loading}>Uložit</button>
-            <button onClick={fetchResults} disabled={loading}>Obnovit</button>
+            <button onClick={save} disabled={busy}>Uložit</button>
+            <button onClick={refreshAll} disabled={busy}>Obnovit</button>
           </div>
           {message && <p className="msg">{message}</p>}
         </aside>
 
         {/* Main */}
         <div className="main">
+          <div className="debug-ticker-wrap">
+            <span className={`debug-ticker-dot${isRunning ? " active" : ""}`} title={isRunning ? "Běží" : "Nečinný"} />
+            <span className="debug-ticker-text" title={logs.length > 0 ? logs[logs.length - 1] : ""}>
+              {logs.length > 0 ? logs[logs.length - 1] : <span className="debug-ticker-empty">Žádný log výstup.</span>}
+            </span>
+            <button
+              className="debug-history-btn"
+              onClick={() => { setShowLogsModal(true); setTimeout(() => { if (logsModalBodyRef.current) logsModalBodyRef.current.scrollTop = logsModalBodyRef.current.scrollHeight; }, 50); }}
+            >
+              Historie ({logs.length})
+            </button>
+          </div>
+
           {status && (
             <div className="status-bar">
+              <span><span className="lbl">Stav</span> {statusLabel()}</span>
               <span><span className="lbl">Start</span> {fmtDate(status.last_started_at)}</span>
               <span><span className="lbl">Konec</span> {fmtDate(status.last_finished_at)}</span>
               <span><span className="lbl">Exit</span> {status.last_exit_code ?? "—"}</span>
@@ -289,8 +600,41 @@ export default function App() {
             </div>
           )}
 
-          <div className="results-hd">
-            <strong>Výsledky</strong> <span className="muted">{items.length} záznamů</span>
+          <div className="results-hd results-header">
+            <div>
+              <strong>Výsledky</strong>
+              <span className="muted">{items.length} záznamů</span>
+            </div>
+            <div className="results-actions">
+              <button className="link-btn" onClick={() => exportResults("all")}>Export všech</button>
+              <button className="link-btn" onClick={() => exportResults("selected")} disabled={selectedCount === 0}>Export vybraných</button>
+              <button className="link-btn" onClick={() => markSelected(true)} disabled={selectedCount === 0}>Označit</button>
+              <button className="link-btn" onClick={() => markSelected(false)} disabled={selectedCount === 0}>Odznačit</button>
+              <button className="link-btn danger" onClick={deleteSelected} disabled={selectedCount === 0}>Smazat</button>
+              <button className="link-btn danger" onClick={clearAllResults}>Smazat vše</button>
+              <button className="link-btn" onClick={() => fileInputRef.current?.click()}>Import</button>
+              <button className="link-btn" onClick={refreshAll}>Obnovit</button>
+            </div>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json,.json"
+            style={{ display: "none" }}
+            onChange={(e) => importResultsFile(e.target.files?.[0])}
+          />
+
+          <div className="selection-bar">
+            <div>
+              <strong>{selectedCount}</strong> vybraných
+              <span className="muted"> · zdroj {resultsPath}</span>
+            </div>
+            <div className="selection-actions">
+              <button className="link-btn" onClick={toggleSelectVisible}>
+                {items.slice(0, 100).every((item) => selectedIds.includes(resultKey(item))) ? "Odznačit viditelné" : "Vybrat viditelné"}
+              </button>
+              <button className="link-btn" onClick={() => setSelectedIds([])} disabled={selectedCount === 0}>Vyčistit výběr</button>
+            </div>
           </div>
 
           <div className="table-wrap">
@@ -300,6 +644,8 @@ export default function App() {
               <table>
                 <thead>
                   <tr>
+                    <th className="cell-check"><input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectVisible} /></th>
+                    <th className="cell-mark"></th>
                     <th>Skóre</th>
                     <th>Název</th>
                     <th>Cena (Kč)</th>
@@ -313,8 +659,18 @@ export default function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {items.slice(0, 100).map((item, i) => (
-                    <tr key={item.ad_id || i}>
+                  {visibleItems.map((item, i) => {
+                    const key = resultKey(item);
+                    const selected = selectedIds.includes(key);
+                    const marked = markedIds.includes(String(item.ad_id));
+                    return (
+                    <tr key={item.ad_id || i} className={`${selected ? "row-selected" : ""}${marked ? " row-marked" : ""}`}>
+                      <td className="cell-check">
+                        <input type="checkbox" checked={selected} onChange={() => toggleSelected(key)} />
+                      </td>
+                      <td className="cell-mark">
+                        <button className={`mark-chip${marked ? " marked" : ""}`} onClick={() => markSelected(marked ? false : true)} disabled={!selected && !marked}>★</button>
+                      </td>
                       <td>
                         <span className={`score ${(item.score ?? 0) >= 90 ? "score-hi" : ""}`}>
                           {item.score ?? "—"}
@@ -338,13 +694,55 @@ export default function App() {
                           : "—"}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             )}
           </div>
         </div>
       </div>
+
+    {showLogsModal && (
+      <div className="debug-modal-overlay" onClick={() => setShowLogsModal(false)}>
+        <div className="debug-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="debug-modal-head">
+            <strong>Debug výpis — Historie</strong>
+            <span className="muted">{logs.length} řádků</span>
+            <button className="debug-modal-close" onClick={() => setShowLogsModal(false)}>✕</button>
+          </div>
+          <div className="debug-modal-body" ref={logsModalBodyRef}>
+            {logs.length === 0 ? (
+              <div className="debug-empty">Zatím žádný log výstup.</div>
+            ) : (
+              logs.map((line, i) => (
+                <div key={`log-${i}`} className="debug-modal-line" onClick={() => setPopupLog(line)}>
+                  <span className="debug-line-num">{i + 1}</span>
+                  <span className="debug-line-text">{line}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+
+    {popupLog !== null && (
+      <div className="log-popup-overlay" onClick={() => setPopupLog(null)}>
+        <div className="log-popup" onClick={(e) => e.stopPropagation()}>
+          <div className="log-popup-head">
+            <strong>Detail řádku</strong>
+            <button className="debug-modal-close" onClick={() => setPopupLog(null)}>✕</button>
+          </div>
+          <pre className="log-popup-body">{popupLog}</pre>
+          <div className="log-popup-foot">
+            <button className="btn-sm" onClick={() => { navigator.clipboard.writeText(popupLog).catch(() => null); }}>Kopírovat</button>
+            <button className="btn-sm secondary" onClick={() => setPopupLog(null)}>Zavřít</button>
+          </div>
+        </div>
+      </div>
+    )}
     </div>
+    </>
   );
 }

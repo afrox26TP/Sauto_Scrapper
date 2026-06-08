@@ -5,9 +5,8 @@
   "condition_seo": "nove,ojete,predvadeci",
   "operating_lease": "false",
   "seller_type": "soukromy",
-  "price_from": "0",
-  "price_to": "300000",
-
+  "price_from": "40000",
+  "price_to": "2000000",
   "interesting_min_score": "90",
   "interesting_top_n": "10",
   "interesting_min_price": "20000",
@@ -21,7 +20,6 @@
   "undervalue_ratio_threshold": "0.88",
   "deep_undervalue_ratio_threshold": "0.75",
   "overprice_ratio_threshold": "1.18",
-
   "discord_notify_only_new": "true",
   "discord_webhook_url": "https://discordapp.com/api/webhooks/1478178620991209615/dmix_llEFt-_C_K4KCKSwBe4tvR37XmDvzrdUhMh2UFOduZ0mua-6tGiSFizXvgn5m_U"
 }
