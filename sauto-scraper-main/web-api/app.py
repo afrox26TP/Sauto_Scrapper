@@ -20,6 +20,7 @@ PARAMS_PATH = ROOT_DIR / "params.json"
 API_VERSION = "1.0.0"
 API_START_TIME = time.time()
 DEFAULT_RESULTS_PATH = ROOT_DIR / "data" / "sauto_interesting.json"
+RAW_OUTPUT_PATH = ROOT_DIR / "data" / "sauto_raw.json"
 MARKED_IDS_PATH = ROOT_DIR / "marked_ids.json"
 
 
@@ -104,7 +105,9 @@ class ScraperRunner:
             if self.process is not None and self.process.poll() is None:
                 raise RuntimeError("Scraper is already running.")
 
-            command = [sys.executable, "-m", "scrapy", "crawl", "sauto", "-O", output_file]
+            # Use a dedicated raw file for scrapy feed export to avoid
+            # conflicting with the spider's own sauto_interesting.json output
+            command = [sys.executable, "-m", "scrapy", "crawl", "sauto", "-O", str(RAW_OUTPUT_PATH.relative_to(ROOT_DIR))]
             self.log_lines.clear()
             self.log_lines.append(f"[web-api] Spouštím: {' '.join(command)}")
             self.process = subprocess.Popen(
@@ -200,14 +203,31 @@ def save_marked_ids(ids: set[str]) -> None:
 
 
 def load_result_items(result_path: Path) -> list[dict[str, Any]]:
-    data = load_json(result_path, [])
+    if not result_path.exists():
+        return []
+    try:
+        with result_path.open("r", encoding="utf-8") as fh:
+            raw = fh.read().strip()
+    except OSError:
+        return []
+    if not raw:
+        return []
+    # Robust parser: trim trailing garbage until we get valid JSON
+    attempt = raw
+    for _ in range(30):
+        try:
+            data = json.loads(attempt)
+            break
+        except json.JSONDecodeError as exc:
+            if "Extra data" in str(exc):
+                attempt = attempt[: exc.pos].rstrip()
+            else:
+                return []
+    else:
+        return []
     if not isinstance(data, list):
-        raise HTTPException(status_code=500, detail="Results file does not contain a JSON array.")
-    items: list[dict[str, Any]] = []
-    for item in data:
-        if isinstance(item, dict):
-            items.append(item)
-    return items
+        return []
+    return [item for item in data if isinstance(item, dict)]
 
 
 app = FastAPI(title="Sauto Scraper API", version="1.0.0")
@@ -282,7 +302,7 @@ def get_logs(limit: int = 120) -> dict[str, Any]:
 
 @app.get("/api/results")
 def get_results(path: str | None = None) -> dict[str, Any]:
-    rel_path = normalize_relative_path(path, runner.last_output_file or "data/sauto_interesting.json")
+    rel_path = normalize_relative_path(path, "data/sauto_interesting.json")
     result_path = (ROOT_DIR / rel_path).resolve()
 
     if not result_path.exists():

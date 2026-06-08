@@ -215,10 +215,9 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--r);
   padding: 0.9rem;
-  position: sticky;
-  top: 1rem;
-  max-height: calc(100vh - 2rem);
-  overflow-y: auto;
+  position: relative;
+  max-height: none;
+  overflow: visible;
 }
 
 .param-group { margin-bottom: 1rem; }
@@ -249,8 +248,7 @@ body {
 }
 
 .sticky-actions {
-  position: sticky;
-  bottom: 0.75rem;
+  position: static;
   background: var(--surface);
   z-index: 1;
 }

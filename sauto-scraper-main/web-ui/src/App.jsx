@@ -484,19 +484,6 @@ export default function App() {
         )}
       </div>
 
-      <div className="hero-card">
-        <div>
-          <div className="hero-title">Webové ovládání scraperu</div>
-          <div className="hero-subtitle">
-            Uprav parametry, spusť scraping a sleduj průběh i výsledky na jedné stránce.
-          </div>
-        </div>
-        <div className={`hero-badge${busy ? " busy" : ""}`}>
-          <span className="hero-badge-dot" />
-          {statusLabel()}
-        </div>
-      </div>
-
       <div className="layout">
         {/* Sidebar */}
         <aside className="sidebar">
