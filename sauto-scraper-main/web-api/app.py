@@ -9,6 +9,8 @@ import time
 from collections import deque
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlencode
+from urllib.request import urlopen
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,6 +24,9 @@ API_START_TIME = time.time()
 DEFAULT_RESULTS_PATH = ROOT_DIR / "data" / "sauto_interesting.json"
 RAW_OUTPUT_PATH = ROOT_DIR / "data" / "sauto_raw.json"
 MARKED_IDS_PATH = ROOT_DIR / "marked_ids.json"
+CATALOG_CACHE_PATH = ROOT_DIR / "data" / "sauto_catalog_cache.json"
+CATALOG_CACHE_TTL_S = 24 * 60 * 60
+SAUTO_SEARCH_API = "https://www.sauto.cz/api/v1/items/search"
 
 
 class ParamsPayload(BaseModel):
@@ -230,6 +235,78 @@ def load_result_items(result_path: Path) -> list[dict[str, Any]]:
     return [item for item in data if isinstance(item, dict)]
 
 
+def _load_catalog_cache() -> dict[str, Any]:
+    data = load_json(CATALOG_CACHE_PATH, {})
+    if not isinstance(data, dict):
+        return {}
+    return data
+
+
+def _save_catalog_cache(data: dict[str, Any]) -> None:
+    dump_json(CATALOG_CACHE_PATH, data)
+
+
+def _is_fresh(ts: float | int | None, ttl_s: int = CATALOG_CACHE_TTL_S) -> bool:
+    if ts is None:
+        return False
+    try:
+        return (time.time() - float(ts)) < ttl_s
+    except (TypeError, ValueError):
+        return False
+
+
+def _fetch_sauto_results(params: dict[str, Any]) -> list[dict[str, Any]]:
+    query = urlencode(params)
+    url = f"{SAUTO_SEARCH_API}?{query}"
+    with urlopen(url, timeout=15) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+    results = payload.get("results", []) if isinstance(payload, dict) else []
+    return [item for item in results if isinstance(item, dict)]
+
+
+def _collect_brands(max_pages: int = 25, page_size: int = 200) -> list[dict[str, str]]:
+    brands: dict[str, str] = {}
+    for page in range(max_pages):
+        offset = page * page_size
+        batch = _fetch_sauto_results({"category_id": 838, "limit": page_size, "offset": offset})
+        if not batch:
+            break
+        for item in batch:
+            manufacturer = item.get("manufacturer_cb") or {}
+            seo_name = str(manufacturer.get("seo_name") or "").strip()
+            name = str(manufacturer.get("name") or seo_name).strip()
+            if seo_name:
+                brands[seo_name] = name
+    return [{"value": key, "label": brands[key]} for key in sorted(brands.keys())]
+
+
+def _collect_models_for_brand(brand: str, max_pages: int = 8, page_size: int = 150) -> list[dict[str, str]]:
+    models: dict[str, str] = {}
+    for page in range(max_pages):
+        offset = page * page_size
+        batch = _fetch_sauto_results(
+            {
+                "category_id": 838,
+                "manufacturer_seo_name": brand,
+                "limit": page_size,
+                "offset": offset,
+            }
+        )
+        if not batch:
+            break
+        for item in batch:
+            manufacturer = item.get("manufacturer_cb") or {}
+            manufacturer_seo = str(manufacturer.get("seo_name") or "").strip().lower()
+            if manufacturer_seo != brand:
+                continue
+            model = item.get("model_cb") or {}
+            seo_name = str(model.get("seo_name") or "").strip()
+            name = str(model.get("name") or seo_name).strip()
+            if seo_name:
+                models[seo_name] = name
+    return [{"value": key, "label": models[key]} for key in sorted(models.keys())]
+
+
 app = FastAPI(title="Sauto Scraper API", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
@@ -320,6 +397,78 @@ def get_results(path: str | None = None) -> dict[str, Any]:
 
     sorted_items = sorted(annotated, key=lambda item: item.get("score", 0), reverse=True)
     return {"items": sorted_items, "path": str(result_path.relative_to(ROOT_DIR)), "count": len(sorted_items), "marked_ids": sorted(marked_ids)}
+
+
+@app.get("/api/catalog/brands")
+def get_catalog_brands(force_refresh: bool = False) -> dict[str, Any]:
+    cache = _load_catalog_cache()
+    catalog = cache.get("brands", {}) if isinstance(cache, dict) else {}
+    cached_items = catalog.get("items", []) if isinstance(catalog, dict) else []
+    cached_ts = catalog.get("updated_at") if isinstance(catalog, dict) else None
+
+    if not force_refresh and _is_fresh(cached_ts) and isinstance(cached_items, list):
+        return {"items": cached_items, "cached": True, "updated_at": cached_ts}
+
+    try:
+        items = _collect_brands()
+    except Exception as exc:
+        if isinstance(cached_items, list) and cached_items:
+            return {"items": cached_items, "cached": True, "updated_at": cached_ts, "warning": f"Using cache: {exc}"}
+        raise HTTPException(status_code=502, detail=f"Unable to fetch Sauto brands: {exc}") from exc
+
+    now = int(time.time())
+    if not isinstance(cache, dict):
+        cache = {}
+    cache["brands"] = {"updated_at": now, "items": items}
+    _save_catalog_cache(cache)
+    return {"items": items, "cached": False, "updated_at": now}
+
+
+@app.get("/api/catalog/models")
+def get_catalog_models(brand: str, force_refresh: bool = False) -> dict[str, Any]:
+    selected_brand = (brand or "").strip().lower()
+    if not selected_brand:
+        return {"brand": "", "items": [], "cached": True, "updated_at": None}
+
+    cache = _load_catalog_cache()
+    models_cache = cache.get("models", {}) if isinstance(cache, dict) else {}
+    brand_cache = models_cache.get(selected_brand, {}) if isinstance(models_cache, dict) else {}
+    cached_items = brand_cache.get("items", []) if isinstance(brand_cache, dict) else []
+    cached_ts = brand_cache.get("updated_at") if isinstance(brand_cache, dict) else None
+    cached_collector_version = brand_cache.get("collector_version") if isinstance(brand_cache, dict) else None
+
+    # Per-brand cache gate to avoid serving stale entries from older buggy collector logic.
+    cache_ok = cached_collector_version == 2
+
+    if not force_refresh and cache_ok and _is_fresh(cached_ts) and isinstance(cached_items, list):
+        return {"brand": selected_brand, "items": cached_items, "cached": True, "updated_at": cached_ts}
+
+    try:
+        items = _collect_models_for_brand(selected_brand)
+    except Exception as exc:
+        if isinstance(cached_items, list) and cached_items:
+            return {
+                "brand": selected_brand,
+                "items": cached_items,
+                "cached": True,
+                "updated_at": cached_ts,
+                "warning": f"Using cache: {exc}",
+            }
+        raise HTTPException(status_code=502, detail=f"Unable to fetch Sauto models for '{selected_brand}': {exc}") from exc
+
+    now = int(time.time())
+    if not isinstance(cache, dict):
+        cache = {}
+    if not isinstance(cache.get("models"), dict):
+        cache["models"] = {}
+    cache["models"][selected_brand] = {
+        "updated_at": now,
+        "items": items,
+        "collector_version": 2,
+    }
+    _save_catalog_cache(cache)
+
+    return {"brand": selected_brand, "items": items, "cached": False, "updated_at": now}
 
 
 @app.get("/api/results/export")

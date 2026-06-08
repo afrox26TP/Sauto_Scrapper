@@ -6,8 +6,6 @@ const PARAM_GROUPS = [
   {
     label: "Hledání",
     fields: [
-      { key: "manufacturer_seo_name", type: "text", label: "Výrobce" },
-      { key: "model_seo_name", type: "text", label: "Model" },
       { key: "seller_type", type: "select", label: "Prodejce", options: ["", "soukromy", "bazar"] },
       { key: "condition_seo", type: "text", label: "Stav (čárkou)" },
       { key: "operating_lease", type: "boolean", label: "Operativní leasing" },
@@ -81,6 +79,17 @@ function fmtVal(val, fmt) {
 function fmtDate(ts) {
   if (!ts) return "—";
   return new Date(ts * 1000).toLocaleString("cs-CZ");
+}
+
+function csvToArray(value) {
+  return String(value || "")
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
+function uniq(arr) {
+  return Array.from(new Set(arr));
 }
 
 function Field({ def, value, onChange }) {
@@ -161,6 +170,13 @@ export default function App() {
   const [showLogsModal, setShowLogsModal] = useState(false);
   const [popupLog, setPopupLog] = useState(null);
   const [apiHealth, setApiHealth] = useState(null);
+  const [brandOptions, setBrandOptions] = useState([]);
+  const [selectedBrands, setSelectedBrands] = useState([]);
+  const [selectedModels, setSelectedModels] = useState([]);
+  const [modelsByBrand, setModelsByBrand] = useState({});
+  const [loadingModelsByBrand, setLoadingModelsByBrand] = useState({});
+  const [brandFilterText, setBrandFilterText] = useState("");
+  const [modelFilterText, setModelFilterText] = useState("");
   const fileInputRef = useRef(null);
   const logsModalBodyRef = useRef(null);
   const prevIsRunningRef = useRef(null);
@@ -211,6 +227,70 @@ export default function App() {
     } catch {
       setApiHealth({ status: "error" });
     }
+  }
+
+  async function fetchBrands() {
+    try {
+      const res = await fetch(`${API_BASE}/api/catalog/brands`, { signal: AbortSignal.timeout(12000) });
+      const data = await res.json();
+      setBrandOptions(Array.isArray(data.items) ? data.items : []);
+    } catch {
+      setBrandOptions([]);
+    }
+  }
+
+  async function fetchModelsForBrand(brand) {
+    const b = String(brand || "").trim();
+    if (!b || modelsByBrand[b] || loadingModelsByBrand[b]) return;
+    setLoadingModelsByBrand((prev) => ({ ...prev, [b]: true }));
+    try {
+      const res = await fetch(`${API_BASE}/api/catalog/models?brand=${encodeURIComponent(b)}`, { signal: AbortSignal.timeout(12000) });
+      const data = await res.json();
+      const items = Array.isArray(data.items) ? data.items : [];
+      setModelsByBrand((prev) => ({ ...prev, [b]: items }));
+    } catch {
+      setModelsByBrand((prev) => ({ ...prev, [b]: [] }));
+    } finally {
+      setLoadingModelsByBrand((prev) => ({ ...prev, [b]: false }));
+    }
+  }
+
+  function syncFilterParams(brands, models) {
+    const brandCsv = brands.join(",");
+    const modelCsv = models.join(",");
+    setParams((prev) => ({
+      ...prev,
+      manufacturer_seo_name: brandCsv,
+      model_seo_name: modelCsv,
+    }));
+  }
+
+  function toggleBrand(brand) {
+    const b = String(brand || "").trim();
+    if (!b) return;
+    // Single-brand mode: checkbox UX, but only one active brand at a time.
+    const nextBrands = selectedBrands.includes(b) ? [] : [b];
+
+    const allowedModels = new Set(nextBrands.flatMap((k) => (modelsByBrand[k] || []).map((m) => m.value)));
+    const nextModels = selectedModels.filter((m) => allowedModels.has(m));
+
+    setSelectedBrands(nextBrands);
+    setSelectedModels(nextModels);
+    syncFilterParams(nextBrands, nextModels);
+
+    if (nextBrands.length > 0) {
+      fetchModelsForBrand(b).catch(() => null);
+    }
+  }
+
+  function toggleModel(model) {
+    const m = String(model || "").trim();
+    if (!m) return;
+    const nextModels = selectedModels.includes(m)
+      ? selectedModels.filter((x) => x !== m)
+      : [...selectedModels, m];
+    setSelectedModels(nextModels);
+    syncFilterParams(selectedBrands, nextModels);
   }
 
   async function refreshAll() {
@@ -335,6 +415,21 @@ export default function App() {
       .catch(() => setMessage("API není dostupné — spusť backend na portu 8000."))
       .finally(() => setInitialLoading(false));
   }, []);
+
+  useEffect(() => {
+    fetchBrands().catch(() => null);
+  }, []);
+
+  useEffect(() => {
+    const parsedBrands = uniq(csvToArray(params.manufacturer_seo_name));
+    const parsedModels = uniq(csvToArray(params.model_seo_name));
+    setSelectedBrands(parsedBrands);
+    setSelectedModels(parsedModels);
+  }, [params.manufacturer_seo_name, params.model_seo_name]);
+
+  useEffect(() => {
+    selectedBrands.forEach((b) => { fetchModelsForBrand(b).catch(() => null); });
+  }, [selectedBrands]);
 
   useEffect(() => {
     const t = setInterval(() => fetchStatus().catch(() => null), 2000);
@@ -513,9 +608,81 @@ export default function App() {
           {BASIC_GROUPS.map((group) => (
             <div key={group.label} className="param-group card-section">
               <div className="group-label">{group.label}</div>
-              {group.fields.map((def) => (
-                <Field key={def.key} def={def} value={params[def.key]} onChange={setParam} />
-              ))}
+              {group.label === "Hledání" && (
+                <div className="catalog-multi-wrap">
+                  <div className="catalog-block">
+                    <div className="catalog-title">Výrobce</div>
+                    <input
+                      type="text"
+                      className="catalog-search"
+                      placeholder="Filtrovat značky..."
+                      value={brandFilterText}
+                      onChange={(e) => setBrandFilterText(e.target.value)}
+                    />
+                    <div className="catalog-list">
+                      {brandOptions
+                        .filter((b) => b.label.toLowerCase().includes(brandFilterText.toLowerCase()) || b.value.toLowerCase().includes(brandFilterText.toLowerCase()))
+                        .map((b) => (
+                          <label key={b.value} className="catalog-item">
+                            <input
+                              type="checkbox"
+                              checked={selectedBrands.includes(b.value)}
+                              onChange={() => toggleBrand(b.value)}
+                            />
+                            <span>{b.label}</span>
+                          </label>
+                        ))}
+                    </div>
+                  </div>
+
+                  {selectedBrands.length > 0 && (
+                    <div className="catalog-block models">
+                      <div className="catalog-title">Modely ({selectedBrands[0]})</div>
+                      <input
+                        type="text"
+                        className="catalog-search"
+                        placeholder="Filtrovat modely..."
+                        value={modelFilterText}
+                        onChange={(e) => setModelFilterText(e.target.value)}
+                      />
+                      <div className="catalog-list">
+                        {(() => {
+                          const brand = selectedBrands[0];
+                          const models = modelsByBrand[brand] || [];
+                          const loadingModels = loadingModelsByBrand[brand];
+                          if (loadingModels) {
+                            return <div className="catalog-subhead">{brand} · načítám...</div>;
+                          }
+                          const filtered = models.filter((m) =>
+                            m.label.toLowerCase().includes(modelFilterText.toLowerCase()) ||
+                            m.value.toLowerCase().includes(modelFilterText.toLowerCase()),
+                          );
+                          return filtered.map((m) => (
+                            <label key={`${brand}-${m.value}`} className="catalog-item model">
+                              <input
+                                type="checkbox"
+                                checked={selectedModels.includes(m.value)}
+                                onChange={() => toggleModel(m.value)}
+                              />
+                              <span>{m.label}</span>
+                            </label>
+                          ));
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="catalog-selected-note">
+                    {selectedBrands.length} značek, {selectedModels.length} modelů vybráno
+                  </div>
+                </div>
+              )}
+
+              {group.fields
+                .filter((def) => !["manufacturer_seo_name", "model_seo_name"].includes(def.key))
+                .map((def) => (
+                  <Field key={def.key} def={def} value={params[def.key]} onChange={setParam} />
+                ))}
             </div>
           ))}
 

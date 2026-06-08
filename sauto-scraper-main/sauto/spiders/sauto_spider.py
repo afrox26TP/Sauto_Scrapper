@@ -849,6 +849,8 @@ class SautoSpider(scrapy.Spider):
 
         self.strict_manufacturer_seo = None
         self.strict_model_seo = None
+        self.strict_manufacturer_set = set()
+        self.strict_model_set = set()
         self.strict_seller_type = None
 
         self.discord_webhook_url = os.getenv("SAUTO_DISCORD_WEBHOOK_URL", "").strip()
@@ -1059,6 +1061,12 @@ class SautoSpider(scrapy.Spider):
     def _load_strict_filters(self, params: dict):
         self.strict_manufacturer_seo = self._norm_str(params.get("manufacturer_seo_name"))
         self.strict_model_seo = self._norm_str(params.get("model_seo_name"))
+        self.strict_manufacturer_set = {
+            x.strip() for x in (self.strict_manufacturer_seo or "").split(",") if x.strip()
+        }
+        self.strict_model_set = {
+            x.strip() for x in (self.strict_model_seo or "").split(",") if x.strip()
+        }
         self.strict_seller_type = self._norm_str(params.get("seller_type"))
 
     def _passes_strict_filter(self, item: dict) -> bool:
@@ -1068,9 +1076,9 @@ class SautoSpider(scrapy.Spider):
         m_seo = m_cb.get("seo_name")
         mo_seo = mo_cb.get("seo_name")
 
-        if self.strict_manufacturer_seo and m_seo != self.strict_manufacturer_seo:
+        if self.strict_manufacturer_set and m_seo not in self.strict_manufacturer_set:
             return False
-        if self.strict_model_seo and mo_seo != self.strict_model_seo:
+        if self.strict_model_set and mo_seo not in self.strict_model_set:
             return False
 
         if self.strict_seller_type:
