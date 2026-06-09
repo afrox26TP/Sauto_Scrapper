@@ -846,6 +846,7 @@ class SautoSpider(scrapy.Spider):
 
         self.items_scraped = 0
         self.scored_cars = []
+        self.all_items = []
 
         self.strict_manufacturer_seo = None
         self.strict_model_seo = None
@@ -1526,6 +1527,7 @@ class SautoSpider(scrapy.Spider):
             base_item["offer_reasons"] = []
 
         self.items_scraped += 1
+        self.all_items.append(base_item)
         yield base_item
 
     def handle_detail_error(self, failure):
@@ -1534,6 +1536,7 @@ class SautoSpider(scrapy.Spider):
         base_item["detail_raw"] = None
         base_item["detail_error"] = str(failure.value)
         self.items_scraped += 1
+        self.all_items.append(base_item)
         yield base_item
 
     def handle_error(self, failure):
@@ -1611,6 +1614,11 @@ class SautoSpider(scrapy.Spider):
 
     def closed(self, reason):
         sorted_offers = self._apply_advanced_sorting(list(self.scored_cars))
+        if self.all_items:
+            # Keep all matched ads in the file, not just the scored subset.
+            all_offers = self._apply_advanced_sorting(list(self.all_items))
+        else:
+            all_offers = sorted_offers
         interesting_offers = [offer for offer in sorted_offers if offer["interesting"]]
         top_offers = interesting_offers[: self.top_n]
 
@@ -1625,7 +1633,7 @@ class SautoSpider(scrapy.Spider):
         else:
             offers_for_discord = top_offers
 
-        self._save_sorted_offers(sorted_offers)
+        self._save_sorted_offers(all_offers)
         if top_offers:
             self._save_notified()
 

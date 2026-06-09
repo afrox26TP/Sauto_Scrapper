@@ -177,6 +177,7 @@ export default function App() {
   const [loadingModelsByBrand, setLoadingModelsByBrand] = useState({});
   const [brandFilterText, setBrandFilterText] = useState("");
   const [modelFilterText, setModelFilterText] = useState("");
+  const [tickerStep, setTickerStep] = useState(0);
   const fileInputRef = useRef(null);
   const logsModalBodyRef = useRef(null);
   const prevIsRunningRef = useRef(null);
@@ -268,8 +269,9 @@ export default function App() {
   function toggleBrand(brand) {
     const b = String(brand || "").trim();
     if (!b) return;
-    // Single-brand mode: checkbox UX, but only one active brand at a time.
-    const nextBrands = selectedBrands.includes(b) ? [] : [b];
+    const nextBrands = selectedBrands.includes(b)
+      ? selectedBrands.filter((x) => x !== b)
+      : [...selectedBrands, b];
 
     const allowedModels = new Set(nextBrands.flatMap((k) => (modelsByBrand[k] || []).map((m) => m.value)));
     const nextModels = selectedModels.filter((m) => allowedModels.has(m));
@@ -442,6 +444,17 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (!isRunning) {
+      setTickerStep(0);
+      return;
+    }
+    const t = setInterval(() => {
+      setTickerStep((prev) => (prev + 1) % 4);
+    }, 650);
+    return () => clearInterval(t);
+  }, [isRunning]);
+
+  useEffect(() => {
     fetchApiHealth().catch(() => null);
     const t = setInterval(() => fetchApiHealth().catch(() => null), 10000);
     return () => clearInterval(t);
@@ -539,12 +552,19 @@ export default function App() {
     if (initialLoading) return "Načítám data…";
     if (runPhase === "saving") return "Ukládám parametry…";
     if (runPhase === "starting") return "Spouštím scraper…";
+    if (isRunning) return "Scraper běží…";
     if (runPhase === "running") return "Scraper běží…";
     if (runPhase === "refreshing") return "Aktualizuji výsledky…";
     if (runPhase === "done") return "Hotovo.";
     if (runPhase === "error") return "Spuštění selhalo.";
-    if (isRunning) return "Scraper běží…";
     return "Připraveno.";
+  }
+
+  function tickerPrefix() {
+    if (!isRunning) return "Poslední log";
+    const phases = ["Crawling", "Načítám", "Zpracovávám", "Kontroluji"];
+    const dots = [".", "..", "...", "...."];
+    return `${phases[tickerStep]} ${dots[tickerStep]}`;
   }
 
   // Extra params from params.json that aren't in PARAM_GROUPS (e.g. discord webhook)
@@ -556,7 +576,7 @@ export default function App() {
     <>
     <div className="app">
       <div className="topbar">
-        <h1>Sauto Scraper</h1>
+        <h1>DobráKára</h1>
         <span className={`status-dot${busy ? " running" : ""}`}>
           {statusLabel()}
         </span>
@@ -637,7 +657,7 @@ export default function App() {
 
                   {selectedBrands.length > 0 && (
                     <div className="catalog-block models">
-                      <div className="catalog-title">Modely ({selectedBrands[0]})</div>
+                      <div className="catalog-title">Modely (pro vybrané značky)</div>
                       <input
                         type="text"
                         className="catalog-search"
@@ -646,28 +666,32 @@ export default function App() {
                         onChange={(e) => setModelFilterText(e.target.value)}
                       />
                       <div className="catalog-list">
-                        {(() => {
-                          const brand = selectedBrands[0];
+                        {selectedBrands.flatMap((brand) => {
                           const models = modelsByBrand[brand] || [];
                           const loadingModels = loadingModelsByBrand[brand];
                           if (loadingModels) {
-                            return <div className="catalog-subhead">{brand} · načítám...</div>;
+                            return [
+                              <div key={`loading-${brand}`} className="catalog-subhead">{brand} · načítám...</div>,
+                            ];
                           }
                           const filtered = models.filter((m) =>
                             m.label.toLowerCase().includes(modelFilterText.toLowerCase()) ||
                             m.value.toLowerCase().includes(modelFilterText.toLowerCase()),
                           );
-                          return filtered.map((m) => (
-                            <label key={`${brand}-${m.value}`} className="catalog-item model">
-                              <input
-                                type="checkbox"
-                                checked={selectedModels.includes(m.value)}
-                                onChange={() => toggleModel(m.value)}
-                              />
-                              <span>{m.label}</span>
-                            </label>
-                          ));
-                        })()}
+                          return [
+                            <div key={`head-${brand}`} className="catalog-subhead">{brand}</div>,
+                            ...filtered.map((m) => (
+                              <label key={`${brand}-${m.value}`} className="catalog-item model">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedModels.includes(m.value)}
+                                  onChange={() => toggleModel(m.value)}
+                                />
+                                <span>{m.label}</span>
+                              </label>
+                            )),
+                          ];
+                        })}
                       </div>
                     </div>
                   )}
@@ -734,6 +758,7 @@ export default function App() {
           <div className="debug-ticker-wrap">
             <span className={`debug-ticker-dot${isRunning ? " active" : ""}`} title={isRunning ? "Běží" : "Nečinný"} />
             <span className="debug-ticker-text" title={logs.length > 0 ? logs[logs.length - 1] : ""}>
+              <span className="debug-prefix">[{tickerPrefix()}]</span>{" "}
               {logs.length > 0 ? logs[logs.length - 1] : <span className="debug-ticker-empty">Žádný log výstup.</span>}
             </span>
             <button

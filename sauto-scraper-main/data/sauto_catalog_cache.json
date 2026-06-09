@@ -1190,8 +1190,12 @@
       "collector_version": 2
     },
     "skoda": {
-      "updated_at": 1780947068,
+      "updated_at": 1781025876,
       "items": [
+        {
+          "value": "105",
+          "label": "105"
+        },
         {
           "value": "enyaq",
           "label": "Enyaq"
@@ -1225,10 +1229,6 @@
           "label": "Rapid"
         },
         {
-          "value": "roomster",
-          "label": "Roomster"
-        },
-        {
           "value": "scala",
           "label": "Scala"
         },
@@ -1240,7 +1240,8 @@
           "value": "yeti",
           "label": "Yeti"
         }
-      ]
+      ],
+      "collector_version": 2
     },
     "abarth": {
       "updated_at": 1780947291,
@@ -1312,6 +1313,288 @@
         {
           "value": "transit-custom",
           "label": "Transit Custom"
+        }
+      ],
+      "collector_version": 2
+    },
+    "dodge": {
+      "updated_at": 1781025841,
+      "items": [
+        {
+          "value": "challenger",
+          "label": "Challenger"
+        },
+        {
+          "value": "durango",
+          "label": "Durango"
+        }
+      ],
+      "collector_version": 2
+    },
+    "fiat": {
+      "updated_at": 1781025847,
+      "items": [
+        {
+          "value": "500",
+          "label": "500"
+        },
+        {
+          "value": "500l",
+          "label": "500L"
+        },
+        {
+          "value": "500x",
+          "label": "500X"
+        },
+        {
+          "value": "ducato",
+          "label": "Ducato"
+        },
+        {
+          "value": "freemont",
+          "label": "Freemont"
+        },
+        {
+          "value": "panda",
+          "label": "Panda"
+        },
+        {
+          "value": "scudo",
+          "label": "Scudo"
+        }
+      ],
+      "collector_version": 2
+    },
+    "lexus": {
+      "updated_at": 1781025866,
+      "items": [
+        {
+          "value": "lbx",
+          "label": "LBX"
+        },
+        {
+          "value": "rx",
+          "label": "RX"
+        },
+        {
+          "value": "rx-450h",
+          "label": "RX 450h"
+        },
+        {
+          "value": "rx-500h",
+          "label": "RX 500h"
+        }
+      ],
+      "collector_version": 2
+    },
+    "subaru": {
+      "updated_at": 1781025936,
+      "items": [
+        {
+          "value": "brz",
+          "label": "BRZ"
+        },
+        {
+          "value": "forester",
+          "label": "Forester"
+        },
+        {
+          "value": "impreza",
+          "label": "Impreza"
+        },
+        {
+          "value": "outback",
+          "label": "Outback"
+        },
+        {
+          "value": "wrx-sti",
+          "label": "WRX STI"
+        },
+        {
+          "value": "xv",
+          "label": "XV"
+        }
+      ],
+      "collector_version": 2
+    },
+    "suzuki": {
+      "updated_at": 1781025939,
+      "items": [
+        {
+          "value": "grand-vitara",
+          "label": "Grand Vitara"
+        },
+        {
+          "value": "jimny",
+          "label": "Jimny"
+        },
+        {
+          "value": "vitara",
+          "label": "Vitara"
+        }
+      ],
+      "collector_version": 2
+    },
+    "ssangyong": {
+      "updated_at": 1781026013,
+      "items": [
+        {
+          "value": "korando",
+          "label": "Korando"
+        },
+        {
+          "value": "rexton",
+          "label": "Rexton"
+        },
+        {
+          "value": "tivoli",
+          "label": "Tivoli"
+        }
+      ],
+      "collector_version": 2
+    },
+    "tesla": {
+      "updated_at": 1781026016,
+      "items": [
+        {
+          "value": "model-3",
+          "label": "Model 3"
+        },
+        {
+          "value": "model-s",
+          "label": "Model S"
+        },
+        {
+          "value": "model-x",
+          "label": "Model X"
+        },
+        {
+          "value": "model-y",
+          "label": "Model Y"
+        }
+      ],
+      "collector_version": 2
+    },
+    "toyota": {
+      "updated_at": 1781026032,
+      "items": [
+        {
+          "value": "auris",
+          "label": "Auris"
+        },
+        {
+          "value": "aygo",
+          "label": "Aygo"
+        },
+        {
+          "value": "c-hr",
+          "label": "C-HR"
+        },
+        {
+          "value": "camry",
+          "label": "Camry"
+        },
+        {
+          "value": "corolla",
+          "label": "Corolla"
+        },
+        {
+          "value": "land-cruiser",
+          "label": "Land Cruiser"
+        },
+        {
+          "value": "proace",
+          "label": "Proace"
+        },
+        {
+          "value": "rav4",
+          "label": "Rav4"
+        },
+        {
+          "value": "yaris",
+          "label": "Yaris"
+        }
+      ],
+      "collector_version": 2
+    },
+    "bmw": {
+      "updated_at": 1781026061,
+      "items": [
+        {
+          "value": "i3",
+          "label": "i3"
+        },
+        {
+          "value": "i5",
+          "label": "i5"
+        },
+        {
+          "value": "i8",
+          "label": "i8"
+        },
+        {
+          "value": "m2",
+          "label": "M2"
+        },
+        {
+          "value": "m5",
+          "label": "M5"
+        },
+        {
+          "value": "rada-1",
+          "label": "Řada 1"
+        },
+        {
+          "value": "rada-2",
+          "label": "Řada 2"
+        },
+        {
+          "value": "rada-3",
+          "label": "Řada 3"
+        },
+        {
+          "value": "rada-5",
+          "label": "Řada 5"
+        },
+        {
+          "value": "rada-6",
+          "label": "Řada 6"
+        },
+        {
+          "value": "rada-8",
+          "label": "Řada 8"
+        },
+        {
+          "value": "x1",
+          "label": "X1"
+        },
+        {
+          "value": "x2",
+          "label": "X2"
+        },
+        {
+          "value": "x3",
+          "label": "X3"
+        },
+        {
+          "value": "x4",
+          "label": "X4"
+        },
+        {
+          "value": "x5",
+          "label": "X5"
+        },
+        {
+          "value": "x6",
+          "label": "X6"
+        },
+        {
+          "value": "x7",
+          "label": "X7"
+        },
+        {
+          "value": "z4",
+          "label": "Z4"
         }
       ],
       "collector_version": 2

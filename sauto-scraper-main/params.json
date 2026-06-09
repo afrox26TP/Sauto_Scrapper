@@ -21,5 +21,7 @@
   "deep_undervalue_ratio_threshold": "0.75",
   "overprice_ratio_threshold": "1.18",
   "discord_notify_only_new": "true",
-  "discord_webhook_url": "https://discordapp.com/api/webhooks/1478178620991209615/dmix_llEFt-_C_K4KCKSwBe4tvR37XmDvzrdUhMh2UFOduZ0mua-6tGiSFizXvgn5m_U"
+  "discord_webhook_url": "https://discordapp.com/api/webhooks/1478178620991209615/dmix_llEFt-_C_K4KCKSwBe4tvR37XmDvzrdUhMh2UFOduZ0mua-6tGiSFizXvgn5m_U",
+  "manufacturer_seo_name": "audi,bmw",
+  "model_seo_name": "a3,rada-1"
 }

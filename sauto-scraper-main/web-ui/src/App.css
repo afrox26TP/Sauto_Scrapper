@@ -585,6 +585,12 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   text-overflow: ellipsis;
 }
 
+.debug-prefix {
+  color: #93c5fd;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
 .debug-ticker-empty {
   color: #475569;
 }
