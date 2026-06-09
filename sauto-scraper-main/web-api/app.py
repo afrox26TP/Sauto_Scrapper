@@ -357,6 +357,9 @@ def run_scraper(payload: RunPayload) -> dict[str, Any]:
     if ROOT_DIR not in resolved.parents and resolved != ROOT_DIR:
         raise HTTPException(status_code=400, detail="output_file must stay inside project directory.")
 
+    # Prevent stale UI data: start each run with a clean target result file.
+    dump_json(resolved, [])
+
     try:
         status = runner.start(output_file=output_file)
     except RuntimeError as exc:
@@ -396,7 +399,13 @@ def get_results(path: str | None = None) -> dict[str, Any]:
         annotated.append({**item, "is_marked": ad_id in marked_ids})
 
     sorted_items = sorted(annotated, key=lambda item: item.get("score", 0), reverse=True)
-    return {"items": sorted_items, "path": str(result_path.relative_to(ROOT_DIR)), "count": len(sorted_items), "marked_ids": sorted(marked_ids)}
+    return {
+        "items": sorted_items,
+        "path": str(result_path.relative_to(ROOT_DIR)),
+        "count": len(sorted_items),
+        "marked_ids": sorted(marked_ids),
+        "scraper_running": runner.is_running(),
+    }
 
 
 @app.get("/api/catalog/brands")

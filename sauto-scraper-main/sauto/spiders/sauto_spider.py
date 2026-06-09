@@ -924,6 +924,7 @@ class SautoSpider(scrapy.Spider):
 
     NOTIFIED_FILE = "notified_ids.json"
     INTERESTING_OFFERS_FILE = "data/sauto_interesting.json"
+    CATALOG_CACHE_FILE = "data/sauto_catalog_cache.json"
 
     def __init__(self, *args, **kwargs):
         super(SautoSpider, self).__init__(*args, **kwargs)
@@ -939,6 +940,7 @@ class SautoSpider(scrapy.Spider):
         self.items_scraped = 0
         self.scored_cars = []
         self.all_items = []
+        self.seen_ad_ids = set()
 
         self.strict_manufacturer_seo = None
         self.strict_model_seo = None
@@ -1062,12 +1064,9 @@ class SautoSpider(scrapy.Spider):
         if webhook_from_params:
             self.discord_webhook_url = webhook_from_params
 
-        self.min_interesting_score = max(
-            1,
-            self._to_int(
-                params.pop("interesting_min_score", self.min_interesting_score),
-                self.min_interesting_score,
-            ),
+        self.min_interesting_score = self._to_int(
+            params.pop("interesting_min_score", self.min_interesting_score),
+            self.min_interesting_score,
         )
         self.top_n = max(1, self._to_int(params.pop("interesting_top_n", self.top_n), self.top_n))
         self.min_price = max(0, self._to_int(params.pop("interesting_min_price", self.min_price), self.min_price))
@@ -1182,6 +1181,97 @@ class SautoSpider(scrapy.Spider):
                 return False
 
         return True
+
+    @staticmethod
+    def _split_csv(value):
+        return [x.strip() for x in str(value or "").split(",") if x.strip()]
+
+    def _load_cached_model_map(self):
+        try:
+            with open(self.CATALOG_CACHE_FILE, "r", encoding="utf-8") as f:
+                cache = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            return {}
+
+        model_map = {}
+        models_by_brand = cache.get("models") if isinstance(cache, dict) else None
+        if not isinstance(models_by_brand, dict):
+            return model_map
+
+        for manufacturer, payload in models_by_brand.items():
+            if not isinstance(payload, dict):
+                continue
+            items = payload.get("items") or []
+            model_map[manufacturer] = {
+                str(item.get("value") or "").strip()
+                for item in items
+                if isinstance(item, dict) and str(item.get("value") or "").strip()
+            }
+        return model_map
+
+    def _build_manufacturer_model_seo(self, params: dict):
+        existing = self._norm_str(params.get("manufacturer_model_seo"))
+        if existing:
+            return existing
+
+        manufacturers = self._split_csv(params.get("manufacturer_seo_name"))
+        models = self._split_csv(params.get("model_seo_name"))
+        if not manufacturers:
+            return None
+
+        if not models:
+            return "|".join(manufacturers)
+
+        model_map = self._load_cached_model_map()
+        pairs = []
+        for manufacturer in manufacturers:
+            brand_models = model_map.get(manufacturer)
+            for model in models:
+                if brand_models is not None and model not in brand_models:
+                    continue
+                pairs.append(f"{manufacturer}:{model}")
+
+        if pairs:
+            return "|".join(pairs)
+
+        # The Sauto API expects brand/model filters as `manufacturer_model_seo`
+        # with `brand:model` pairs joined by `|`. The UI still stores our older
+        # structure (`manufacturer_seo_name` + `model_seo_name`), so keep that
+        # public structure and translate it only for the upstream API request.
+        # If the local catalog cache is missing/stale, fall back to the old
+        # broad behavior plus strict local filtering rather than returning zero.
+        return "|".join(
+            f"{manufacturer}:{model}"
+            for manufacturer in manufacturers
+            for model in models
+        )
+
+    def _build_search_params(self, params: dict):
+        search_params = params.copy()
+        manufacturer_model_seo = self._build_manufacturer_model_seo(search_params)
+
+        # These keys are local/UI compatibility filters. Sauto ignores them on
+        # /items/search, so sending them makes the request look filtered while it
+        # is actually broad. The real Sauto filter is manufacturer_model_seo.
+        search_params.pop("manufacturer_seo_name", None)
+        search_params.pop("model_seo_name", None)
+        if manufacturer_model_seo:
+            search_params["manufacturer_model_seo"] = manufacturer_model_seo
+
+        search_params["offset"] = str(search_params.get("offset", "0"))
+        return search_params
+
+    def _make_search_request(self, params: dict):
+        url = f"{self.BASE_URL}{urlencode(params)}"
+        _url_logger.info(f"Date: {datetime.datetime.now()}, scraping url: {url}")
+        return scrapy.Request(
+            url=url,
+            method="GET",
+            callback=self.parse_search,
+            errback=self.handle_error,
+            meta={"params": params},
+            dont_filter=True,
+        )
 
     def _extract_total(self, data: dict) -> int:
         for path in (("pagination", "total"), ("meta", "total"), ("data", "total"), ("total",)):
@@ -1481,22 +1571,11 @@ class SautoSpider(scrapy.Spider):
             reverse=True,
         )
 
-    @log_url
     def start_requests(self):
         params = self.read_params_from_json("params.json")
         self._load_runtime_options(params)
         self._load_strict_filters(params)
-        params["offset"] = str(params.get("offset", "0"))
-
-        url = f"{self.BASE_URL}{urlencode(params)}"
-        yield scrapy.Request(
-            url=url,
-            method="GET",
-            callback=self.parse_search,
-            errback=self.handle_error,
-            meta={"params": params},
-            dont_filter=True,
-        )
+        yield self._make_search_request(self._build_search_params(params))
 
     def parse_search(self, response):
         try:
@@ -1513,6 +1592,11 @@ class SautoSpider(scrapy.Spider):
             manufacturer = (r.get("manufacturer_cb") or {}).get("seo_name")
             model = (r.get("model_cb") or {}).get("seo_name")
             ad_id = r.get("id")
+
+            if ad_id and ad_id in self.seen_ad_ids:
+                continue
+            if ad_id:
+                self.seen_ad_ids.add(ad_id)
 
             r["manufacturer_name"] = (r.get("manufacturer_cb") or {}).get("name")
             r["model_name"] = (r.get("model_cb") or {}).get("name")
@@ -1538,34 +1622,20 @@ class SautoSpider(scrapy.Spider):
                 yield r
 
         params = (response.meta.get("params") or {}).copy()
-        limit = int(params.get("limit", 35))
-        offset = int(params.get("offset", 0))
+        limit = max(1, self._to_int(params.get("limit", 35), 35))
+        offset = max(0, self._to_int(params.get("offset", 0), 0))
         total = self._extract_total(data)
 
         if total == -1:
             if len(results) == limit and limit > 0:
                 params["offset"] = str(offset + limit)
-                yield scrapy.Request(
-                    url=f"{self.BASE_URL}{urlencode(params)}",
-                    method="GET",
-                    callback=self.parse_search,
-                    errback=self.handle_error,
-                    meta={"params": params},
-                    dont_filter=True,
-                )
+                yield self._make_search_request(params)
             return
 
         next_offset = offset + limit
         if next_offset < total:
             params["offset"] = str(next_offset)
-            yield scrapy.Request(
-                url=f"{self.BASE_URL}{urlencode(params)}",
-                method="GET",
-                callback=self.parse_search,
-                errback=self.handle_error,
-                meta={"params": params},
-                dont_filter=True,
-            )
+            yield self._make_search_request(params)
 
     def parse_detail(self, response):
         base_item = response.meta.get("base_item") or {}
@@ -1706,11 +1776,10 @@ class SautoSpider(scrapy.Spider):
 
     def closed(self, reason):
         sorted_offers = self._apply_advanced_sorting(list(self.scored_cars))
-        if self.all_items:
-            # Keep all matched ads in the file, not just the scored subset.
-            all_offers = self._apply_advanced_sorting(list(self.all_items))
-        else:
-            all_offers = sorted_offers
+        # Keep every scored matching ad in the ranked output, including negative
+        # scores. Raw base items are still yielded to Scrapy's feed, but the UI
+        # result file must contain evaluated offers with real `score` fields.
+        all_offers = sorted_offers
         interesting_offers = [offer for offer in sorted_offers if offer["interesting"]]
         top_offers = interesting_offers[: self.top_n]
 

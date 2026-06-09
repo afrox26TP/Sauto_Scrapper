@@ -29,8 +29,8 @@ const PARAM_GROUPS = [
   {
     label: "Hodnocení",
     fields: [
-      { key: "interesting_min_score", type: "slider", label: "Min. skóre", min: 0, max: 300, step: 1 },
-      { key: "interesting_top_n", type: "slider", label: "Top N", min: 1, max: 100, step: 1 },
+      { key: "interesting_min_score", type: "slider", label: "Min. skóre", min: -1000, max: 300, step: 1 },
+      { key: "interesting_top_n", type: "slider", label: "Top N", min: 1, max: 5000, step: 1 },
       { key: "interesting_min_price", type: "slider", label: "Min. cena pro hodnocení", min: 0, max: 500000, step: 5000, fmt: "price" },
     ],
   },
@@ -156,6 +156,10 @@ function Field({ def, value, onChange }) {
 
 export default function App() {
   const [params, setParams] = useState({});
+  const [theme, setTheme] = useState(() => {
+    const stored = window.localStorage.getItem("sauto_theme");
+    return stored === "dark" ? "dark" : "light";
+  });
   const [status, setStatus] = useState(null);
   const [items, setItems] = useState([]);
   const [logs, setLogs] = useState([]);
@@ -170,6 +174,7 @@ export default function App() {
   const [showLogsModal, setShowLogsModal] = useState(false);
   const [popupLog, setPopupLog] = useState(null);
   const [apiHealth, setApiHealth] = useState(null);
+  const [scraperRunningFromResults, setScraperRunningFromResults] = useState(false);
   const [brandOptions, setBrandOptions] = useState([]);
   const [selectedBrands, setSelectedBrands] = useState([]);
   const [selectedModels, setSelectedModels] = useState([]);
@@ -184,6 +189,11 @@ export default function App() {
 
   const isRunning = Boolean(status?.running);
   const busy = loading || initialLoading || isRunning || runPhase !== "idle";
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("theme-dark", theme === "dark");
+    window.localStorage.setItem("sauto_theme", theme);
+  }, [theme]);
 
   function fmtUptime(s) {
     if (!s && s !== 0) return "—";
@@ -211,6 +221,7 @@ export default function App() {
     setItems(data.items || []);
     setMarkedIds(data.marked_ids || []);
     setResultsPath(data.path || resultsPath);
+    setScraperRunningFromResults(Boolean(data.scraper_running));
     setSelectedIds((prev) => prev.filter((id) => (data.items || []).some((item) => String(item.ad_id) === String(id))));
   }
 
@@ -311,7 +322,7 @@ export default function App() {
   }
 
   function toggleSelectVisible() {
-    const visibleIds = items.slice(0, 100).map((item) => resultKey(item)).filter(Boolean);
+    const visibleIds = items.map((item) => resultKey(item)).filter(Boolean);
     if (visibleIds.length === 0) return;
     const allSelected = visibleIds.every((id) => selectedIds.includes(id));
     setSelectedIds(allSelected ? selectedIds.filter((id) => !visibleIds.includes(id)) : Array.from(new Set([...selectedIds, ...visibleIds])));
@@ -375,7 +386,7 @@ export default function App() {
   }
 
   async function exportResults(scope) {
-    const visible = items.slice(0, 100);
+    const visible = items;
     const exportItems = scope === "selected"
       ? visible.filter((item) => selectedIds.includes(resultKey(item)))
       : visible;
@@ -569,7 +580,7 @@ export default function App() {
 
   // Extra params from params.json that aren't in PARAM_GROUPS (e.g. discord webhook)
   const extraKeys = Object.keys(params).filter((k) => !IGNORED_KEYS.has(k));
-  const visibleItems = items.slice(0, 100);
+  const visibleItems = items;
   const allVisibleSelected = visibleItems.length > 0 && visibleItems.every((item) => selectedIds.includes(resultKey(item)));
 
   return (
@@ -581,6 +592,14 @@ export default function App() {
           {statusLabel()}
         </span>
         <div className="topbar-spacer" />
+        <button
+          type="button"
+          className="theme-toggle"
+          onClick={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
+          title="Přepnout tmavý režim"
+        >
+          {theme === "dark" ? "Světlý režim" : "Tmavý režim"}
+        </button>
         {apiHealth && (
           <div className={`api-status-chip${apiHealth.status === "ok" ? " up" : " down"}`}>
             <span className="api-status-dot" />
@@ -783,6 +802,7 @@ export default function App() {
             <div>
               <strong>Výsledky</strong>
               <span className="muted">{items.length} záznamů</span>
+              {scraperRunningFromResults && <span className="muted"> · běží scrape, data se doplňují</span>}
             </div>
             <div className="results-actions">
               <button className="link-btn" onClick={() => exportResults("all")}>Export všech</button>
@@ -810,7 +830,7 @@ export default function App() {
             </div>
             <div className="selection-actions">
               <button className="link-btn" onClick={toggleSelectVisible}>
-                {items.slice(0, 100).every((item) => selectedIds.includes(resultKey(item))) ? "Odznačit viditelné" : "Vybrat viditelné"}
+                {items.every((item) => selectedIds.includes(resultKey(item))) ? "Odznačit viditelné" : "Vybrat viditelné"}
               </button>
               <button className="link-btn" onClick={() => setSelectedIds([])} disabled={selectedCount === 0}>Vyčistit výběr</button>
             </div>

@@ -1132,7 +1132,7 @@
       "collector_version": 2
     },
     "audi": {
-      "updated_at": 1780948018,
+      "updated_at": 1781044244,
       "items": [
         {
           "value": "a3",
@@ -1159,28 +1159,28 @@
           "label": "A6"
         },
         {
-          "value": "a6-avant",
-          "label": "A6 Avant"
+          "value": "a6-allroad",
+          "label": "A6 allroad"
         },
         {
           "value": "a7",
           "label": "A7"
         },
         {
-          "value": "a8",
-          "label": "A8"
-        },
-        {
-          "value": "e-tron-gt",
-          "label": "e-tron GT"
+          "value": "e-tron",
+          "label": "e-tron"
         },
         {
           "value": "q2",
           "label": "Q2"
         },
         {
-          "value": "q3",
-          "label": "Q3"
+          "value": "q4-e-tron",
+          "label": "Q4 e-tron"
+        },
+        {
+          "value": "q5",
+          "label": "Q5"
         },
         {
           "value": "q7",
@@ -1191,8 +1191,24 @@
           "label": "Q8"
         },
         {
-          "value": "s5",
-          "label": "S5"
+          "value": "q8-e-tron",
+          "label": "Q8 e-tron"
+        },
+        {
+          "value": "rs-q8",
+          "label": "RS Q8"
+        },
+        {
+          "value": "rs4",
+          "label": "RS4"
+        },
+        {
+          "value": "rs5",
+          "label": "RS5"
+        },
+        {
+          "value": "rs6",
+          "label": "RS6"
         },
         {
           "value": "s6",
@@ -1203,8 +1219,20 @@
           "label": "S7"
         },
         {
+          "value": "s8",
+          "label": "S8"
+        },
+        {
           "value": "sq5",
           "label": "SQ5"
+        },
+        {
+          "value": "sq7",
+          "label": "SQ7"
+        },
+        {
+          "value": "sq8",
+          "label": "SQ8"
         }
       ],
       "collector_version": 2
