@@ -1,11 +1,7 @@
 {
   "brands": {
-    "updated_at": 1780946521,
+    "updated_at": 1781041047,
     "items": [
-      {
-        "value": "abarth",
-        "label": "Abarth"
-      },
       {
         "value": "alfa-romeo",
         "label": "Alfa Romeo"
@@ -13,10 +9,6 @@
       {
         "value": "alpina",
         "label": "Alpina"
-      },
-      {
-        "value": "aston-martin",
-        "label": "Aston Martin"
       },
       {
         "value": "audi",
@@ -35,12 +27,16 @@
         "label": "BMW"
       },
       {
+        "value": "buick",
+        "label": "Buick"
+      },
+      {
         "value": "byd",
         "label": "BYD"
       },
       {
-        "value": "caterham",
-        "label": "Caterham"
+        "value": "cadillac",
+        "label": "Cadillac"
       },
       {
         "value": "chery",
@@ -83,12 +79,20 @@
         "label": "Ford"
       },
       {
+        "value": "gmc",
+        "label": "GMC"
+      },
+      {
         "value": "honda",
         "label": "Honda"
       },
       {
         "value": "hyundai",
         "label": "Hyundai"
+      },
+      {
+        "value": "isuzu",
+        "label": "Isuzu"
       },
       {
         "value": "jaecoo",
@@ -103,24 +107,32 @@
         "label": "Jeep"
       },
       {
-        "value": "kgm",
-        "label": "KGM"
-      },
-      {
         "value": "kia",
         "label": "Kia"
+      },
+      {
+        "value": "lada",
+        "label": "Lada"
+      },
+      {
+        "value": "lamborghini",
+        "label": "Lamborghini"
       },
       {
         "value": "land-rover",
         "label": "Land Rover"
       },
       {
+        "value": "leapmotor",
+        "label": "Leapmotor"
+      },
+      {
         "value": "lexus",
         "label": "Lexus"
       },
       {
-        "value": "lynk-co",
-        "label": "Lynk & Co"
+        "value": "lincoln",
+        "label": "Lincoln"
       },
       {
         "value": "maserati",
@@ -131,20 +143,12 @@
         "label": "Mazda"
       },
       {
-        "value": "mclaren",
-        "label": "McLaren"
-      },
-      {
         "value": "mercedes-benz",
         "label": "Mercedes-Benz"
       },
       {
         "value": "mg",
         "label": "MG"
-      },
-      {
-        "value": "microcar",
-        "label": "Microcar"
       },
       {
         "value": "mini",
@@ -167,8 +171,16 @@
         "label": "Opel"
       },
       {
+        "value": "ostatni",
+        "label": "Ostatní"
+      },
+      {
         "value": "peugeot",
         "label": "Peugeot"
+      },
+      {
+        "value": "polestar",
+        "label": "Polestar"
       },
       {
         "value": "porsche",
@@ -181,6 +193,14 @@
       {
         "value": "renault",
         "label": "Renault"
+      },
+      {
+        "value": "rolls-royce",
+        "label": "Rolls-Royce"
+      },
+      {
+        "value": "saab",
+        "label": "Saab"
       },
       {
         "value": "seat",

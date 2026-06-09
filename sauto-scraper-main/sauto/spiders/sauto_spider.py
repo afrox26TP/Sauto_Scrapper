@@ -247,31 +247,72 @@ class CarEvaluator:
         return round(min(max(value, 2.3), 30.0), 2)
 
     @staticmethod
-    def _estimate_annual_insurance(price, power_kw, fuel_seo, drive_type, gearbox_type, age_years, brand_tier):
-        estimate = 2400.0
-        estimate += power_kw * 24.0
-        estimate += min(2200.0, price * 0.0045)
+    def _estimate_annual_insurance(
+        price,
+        power_kw,
+        fuel_seo,
+        drive_type,
+        gearbox_type,
+        age_years,
+        brand_tier,
+        engine_volume,
+    ):
+        estimate = 2300.0
+
+        # Engine power in buckets reflects insurer risk tables better than a pure linear term.
+        if power_kw <= 55:
+            estimate += 250.0
+        elif power_kw <= 75:
+            estimate += 700.0
+        elif power_kw <= 95:
+            estimate += 1250.0
+        elif power_kw <= 120:
+            estimate += 1950.0
+        elif power_kw <= 150:
+            estimate += 3000.0
+        else:
+            estimate += 4200.0
+
+        estimate += min(2600.0, price * 0.0050)
 
         if fuel_seo == "nafta":
-            estimate += 250.0
-        if drive_type == "awd":
-            estimate += 450.0
-        elif drive_type == "rwd":
-            estimate += 200.0
-        if gearbox_type == "automatic":
-            estimate += 200.0
+            estimate += 300.0
+        elif fuel_seo == "lpg-benzin":
+            estimate += 180.0
+        elif fuel_seo == "elektro":
+            estimate += 950.0
 
-        if age_years <= 5:
-            estimate += 450.0
-        elif age_years >= 15:
-            estimate -= 250.0
+        if drive_type == "awd":
+            estimate += 520.0
+        elif drive_type == "rwd":
+            estimate += 240.0
+
+        if gearbox_type == "automatic":
+            estimate += 240.0
+
+        if engine_volume >= 3000:
+            estimate += 420.0
+        elif engine_volume >= 2200:
+            estimate += 220.0
+
+        if age_years <= 2:
+            estimate += 650.0
+        elif age_years <= 5:
+            estimate += 420.0
+        elif age_years >= 18:
+            estimate -= 420.0
+        elif age_years >= 12:
+            estimate -= 220.0
 
         if brand_tier == "premium":
-            estimate += 1000.0
+            estimate += 1100.0
         elif brand_tier == "budget":
-            estimate -= 300.0
+            estimate -= 320.0
 
-        return int(max(2500, min(18000, round(estimate))))
+        if power_kw >= 140 and brand_tier == "premium":
+            estimate += 380.0
+
+        return int(max(2500, min(22000, round(estimate))))
 
     @staticmethod
     def _estimate_annual_maintenance(
@@ -284,29 +325,59 @@ class CarEvaluator:
         first_owner,
         tuning,
         brand_tier,
+        fuel_seo,
+        engine_volume,
+        power_kw,
     ):
-        estimate = 4200.0
-        estimate += age_years * 260.0
-        estimate += max(0, tachometer - 90000) / 1000.0 * 38.0
-        estimate += price * 0.010
+        estimate = 4000.0
+
+        estimate += age_years * 290.0
+        estimate += max(0, tachometer - 80000) / 1000.0 * 42.0
+        estimate += price * 0.0105
 
         if drive_type == "awd":
-            estimate += 1200.0
+            estimate += 1300.0
         if gearbox_type == "automatic":
-            estimate += 900.0
+            estimate += 1050.0
         if service_book:
-            estimate -= 800.0
+            estimate -= 950.0
         if first_owner:
-            estimate -= 200.0
+            estimate -= 300.0
         if tuning:
-            estimate += 900.0
+            estimate += 1200.0
+
+        if fuel_seo == "nafta":
+            estimate += 500.0
+        elif fuel_seo == "lpg-benzin":
+            estimate += 420.0
+        elif fuel_seo == "elektro":
+            estimate += 650.0
+
+        if engine_volume >= 3000:
+            estimate += 650.0
+        elif engine_volume >= 2200:
+            estimate += 300.0
+
+        if power_kw >= 170:
+            estimate += 450.0
+        elif power_kw <= 60:
+            estimate -= 120.0
 
         if brand_tier == "premium":
-            estimate += 1800.0
+            estimate += 1900.0
         elif brand_tier == "budget":
-            estimate -= 500.0
+            estimate -= 550.0
 
-        return int(max(3000, min(32000, round(estimate))))
+        if age_years >= 14 and gearbox_type == "automatic":
+            estimate += 700.0
+        if age_years >= 13 and drive_type == "awd":
+            estimate += 600.0
+        if tachometer >= 220000 and brand_tier == "premium":
+            estimate += 900.0
+        if tachometer >= 250000 and gearbox_type == "automatic":
+            estimate += 700.0
+
+        return int(max(3000, min(38000, round(estimate))))
 
     @classmethod
     def _equipment_depth_score(cls, equipment_names):
@@ -479,11 +550,8 @@ class CarEvaluator:
         score = 0
         reasons = []
 
-        text_bonus, text_bonus_reasons = cls._apply_pattern_score(full_text, cls.BONUS_PATTERNS)
-        text_penalty, text_penalty_reasons = cls._apply_pattern_score(full_text, cls.PENALTY_PATTERNS)
-        score += text_bonus + text_penalty
-        reasons.extend(text_bonus_reasons)
-        reasons.extend(text_penalty_reasons)
+        # Free-text claims from title/description are not scored anymore.
+        # They are too easy to spoof and often read like marketing copy.
 
         first_owner = bool(result.get("first_owner"))
         crash_status = result.get("crashed_in_past")
@@ -711,6 +779,7 @@ class CarEvaluator:
             gearbox_type=gearbox_type,
             age_years=age_years,
             brand_tier=brand_tier,
+            engine_volume=engine_volume,
         )
         annual_maintenance = cls._estimate_annual_maintenance(
             price=price,
@@ -722,8 +791,28 @@ class CarEvaluator:
             first_owner=first_owner,
             tuning=tuning,
             brand_tier=brand_tier,
+            fuel_seo=fuel_seo,
+            engine_volume=engine_volume,
+            power_kw=power_kw,
         )
         annual_total_cost = annual_fuel_cost + annual_insurance + annual_maintenance
+
+        # Explicit risk interactions catch combinations with historically higher ownership risk.
+        if age_years >= 12 and tachometer >= 220000 and gearbox_type == "automatic":
+            score -= 7
+            reasons.append("-7 (older high-km automatic risk)")
+        if age_years >= 13 and drive_type == "awd":
+            score -= 4
+            reasons.append("-4 (older AWD maintenance risk)")
+        if fuel_seo == "nafta" and km_per_year is not None and km_per_year < 9000:
+            score -= 6
+            reasons.append("-6 (diesel with low annual usage)")
+        if brand_tier == "premium" and tachometer >= 230000:
+            score -= 5
+            reasons.append("-5 (high-mileage premium risk)")
+        if price > 0 and power_kw >= 170 and price <= 180000:
+            score -= 5
+            reasons.append("-5 (cheap high-power risk profile)")
 
         if annual_total_cost <= 50000:
             score += 10
@@ -747,7 +836,6 @@ class CarEvaluator:
             power_kw > 0,
             tachometer > 0,
             year_match is not None,
-            bool(description.strip()),
             images_count > 0,
             bool(item.get("url")),
             drive_type != "unknown",
@@ -755,19 +843,23 @@ class CarEvaluator:
             months_to_stk is not None,
             euro_value > 0,
             len(vin) >= 10,
+            bool(result.get("manufacturer_cb")),
+            bool(result.get("model_cb")),
+            bool(result.get("fuel_cb")),
+            bool(result.get("vehicle_body_cb")),
         ]
         completeness_ratio = sum(1 for v in completeness_checks if v) / len(completeness_checks)
-        confidence_score = int(round(completeness_ratio * 25))
-
-        if len(description) >= 250:
-            confidence_score += 6
-        elif len(description) >= 120:
-            confidence_score += 3
+        confidence_score = int(round(completeness_ratio * 28))
 
         if images_count >= 10:
             confidence_score += 5
         elif images_count >= 5:
             confidence_score += 3
+
+        if (result.get("equipment_cb") or []):
+            confidence_score += 3
+        if listing_age_days is not None:
+            confidence_score += 2
 
         if service_book:
             confidence_score += 2
