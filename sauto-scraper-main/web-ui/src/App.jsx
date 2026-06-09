@@ -67,6 +67,15 @@ const BASIC_GROUPS = PARAM_GROUPS.slice(0, 3);
 const ADVANCED_GROUPS = PARAM_GROUPS.slice(3);
 const IGNORED_KEYS = new Set(PARAM_GROUPS.flatMap((g) => g.fields.map((f) => f.key)));
 
+const VALUATION_META = {
+  deep_undervalued: { icon: "↘", label: "deep_undervalued", title: "Silně podhodnocené" },
+  undervalued: { icon: "↓", label: "undervalued", title: "Podhodnocené" },
+  fair: { icon: "→", label: "fair", title: "Férová cena" },
+  slightly_overpriced: { icon: "↗", label: "slightly_overpriced", title: "Lehce předražené" },
+  overpriced: { icon: "↑", label: "overpriced", title: "Předražené" },
+  unknown: { icon: "•", label: "—", title: "Neznámé ocenění" },
+};
+
 function fmtVal(val, fmt) {
   const n = parseFloat(val);
   if (isNaN(n)) return val ?? "";
@@ -862,6 +871,8 @@ export default function App() {
                     const key = resultKey(item);
                     const selected = selectedIds.includes(key);
                     const marked = markedIds.includes(String(item.ad_id));
+                    const valuationKey = item.valuation_label || "unknown";
+                    const valuation = VALUATION_META[valuationKey] || VALUATION_META.unknown;
                     return (
                     <tr key={item.ad_id || i} className={`${selected ? "row-selected" : ""}${marked ? " row-marked" : ""}`}>
                       <td className="cell-check">
@@ -882,8 +893,12 @@ export default function App() {
                       <td>{item.drive_type || "—"}</td>
                       <td>{item.gearbox_type || "—"}</td>
                       <td>
-                        <span className={`pill pill-${item.valuation_label}`}>
-                          {item.valuation_label || "—"}
+                        <span
+                          className={`pill valuation-pill pill-${valuationKey}`}
+                          title={`${valuation.title} (${valuation.label})`}
+                          aria-label={`${valuation.title} (${valuation.label})`}
+                        >
+                          <span className="valuation-icon" aria-hidden="true">{valuation.icon}</span>
                         </span>
                       </td>
                       <td>{item.annual_total_cost ? item.annual_total_cost.toLocaleString("cs-CZ") : "—"}</td>
