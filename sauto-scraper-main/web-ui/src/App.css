@@ -277,6 +277,10 @@ body {
   align-items: start;
 }
 
+.layout.sidebar-hidden {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .sidebar {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -285,6 +289,12 @@ body {
   position: relative;
   max-height: none;
   overflow: visible;
+}
+
+.sidebar-head {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.35rem;
 }
 
 .param-group { margin-bottom: 1rem; }
@@ -644,6 +654,12 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .main { display: flex; flex-direction: column; gap: 0.75rem; }
 
+.sidebar-reopen-row {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 0.1rem;
+}
+
 .status-bar {
   display: flex;
   gap: 1.5rem;
@@ -956,6 +972,21 @@ th {
   white-space: nowrap;
 }
 
+.sortable-th {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sortable-th span {
+  margin-left: 0.22rem;
+  font-size: 0.7rem;
+  opacity: 0.8;
+}
+
+.sortable-th:hover {
+  color: var(--text);
+}
+
 td {
   padding: 0.38rem 0.7rem;
   border-bottom: 1px solid var(--border);
@@ -1018,109 +1049,8 @@ tr:hover td { background: var(--hover); }
   font-size: 0.75rem;
 }
 
-.valuation-pill {
-  font-weight: 650;
-  border: 1px solid transparent;
-  padding: 0.04rem;
-  cursor: help;
-}
-
-.valuation-icon {
-  display: inline-grid;
-  place-items: center;
-  width: 1.05rem;
-  height: 1.05rem;
-  border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 900;
-  line-height: 1;
-  background: rgba(255, 255, 255, 0.62);
-}
-
-.valuation-pill:hover .valuation-icon {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.18);
-}
-
-.pill-deep_undervalued  { background: #dcfce7; color: #15803d; }
-.pill-undervalued       { background: #d1fae5; color: #065f46; }
-.pill-fair              { background: #f0f0f0; color: #444; }
-.pill-slightly_overpriced { background: #fff7ed; color: #c2410c; }
-.pill-overpriced        { background: #fee2e2; color: #b91c1c; }
-
-.pill-deep_undervalued .valuation-icon,
-.pill-undervalued .valuation-icon {
-  background: #16a34a;
-  color: #ffffff;
-}
-
-.pill-fair .valuation-icon {
-  background: #64748b;
-  color: #ffffff;
-}
-
-.pill-slightly_overpriced .valuation-icon {
-  background: #f97316;
-  color: #ffffff;
-}
-
-.pill-overpriced .valuation-icon {
-  background: #dc2626;
-  color: #ffffff;
-}
-
-:root.theme-dark .pill-fair {
-  background: #334155;
-  color: #e2e8f0;
-}
-
 :root.theme-dark .pill {
   border: 1px solid transparent;
-}
-
-:root.theme-dark .pill-deep_undervalued {
-  background: #0f3b25;
-  border-color: #166534;
-  color: #86efac;
-}
-
-:root.theme-dark .pill-undervalued {
-  background: #0d3328;
-  border-color: #047857;
-  color: #6ee7b7;
-}
-
-:root.theme-dark .pill-slightly_overpriced {
-  background: #3b2611;
-  border-color: #9a5b13;
-  color: #fbbf24;
-}
-
-:root.theme-dark .pill-overpriced {
-  background: #3a1218;
-  border-color: #8f1d2c;
-  color: #fca5a5;
-}
-
-:root.theme-dark .pill-deep_undervalued .valuation-icon,
-:root.theme-dark .pill-undervalued .valuation-icon {
-  background: #22c55e;
-  color: #052e16;
-}
-
-:root.theme-dark .pill-fair .valuation-icon {
-  background: #94a3b8;
-  color: #0f172a;
-}
-
-:root.theme-dark .pill-slightly_overpriced .valuation-icon {
-  background: #fb923c;
-  color: #281307;
-}
-
-:root.theme-dark .pill-overpriced .valuation-icon {
-  background: #f87171;
-  color: #2a0c0c;
 }
 
 :root.theme-dark .mark-chip {

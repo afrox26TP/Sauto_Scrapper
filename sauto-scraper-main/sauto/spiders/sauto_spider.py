@@ -550,155 +550,61 @@ class CarEvaluator:
         score = 0
         reasons = []
 
-        # Free-text claims from title/description are not scored anymore.
-        # They are too easy to spoof and often read like marketing copy.
-
         first_owner = bool(result.get("first_owner"))
-        crash_status = result.get("crashed_in_past")
         service_book = bool(result.get("service_book"))
         tuning = bool(result.get("tuning"))
 
-        if first_owner:
-            score += 20
-            reasons.append("+20 (first owner)")
-        if crash_status is False:
-            score += 18
-            reasons.append("+18 (no crash history)")
-        elif crash_status is True:
-            score -= 45
-            reasons.append("-45 (crashed in past)")
-        if service_book:
-            score += 20
-            reasons.append("+20 (service book)")
-        if tuning:
-            score -= 35
-            reasons.append("-35 (tuning flag)")
-
-        if brand_tier == "premium":
-            score += 4
-            reasons.append("+4 (premium brand desirability)")
-            if age_years >= 12 or tachometer >= 220000:
-                score -= 10
-                reasons.append("-10 (older/high-km premium maintenance risk)")
-        elif brand_tier == "budget":
-            score += 3
-            reasons.append("+3 (budget brand ownership simplicity)")
-        else:
-            score += 1
-            reasons.append("+1 (mainstream brand liquidity)")
-
-        if gearbox_type == "manual":
-            score += 5
-            reasons.append("+5 (manual gearbox)")
-        elif gearbox_type == "automatic":
-            score += 3
-            reasons.append("+3 (automatic comfort)")
-            if age_years >= 14 or tachometer >= 220000:
-                score -= 6
-                reasons.append("-6 (older/high-km automatic risk)")
-        else:
-            score -= 2
-            reasons.append("-2 (unknown gearbox)")
-
-        if prefer_gearbox != "any" and gearbox_type in {"manual", "automatic"}:
-            if gearbox_type == prefer_gearbox:
-                score += 8
-                reasons.append(f"+8 (preferred gearbox: {prefer_gearbox})")
-            else:
-                score -= 8
-                reasons.append(f"-8 (non-preferred gearbox: {gearbox_type})")
-
-        if drive_type == "awd":
-            score += 6
-            reasons.append("+6 (AWD capability)")
-            if age_years >= 15 or tachometer >= 250000:
-                score -= 7
-                reasons.append("-7 (AWD complexity on older/high-km car)")
-        elif drive_type == "fwd":
-            score += 3
-            reasons.append("+3 (FWD lower running complexity)")
-        elif drive_type == "rwd":
-            score += 3
-            reasons.append("+3 (RWD dynamics)")
-            if power_kw >= 140:
-                score += 2
-                reasons.append("+2 (RWD + strong power)")
-
-        if prefer_drive != "any" and drive_type in {"fwd", "rwd", "awd"}:
-            if drive_type == prefer_drive:
-                score += 6
-                reasons.append(f"+6 (preferred drive: {prefer_drive})")
-            else:
-                score -= 6
-                reasons.append(f"-6 (non-preferred drive: {drive_type})")
-
-        if price_per_kw is not None:
-            if price_per_kw <= 1300:
-                score += 40
-                reasons.append(f"+40 (price/kW {price_per_kw})")
-            elif price_per_kw <= 1600:
-                score += 25
-                reasons.append(f"+25 (price/kW {price_per_kw})")
-            elif price_per_kw <= 2200:
-                score += 8
-                reasons.append(f"+8 (price/kW {price_per_kw})")
-            else:
-                score -= 18
-                reasons.append(f"-18 (high price/kW {price_per_kw})")
-
-        if price_per_km is not None:
-            if price_per_km <= 0.9:
-                score += 30
-                reasons.append(f"+30 (price/km {price_per_km})")
-            elif price_per_km <= 1.3:
-                score += 15
-                reasons.append(f"+15 (price/km {price_per_km})")
-            elif price_per_km >= 2.0:
-                score -= 20
-                reasons.append(f"-20 (high price/km {price_per_km})")
-
-        if km_per_year is not None:
-            if km_per_year <= 10000:
-                score += 30
-                reasons.append(f"+30 (low usage {km_per_year} km/year)")
-            elif km_per_year <= 15000:
-                score += 15
-                reasons.append(f"+15 (normal usage {km_per_year} km/year)")
-            elif km_per_year >= 25000:
-                score -= 25
-                reasons.append(f"-25 (high usage {km_per_year} km/year)")
-
-        if age_years <= 8:
-            score += 20
-            reasons.append(f"+20 (younger car: {age_years}y)")
+        if age_years <= 5:
+            score += 60
+            reasons.append(f"+60 (very low age: {age_years}y)")
+        elif age_years <= 8:
+            score += 45
+            reasons.append(f"+45 (low age: {age_years}y)")
         elif age_years <= 12:
-            score += 12
-            reasons.append(f"+12 (mid age: {age_years}y)")
-        elif age_years >= 20:
-            score -= 10
-            reasons.append(f"-10 (older car: {age_years}y)")
+            score += 25
+            reasons.append(f"+25 (reasonable age: {age_years}y)")
+        elif age_years <= 16:
+            score += 5
+            reasons.append(f"+5 (higher age: {age_years}y)")
+        elif age_years <= 20:
+            score -= 20
+            reasons.append(f"-20 (old car: {age_years}y)")
+        else:
+            score -= 35
+            reasons.append(f"-35 (very old car: {age_years}y)")
 
         if tachometer > 0:
-            if tachometer <= 120000:
-                score += 20
-                reasons.append("+20 (low mileage)")
-            elif tachometer <= 180000:
-                score += 10
-                reasons.append("+10 (reasonable mileage)")
-            elif tachometer >= 280000:
-                score -= 18
-                reasons.append("-18 (high mileage)")
+            if tachometer <= 80000:
+                score += 60
+                reasons.append(f"+60 (very low mileage: {tachometer} km)")
+            elif tachometer <= 140000:
+                score += 40
+                reasons.append(f"+40 (low mileage: {tachometer} km)")
+            elif tachometer <= 200000:
+                score += 15
+                reasons.append(f"+15 (acceptable mileage: {tachometer} km)")
+            elif tachometer <= 260000:
+                score -= 10
+                reasons.append(f"-10 (higher mileage: {tachometer} km)")
+            else:
+                score -= 30
+                reasons.append(f"-30 (very high mileage: {tachometer} km)")
 
-        if power_kw >= 110:
+        if estimated_consumption <= 5.5:
+            score += 30
+            reasons.append(f"+30 (low consumption: {estimated_consumption:.1f} l/100km)")
+        elif estimated_consumption <= 6.8:
+            score += 20
+            reasons.append(f"+20 (good consumption: {estimated_consumption:.1f} l/100km)")
+        elif estimated_consumption <= 8.0:
             score += 8
-            reasons.append("+8 (good power)")
-        elif power_kw > 0 and power_kw < 55:
+            reasons.append(f"+8 (acceptable consumption: {estimated_consumption:.1f} l/100km)")
+        elif estimated_consumption <= 9.5:
             score -= 8
-            reasons.append("-8 (low power)")
-
-        if engine_volume >= 3000:
-            score -= 4
-            reasons.append("-4 (large engine running cost)")
+            reasons.append(f"-8 (higher consumption: {estimated_consumption:.1f} l/100km)")
+        else:
+            score -= 20
+            reasons.append(f"-20 (high consumption: {estimated_consumption:.1f} l/100km)")
 
         equipment_score, equipment_reasons = cls._apply_pattern_score(equipment_text, cls.EQUIPMENT_BONUS)
         score += equipment_score
@@ -708,68 +614,20 @@ class CarEvaluator:
         score += depth_score
         reasons.extend(depth_reasons)
 
-        if images_count >= 10:
-            score += 6
-            reasons.append("+6 (many photos)")
+        if service_book:
+            score += 8
+            reasons.append("+8 (service book)")
+        if first_owner:
+            score += 5
+            reasons.append("+5 (first owner)")
+        if tuning:
+            score -= 12
+            reasons.append("-12 (tuning flag)")
 
         euro_value = cls._safe_int((result.get("euro_level_cb") or {}).get("value"), 0)
-        if euro_value >= 6:
-            score += 6
-            reasons.append("+6 (EURO 6+)")
-        elif euro_value == 5:
-            score += 3
-            reasons.append("+3 (EURO 5)")
-        elif 0 < euro_value <= 3:
-            score -= 6
-            reasons.append("-6 (low EURO class)")
-
-        if months_to_stk is not None:
-            if months_to_stk < 0:
-                score -= 16
-                reasons.append("-16 (STK expired)")
-            elif months_to_stk <= 3:
-                score -= 10
-                reasons.append("-10 (STK expires soon)")
-            elif months_to_stk <= 6:
-                score -= 6
-                reasons.append("-6 (short STK horizon)")
-            elif months_to_stk >= 24:
-                score += 8
-                reasons.append("+8 (long STK horizon)")
-            elif months_to_stk >= 12:
-                score += 4
-                reasons.append("+4 (solid STK horizon)")
-
         vin = str(result.get("vin") or "").strip()
-        if len(vin) >= 17:
-            score += 4
-            reasons.append("+4 (VIN present)")
-        else:
-            score -= 2
-            reasons.append("-2 (VIN missing/short)")
-
-        cebia_verified = bool(item.get("is_cebia_smart_code_url_verified") or result.get("is_cebia_smart_code_url_verified"))
-        if cebia_verified:
-            score += 4
-            reasons.append("+4 (Cebia verified)")
-
-        user = result.get("user") or item.get("user") or {}
-        if str(user.get("bankid_status") or "").lower() == "verified":
-            score += 2
-            reasons.append("+2 (verified seller)")
-
         airbags = cls._safe_int(result.get("airbags"), 0)
-        if airbags >= 8:
-            score += 4
-            reasons.append("+4 (airbag count)")
-        elif 0 < airbags <= 2:
-            score -= 3
-            reasons.append("-3 (low airbag count)")
-
-        origin_name = ((result.get("country_of_origin_cb") or {}).get("name") or "").lower()
-        if "nedohled" in origin_name:
-            score -= 8
-            reasons.append("-8 (unclear country of origin)")
+        user = result.get("user") or item.get("user") or {}
 
         annual_insurance = cls._estimate_annual_insurance(
             price=price,
@@ -796,40 +654,6 @@ class CarEvaluator:
             power_kw=power_kw,
         )
         annual_total_cost = annual_fuel_cost + annual_insurance + annual_maintenance
-
-        # Explicit risk interactions catch combinations with historically higher ownership risk.
-        if age_years >= 12 and tachometer >= 220000 and gearbox_type == "automatic":
-            score -= 7
-            reasons.append("-7 (older high-km automatic risk)")
-        if age_years >= 13 and drive_type == "awd":
-            score -= 4
-            reasons.append("-4 (older AWD maintenance risk)")
-        if fuel_seo == "nafta" and km_per_year is not None and km_per_year < 9000:
-            score -= 6
-            reasons.append("-6 (diesel with low annual usage)")
-        if brand_tier == "premium" and tachometer >= 230000:
-            score -= 5
-            reasons.append("-5 (high-mileage premium risk)")
-        if price > 0 and power_kw >= 170 and price <= 180000:
-            score -= 5
-            reasons.append("-5 (cheap high-power risk profile)")
-
-        if annual_total_cost <= 50000:
-            score += 10
-            reasons.append(f"+10 (low annual ownership cost: {annual_total_cost})")
-        elif annual_total_cost <= 65000:
-            score += 5
-            reasons.append(f"+5 (good annual ownership cost: {annual_total_cost})")
-        elif annual_total_cost >= 95000:
-            score -= 12
-            reasons.append(f"-12 (high annual ownership cost: {annual_total_cost})")
-
-        if annual_insurance <= 4000:
-            score += 4
-            reasons.append(f"+4 (low insurance est.: {annual_insurance})")
-        elif annual_insurance >= 9000:
-            score -= 8
-            reasons.append(f"-8 (high insurance est.: {annual_insurance})")
 
         completeness_checks = [
             price > 0,
@@ -865,11 +689,6 @@ class CarEvaluator:
             confidence_score += 2
 
         confidence_score = min(45, confidence_score)
-        confidence_impact = min(12, confidence_score // 3)
-        if confidence_impact > 0:
-            score += confidence_impact
-            reasons.append(f"+{confidence_impact} (data confidence)")
-
         age_bucket = cls._age_bucket(age_years)
         cohort_key = f"{manufacturer_seo}:{model_seo}:{fuel_seo}:{age_bucket}:{gearbox_type}:{drive_type}"
         model_family_key = f"{manufacturer_seo}:{model_seo}"
@@ -1371,166 +1190,21 @@ class SautoSpider(scrapy.Spider):
         return self._clamp_int(raw, -cap, cap)
 
     def _market_adjustment_for_offer(self, offer, context):
-        cohort_key = offer.get("cohort_key")
-        cohort_ref = context["cohorts"].get(cohort_key)
-
-        use_cohort = bool(cohort_ref and cohort_ref.get("count", 0) >= self.market_min_cohort_size)
-        ref = cohort_ref if use_cohort else context["global"]
-
-        value_score = 0
-        value_score += self._ratio_score(offer.get("price_per_kw"), ref.get("price_per_kw"), 70, 32)
-        value_score += self._ratio_score(offer.get("price_per_km"), ref.get("price_per_km"), 60, 26)
-        value_score += self._ratio_score(offer.get("km_per_year"), ref.get("km_per_year"), 48, 20)
-
-        ownership_score = 0
-        ownership_score += self._ratio_score(offer.get("annual_total_cost"), ref.get("annual_total_cost"), 78, 34)
-        ownership_score += self._ratio_score(offer.get("annual_insurance"), ref.get("annual_insurance"), 36, 14)
-        ownership_score += self._ratio_score(offer.get("annual_fuel_cost"), ref.get("annual_fuel_cost"), 26, 10)
-
-        expected_km = max(1, (offer.get("age_years") or 1) * self.market_expected_km_per_year)
-        tachometer = offer.get("tachometer") or 0
-        usage_score = 0
-        if tachometer > 0:
-            usage_ratio = tachometer / expected_km
-            usage_score = self._clamp_int((1.0 - usage_ratio) * 35, -18, 18)
-
-        regulatory_score = 0
-        months_to_stk = offer.get("months_to_stk")
-        if months_to_stk is not None:
-            if months_to_stk <= 3:
-                regulatory_score -= 3
-            elif months_to_stk >= 18:
-                regulatory_score += 2
-
-        euro_value = offer.get("euro_value") or 0
-        if euro_value >= 6:
-            regulatory_score += 2
-        elif 0 < euro_value <= 3:
-            regulatory_score -= 3
-
-        if not use_cohort:
-            value_score = int(round(value_score * 0.65))
-            ownership_score = int(round(ownership_score * 0.70))
-        elif cohort_ref and cohort_ref.get("count", 0) >= self.market_min_cohort_size * 2:
-            value_score = int(round(value_score * 1.1))
-            ownership_score = int(round(ownership_score * 1.08))
-
-        confidence_score = offer.get("confidence_score") or 0
-        confidence_adjustment = self._clamp_int((confidence_score - 16) * 0.45, -4, 10)
-
-        listing_age_days = offer.get("listing_age_days")
-        freshness_adjustment = 0
-        if listing_age_days is not None:
-            if listing_age_days <= 1:
-                freshness_adjustment = 8
-            elif listing_age_days <= 3:
-                freshness_adjustment = 6
-            elif listing_age_days <= 7:
-                freshness_adjustment = 4
-            elif listing_age_days <= 14:
-                freshness_adjustment = 2
-            elif listing_age_days >= 90:
-                freshness_adjustment = -6
-            elif listing_age_days >= 45:
-                freshness_adjustment = -3
-
-        model_key = offer.get("model_key") or "unknown:unknown"
-        model_count = context["model_counts"].get(model_key, 0)
-        rarity_adjustment = 0
-        if model_count <= 2:
-            rarity_adjustment = 4
-        elif model_count <= 5:
-            rarity_adjustment = 2
-        elif model_count >= 70:
-            rarity_adjustment = -1
-
-        model_family_key = offer.get("model_family_key") or model_key
-        model_price_ref = context["model_price_refs"].get(model_family_key)
-        model_price_score = 0
-        model_avg_price = None
-        model_price_ratio = None
-        model_price_sample = 0
-        valuation_label = "unknown"
-
-        if model_price_ref:
-            model_price_sample = model_price_ref.get("count", 0)
-            model_avg_price = model_price_ref.get("avg_price")
-
-            offer_price = offer.get("price") or 0
-            if model_price_sample >= self.model_price_min_samples and model_avg_price and offer_price > 0:
-                model_price_ratio = offer_price / model_avg_price
-
-                if model_price_ratio <= self.deep_undervalue_ratio_threshold:
-                    model_price_score = 26
-                    valuation_label = "deep_undervalued"
-                elif model_price_ratio <= self.undervalue_ratio_threshold:
-                    model_price_score = 15
-                    valuation_label = "undervalued"
-                elif model_price_ratio >= self.overprice_ratio_threshold + 0.12:
-                    model_price_score = -14
-                    valuation_label = "overpriced"
-                elif model_price_ratio >= self.overprice_ratio_threshold:
-                    model_price_score = -8
-                    valuation_label = "slightly_overpriced"
-                else:
-                    model_price_score = 2
-                    valuation_label = "fair"
-
-                if model_price_ratio <= 0.62:
-                    model_price_score -= 6
-
-                brand_weight = offer.get("brand_market_weight") or 1.0
-                model_price_score = self._clamp_int(model_price_score * brand_weight, -24, 24)
-
-        total_adjustment = (
-            value_score
-            + ownership_score
-            + model_price_score
-            + usage_score
-            + confidence_adjustment
-            + freshness_adjustment
-            + rarity_adjustment
-            + regulatory_score
-        )
-
-        reasons = []
-        if value_score != 0:
-            reasons.append(f"{value_score:+d} (market value)")
-        if ownership_score != 0:
-            reasons.append(f"{ownership_score:+d} (ownership economics)")
-        if model_price_score != 0:
-            if model_price_ratio is None:
-                reasons.append(f"{model_price_score:+d} (model pricing)")
-            else:
-                reasons.append(
-                    f"{model_price_score:+d} (model avg ratio {model_price_ratio:.2f}x, {valuation_label})"
-                )
-        if usage_score != 0:
-            reasons.append(f"{usage_score:+d} (expected mileage fit)")
-        if confidence_adjustment != 0:
-            reasons.append(f"{confidence_adjustment:+d} (data confidence weight)")
-        if freshness_adjustment != 0:
-            reasons.append(f"{freshness_adjustment:+d} (listing freshness)")
-        if rarity_adjustment != 0:
-            reasons.append(f"{rarity_adjustment:+d} (model rarity)")
-        if regulatory_score != 0:
-            reasons.append(f"{regulatory_score:+d} (STK/EURO context)")
-
-        return total_adjustment, reasons, {
-            "value": value_score,
-            "ownership": ownership_score,
-            "model_price": model_price_score,
-            "usage": usage_score,
-            "confidence": confidence_adjustment,
-            "freshness": freshness_adjustment,
-            "rarity": rarity_adjustment,
-            "regulatory": regulatory_score,
-            "model_avg_price": model_avg_price,
-            "model_price_ratio": model_price_ratio,
-            "model_price_sample": model_price_sample,
-            "valuation_label": valuation_label,
-            "used_cohort_reference": use_cohort,
-            "cohort_size": (cohort_ref or {}).get("count", 0),
+        return 0, [], {
+            "value": 0,
+            "ownership": 0,
+            "model_price": 0,
+            "usage": 0,
+            "confidence": 0,
+            "freshness": 0,
+            "rarity": 0,
+            "regulatory": 0,
+            "model_avg_price": None,
+            "model_price_ratio": None,
+            "model_price_sample": 0,
+            "valuation_label": "disabled",
+            "used_cohort_reference": False,
+            "cohort_size": 0,
         }
 
     def _apply_advanced_sorting(self, offers):

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const API_BASE = "http://localhost:8000";
 
@@ -66,15 +66,6 @@ const PARAM_GROUPS = [
 const BASIC_GROUPS = PARAM_GROUPS.slice(0, 3);
 const ADVANCED_GROUPS = PARAM_GROUPS.slice(3);
 const IGNORED_KEYS = new Set(PARAM_GROUPS.flatMap((g) => g.fields.map((f) => f.key)));
-
-const VALUATION_META = {
-  deep_undervalued: { icon: "↘", label: "deep_undervalued", title: "Silně podhodnocené" },
-  undervalued: { icon: "↓", label: "undervalued", title: "Podhodnocené" },
-  fair: { icon: "→", label: "fair", title: "Férová cena" },
-  slightly_overpriced: { icon: "↗", label: "slightly_overpriced", title: "Lehce předražené" },
-  overpriced: { icon: "↑", label: "overpriced", title: "Předražené" },
-  unknown: { icon: "•", label: "—", title: "Neznámé ocenění" },
-};
 
 function fmtVal(val, fmt) {
   const n = parseFloat(val);
@@ -192,6 +183,8 @@ export default function App() {
   const [brandFilterText, setBrandFilterText] = useState("");
   const [modelFilterText, setModelFilterText] = useState("");
   const [tickerStep, setTickerStep] = useState(0);
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
+  const [isSidebarHidden, setIsSidebarHidden] = useState(false);
   const fileInputRef = useRef(null);
   const logsModalBodyRef = useRef(null);
   const prevIsRunningRef = useRef(null);
@@ -331,10 +324,42 @@ export default function App() {
   }
 
   function toggleSelectVisible() {
-    const visibleIds = items.map((item) => resultKey(item)).filter(Boolean);
+    const visibleIds = visibleItems.map((item) => resultKey(item)).filter(Boolean);
     if (visibleIds.length === 0) return;
     const allSelected = visibleIds.every((id) => selectedIds.includes(id));
     setSelectedIds(allSelected ? selectedIds.filter((id) => !visibleIds.includes(id)) : Array.from(new Set([...selectedIds, ...visibleIds])));
+  }
+
+  function toggleSort(key) {
+    setSortConfig((prev) => {
+      if (prev.key !== key) return { key, direction: "asc" };
+      return { key, direction: prev.direction === "asc" ? "desc" : "asc" };
+    });
+  }
+
+  function sortIndicator(key) {
+    if (sortConfig.key !== key) return "⇅";
+    return sortConfig.direction === "asc" ? "↑" : "↓";
+  }
+
+  function sortValue(item, key) {
+    switch (key) {
+      case "score":
+      case "price":
+      case "power_kw":
+      case "tachometer":
+      case "annual_total_cost":
+      case "price_per_kw":
+      case "price_per_km":
+      case "km_per_year":
+        return Number(item?.[key] ?? NaN);
+      case "name":
+      case "drive_type":
+      case "gearbox_type":
+        return String(item?.[key] ?? "").toLowerCase();
+      default:
+        return item?.[key];
+    }
   }
 
   async function postResultAction(url, body) {
@@ -395,7 +420,7 @@ export default function App() {
   }
 
   async function exportResults(scope) {
-    const visible = items;
+    const visible = visibleItems;
     const exportItems = scope === "selected"
       ? visible.filter((item) => selectedIds.includes(resultKey(item)))
       : visible;
@@ -589,7 +614,32 @@ export default function App() {
 
   // Extra params from params.json that aren't in PARAM_GROUPS (e.g. discord webhook)
   const extraKeys = Object.keys(params).filter((k) => !IGNORED_KEYS.has(k));
-  const visibleItems = items;
+  const visibleItems = useMemo(() => {
+    const list = [...items];
+    if (!sortConfig.key) return list;
+
+    list.sort((a, b) => {
+      const av = sortValue(a, sortConfig.key);
+      const bv = sortValue(b, sortConfig.key);
+
+      const aMissing = av === "" || av === null || av === undefined || Number.isNaN(av);
+      const bMissing = bv === "" || bv === null || bv === undefined || Number.isNaN(bv);
+      if (aMissing && bMissing) return 0;
+      if (aMissing) return 1;
+      if (bMissing) return -1;
+
+      let cmp = 0;
+      if (typeof av === "number" && typeof bv === "number") {
+        cmp = av - bv;
+      } else {
+        cmp = String(av).localeCompare(String(bv), "cs");
+      }
+
+      return sortConfig.direction === "asc" ? cmp : -cmp;
+    });
+
+    return list;
+  }, [items, sortConfig]);
   const allVisibleSelected = visibleItems.length > 0 && visibleItems.every((item) => selectedIds.includes(resultKey(item)));
 
   return (
@@ -601,6 +651,14 @@ export default function App() {
           {statusLabel()}
         </span>
         <div className="topbar-spacer" />
+        <button
+          type="button"
+          className="theme-toggle"
+          onClick={() => setIsSidebarHidden((prev) => !prev)}
+          title={isSidebarHidden ? "Zobrazit panel filtrů" : "Skrýt panel filtrů"}
+        >
+          {isSidebarHidden ? "Zobrazit panel" : "Skrýt panel"}
+        </button>
         <button
           type="button"
           className="theme-toggle"
@@ -627,9 +685,19 @@ export default function App() {
         )}
       </div>
 
-      <div className="layout">
+      <div className={`layout${isSidebarHidden ? " sidebar-hidden" : ""}`}>
         {/* Sidebar */}
-        <aside className="sidebar">
+        {!isSidebarHidden && <aside className="sidebar">
+          <div className="sidebar-head">
+            <button
+              type="button"
+              className="link-btn"
+              onClick={() => setIsSidebarHidden(true)}
+              title="Skrýt levý panel"
+            >
+              Schovat filtry
+            </button>
+          </div>
           {initialLoading && (
             <div className="loading-panel">
               <div className="loading-ring" />
@@ -779,10 +847,22 @@ export default function App() {
             <button onClick={refreshAll} disabled={busy}>Obnovit</button>
           </div>
           {message && <p className="msg">{message}</p>}
-        </aside>
+        </aside>}
 
         {/* Main */}
         <div className="main">
+          {isSidebarHidden && (
+            <div className="sidebar-reopen-row">
+              <button
+                type="button"
+                className="link-btn"
+                onClick={() => setIsSidebarHidden(false)}
+                title="Zobrazit levý panel"
+              >
+                Zobrazit filtry
+              </button>
+            </div>
+          )}
           <div className="debug-ticker-wrap">
             <span className={`debug-ticker-dot${isRunning ? " active" : ""}`} title={isRunning ? "Běží" : "Nečinný"} />
             <span className="debug-ticker-text" title={logs.length > 0 ? logs[logs.length - 1] : ""}>
@@ -839,7 +919,7 @@ export default function App() {
             </div>
             <div className="selection-actions">
               <button className="link-btn" onClick={toggleSelectVisible}>
-                {items.every((item) => selectedIds.includes(resultKey(item))) ? "Odznačit viditelné" : "Vybrat viditelné"}
+                {visibleItems.every((item) => selectedIds.includes(resultKey(item))) ? "Odznačit viditelné" : "Vybrat viditelné"}
               </button>
               <button className="link-btn" onClick={() => setSelectedIds([])} disabled={selectedCount === 0}>Vyčistit výběr</button>
             </div>
@@ -854,15 +934,17 @@ export default function App() {
                   <tr>
                     <th className="cell-check"><input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectVisible} /></th>
                     <th className="cell-mark"></th>
-                    <th>Skóre</th>
-                    <th>Název</th>
-                    <th>Cena (Kč)</th>
-                    <th>kW</th>
-                    <th>Km</th>
-                    <th>Pohon</th>
-                    <th>Převod.</th>
-                    <th>Valuation</th>
-                    <th>Náklady/rok</th>
+                    <th className="sortable-th" onClick={() => toggleSort("score")}>Skóre <span>{sortIndicator("score")}</span></th>
+                    <th className="sortable-th" onClick={() => toggleSort("name")}>Název <span>{sortIndicator("name")}</span></th>
+                    <th className="sortable-th" onClick={() => toggleSort("price")}>Cena (Kč) <span>{sortIndicator("price")}</span></th>
+                    <th className="sortable-th" onClick={() => toggleSort("power_kw")}>kW <span>{sortIndicator("power_kw")}</span></th>
+                    <th className="sortable-th" onClick={() => toggleSort("tachometer")}>Km <span>{sortIndicator("tachometer")}</span></th>
+                    <th className="sortable-th" onClick={() => toggleSort("drive_type")}>Pohon <span>{sortIndicator("drive_type")}</span></th>
+                    <th className="sortable-th" onClick={() => toggleSort("gearbox_type")}>Převod. <span>{sortIndicator("gearbox_type")}</span></th>
+                    <th className="sortable-th" onClick={() => toggleSort("price_per_kw")}>Kč/kW <span>{sortIndicator("price_per_kw")}</span></th>
+                    <th className="sortable-th" onClick={() => toggleSort("price_per_km")}>Kč/km <span>{sortIndicator("price_per_km")}</span></th>
+                    <th className="sortable-th" onClick={() => toggleSort("km_per_year")}>Km/rok <span>{sortIndicator("km_per_year")}</span></th>
+                    <th className="sortable-th" onClick={() => toggleSort("annual_total_cost")}>Náklady/rok <span>{sortIndicator("annual_total_cost")}</span></th>
                     <th></th>
                   </tr>
                 </thead>
@@ -871,8 +953,6 @@ export default function App() {
                     const key = resultKey(item);
                     const selected = selectedIds.includes(key);
                     const marked = markedIds.includes(String(item.ad_id));
-                    const valuationKey = item.valuation_label || "unknown";
-                    const valuation = VALUATION_META[valuationKey] || VALUATION_META.unknown;
                     return (
                     <tr key={item.ad_id || i} className={`${selected ? "row-selected" : ""}${marked ? " row-marked" : ""}`}>
                       <td className="cell-check">
@@ -892,15 +972,9 @@ export default function App() {
                       <td>{item.tachometer ? item.tachometer.toLocaleString("cs-CZ") : "—"}</td>
                       <td>{item.drive_type || "—"}</td>
                       <td>{item.gearbox_type || "—"}</td>
-                      <td>
-                        <span
-                          className={`pill valuation-pill pill-${valuationKey}`}
-                          title={`${valuation.title} (${valuation.label})`}
-                          aria-label={`${valuation.title} (${valuation.label})`}
-                        >
-                          <span className="valuation-icon" aria-hidden="true">{valuation.icon}</span>
-                        </span>
-                      </td>
+                      <td>{Number.isFinite(item.price_per_kw) ? item.price_per_kw.toLocaleString("cs-CZ", { maximumFractionDigits: 2 }) : "—"}</td>
+                      <td>{Number.isFinite(item.price_per_km) ? item.price_per_km.toLocaleString("cs-CZ", { maximumFractionDigits: 4 }) : "—"}</td>
+                      <td>{Number.isFinite(item.km_per_year) ? item.km_per_year.toLocaleString("cs-CZ") : "—"}</td>
                       <td>{item.annual_total_cost ? item.annual_total_cost.toLocaleString("cs-CZ") : "—"}</td>
                       <td>
                         {item.url
