@@ -1,7 +1,15 @@
 {
   "brands": {
-    "updated_at": 1781041047,
+    "updated_at": 1781185829,
     "items": [
+      {
+        "value": "abarth",
+        "label": "Abarth"
+      },
+      {
+        "value": "acura",
+        "label": "Acura"
+      },
       {
         "value": "alfa-romeo",
         "label": "Alfa Romeo"
@@ -9,6 +17,14 @@
       {
         "value": "alpina",
         "label": "Alpina"
+      },
+      {
+        "value": "alpine",
+        "label": "Alpine"
+      },
+      {
+        "value": "aston-martin",
+        "label": "Aston Martin"
       },
       {
         "value": "audi",
@@ -19,16 +35,8 @@
         "label": "BAIC"
       },
       {
-        "value": "bentley",
-        "label": "Bentley"
-      },
-      {
         "value": "bmw",
         "label": "BMW"
-      },
-      {
-        "value": "buick",
-        "label": "Buick"
       },
       {
         "value": "byd",
@@ -37,10 +45,6 @@
       {
         "value": "cadillac",
         "label": "Cadillac"
-      },
-      {
-        "value": "chery",
-        "label": "Chery"
       },
       {
         "value": "chevrolet",
@@ -63,12 +67,20 @@
         "label": "Dacia"
       },
       {
+        "value": "daihatsu",
+        "label": "Daihatsu"
+      },
+      {
         "value": "dodge",
         "label": "Dodge"
       },
       {
         "value": "ds",
         "label": "DS"
+      },
+      {
+        "value": "ferrari",
+        "label": "Ferrari"
       },
       {
         "value": "fiat",
@@ -79,16 +91,24 @@
         "label": "Ford"
       },
       {
-        "value": "gmc",
-        "label": "GMC"
+        "value": "foton",
+        "label": "FOTON"
       },
       {
         "value": "honda",
         "label": "Honda"
       },
       {
+        "value": "hummer",
+        "label": "Hummer"
+      },
+      {
         "value": "hyundai",
         "label": "Hyundai"
+      },
+      {
+        "value": "infiniti",
+        "label": "Infiniti"
       },
       {
         "value": "isuzu",
@@ -107,6 +127,10 @@
         "label": "Jeep"
       },
       {
+        "value": "kgm",
+        "label": "KGM"
+      },
+      {
         "value": "kia",
         "label": "Kia"
       },
@@ -117,6 +141,10 @@
       {
         "value": "lamborghini",
         "label": "Lamborghini"
+      },
+      {
+        "value": "lancia",
+        "label": "Lancia"
       },
       {
         "value": "land-rover",
@@ -131,8 +159,8 @@
         "label": "Lexus"
       },
       {
-        "value": "lincoln",
-        "label": "Lincoln"
+        "value": "ligier",
+        "label": "Ligier"
       },
       {
         "value": "maserati",
@@ -171,10 +199,6 @@
         "label": "Opel"
       },
       {
-        "value": "ostatni",
-        "label": "Ostatní"
-      },
-      {
         "value": "peugeot",
         "label": "Peugeot"
       },
@@ -193,10 +217,6 @@
       {
         "value": "renault",
         "label": "Renault"
-      },
-      {
-        "value": "rolls-royce",
-        "label": "Rolls-Royce"
       },
       {
         "value": "saab",
@@ -227,8 +247,8 @@
         "label": "Suzuki"
       },
       {
-        "value": "swm",
-        "label": "SWM"
+        "value": "tatra",
+        "label": "Tatra"
       },
       {
         "value": "tesla",
@@ -245,6 +265,10 @@
       {
         "value": "volvo",
         "label": "Volvo"
+      },
+      {
+        "value": "xpeng",
+        "label": "XPENG"
       }
     ]
   },

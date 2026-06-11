@@ -185,6 +185,8 @@ export default function App() {
   const [tickerStep, setTickerStep] = useState(0);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [isSidebarHidden, setIsSidebarHidden] = useState(false);
+  const [scoringPresets, setScoringPresets] = useState({});
+  const [selectedPreset, setSelectedPreset] = useState("standard");
   const fileInputRef = useRef(null);
   const logsModalBodyRef = useRef(null);
   const prevIsRunningRef = useRef(null);
@@ -253,6 +255,16 @@ export default function App() {
     }
   }
 
+  async function fetchScoringPresets() {
+    try {
+      const res = await fetch(`${API_BASE}/api/scoring/presets`, { signal: AbortSignal.timeout(4000) });
+      const data = await res.json();
+      setScoringPresets(data.presets || {});
+    } catch {
+      setScoringPresets({});
+    }
+  }
+
   async function fetchModelsForBrand(brand) {
     const b = String(brand || "").trim();
     if (!b || modelsByBrand[b] || loadingModelsByBrand[b]) return;
@@ -309,7 +321,7 @@ export default function App() {
   }
 
   async function refreshAll() {
-    await Promise.all([fetchParams(), fetchStatus(), fetchResults(), fetchLogs(), fetchApiHealth()]);
+    await Promise.all([fetchParams(), fetchStatus(), fetchResults(), fetchLogs(), fetchApiHealth(), fetchScoringPresets()]);
   }
 
   function resultKey(item) {
@@ -342,9 +354,180 @@ export default function App() {
     return sortConfig.direction === "asc" ? "↑" : "↓";
   }
 
+  // Varianta A: Score calculation on frontend
+  function calculateBaseScore(item) {
+    let score = 0;
+
+    // Age scoring
+    const age_years = item.age_years || 0;
+    if (age_years <= 5) {
+      score += 60;
+    } else if (age_years <= 8) {
+      score += 45;
+    } else if (age_years <= 12) {
+      score += 25;
+    } else if (age_years <= 16) {
+      score += 5;
+    } else if (age_years <= 20) {
+      score -= 20;
+    } else {
+      score -= 35;
+    }
+
+    // Mileage scoring
+    const tachometer = item.tachometer || 0;
+    if (tachometer > 0) {
+      if (tachometer <= 80000) {
+        score += 60;
+      } else if (tachometer <= 140000) {
+        score += 40;
+      } else if (tachometer <= 200000) {
+        score += 15;
+      } else if (tachometer <= 260000) {
+        score -= 10;
+      } else {
+        score -= 30;
+      }
+    }
+
+    // Consumption scoring
+    const consumption = item.estimated_consumption_per_100km || 0;
+    if (consumption <= 5.5) {
+      score += 30;
+    } else if (consumption <= 6.8) {
+      score += 20;
+    } else if (consumption <= 8.0) {
+      score += 8;
+    } else if (consumption <= 9.5) {
+      score -= 8;
+    } else {
+      score -= 20;
+    }
+
+    // Equipment scoring (simplified - count items as proxy)
+    const equipment_list = item.equipment_list || [];
+    if (equipment_list.length >= 40) {
+      score += 15;
+    } else if (equipment_list.length >= 25) {
+      score += 8;
+    }
+
+    // Flags scoring
+    if (item.service_book) {
+      score += 8;
+    }
+    if (item.first_owner) {
+      score += 5;
+    }
+    if (item.tuning) {
+      score -= 12;
+    }
+
+    return score;
+  }
+
+  function applyPresetMultipliers(baseScore, item, preset) {
+    if (!preset || !preset.multipliers) return baseScore;
+    const m = preset.multipliers;
+
+    let adjustedScore = 0;
+
+    // Re-apply age component with multiplier
+    const age_years = item.age_years || 0;
+    let age_component = 0;
+    if (age_years <= 5) {
+      age_component = 60;
+    } else if (age_years <= 8) {
+      age_component = 45;
+    } else if (age_years <= 12) {
+      age_component = 25;
+    } else if (age_years <= 16) {
+      age_component = 5;
+    } else if (age_years <= 20) {
+      age_component = -20;
+    } else {
+      age_component = -35;
+    }
+    adjustedScore += Math.round(age_component * m.age);
+
+    // Re-apply mileage component with multiplier
+    const tachometer = item.tachometer || 0;
+    let mileage_component = 0;
+    if (tachometer > 0) {
+      if (tachometer <= 80000) {
+        mileage_component = 60;
+      } else if (tachometer <= 140000) {
+        mileage_component = 40;
+      } else if (tachometer <= 200000) {
+        mileage_component = 15;
+      } else if (tachometer <= 260000) {
+        mileage_component = -10;
+      } else {
+        mileage_component = -30;
+      }
+    }
+    adjustedScore += Math.round(mileage_component * m.mileage);
+
+    // Re-apply consumption component with multiplier
+    const consumption = item.estimated_consumption_per_100km || 0;
+    let consumption_component = 0;
+    if (consumption <= 5.5) {
+      consumption_component = 30;
+    } else if (consumption <= 6.8) {
+      consumption_component = 20;
+    } else if (consumption <= 8.0) {
+      consumption_component = 8;
+    } else if (consumption <= 9.5) {
+      consumption_component = -8;
+    } else {
+      consumption_component = -20;
+    }
+    adjustedScore += Math.round(consumption_component * m.consumption);
+
+    // Equipment with multiplier
+    const equipment_list = item.equipment_list || [];
+    let equipment_component = 0;
+    if (equipment_list.length >= 40) {
+      equipment_component = 15;
+    } else if (equipment_list.length >= 25) {
+      equipment_component = 8;
+    }
+    adjustedScore += Math.round(equipment_component * m.equipment);
+
+    // Flags with multiplier
+    let flags_component = 0;
+    if (item.service_book) {
+      flags_component += 8;
+    }
+    if (item.first_owner) {
+      flags_component += 5;
+    }
+    if (item.tuning) {
+      flags_component -= 12;
+    }
+    adjustedScore += Math.round(flags_component * m.flags);
+
+    // Power bonus
+    if (m.power_bonus > 0 && (item.power_kw || 0) >= 150) {
+      adjustedScore += m.power_bonus;
+    }
+
+    return adjustedScore;
+  }
+
+  function getItemScore(item, preset) {
+    const baseScore = calculateBaseScore(item);
+    return applyPresetMultipliers(baseScore, item, preset);
+  }
+
   function sortValue(item, key) {
+    // Special handling for score - apply current preset
+    if (key === "score") {
+      const preset = scoringPresets[selectedPreset];
+      return getItemScore(item, preset);
+    }
+
     switch (key) {
-      case "score":
       case "price":
       case "power_kw":
       case "tachometer":
@@ -639,7 +822,7 @@ export default function App() {
     });
 
     return list;
-  }, [items, sortConfig]);
+  }, [items, sortConfig, selectedPreset, scoringPresets]);
   const allVisibleSelected = visibleItems.length > 0 && visibleItems.every((item) => selectedIds.includes(resultKey(item)));
 
   return (
@@ -925,6 +1108,24 @@ export default function App() {
             </div>
           </div>
 
+          <div style={{ padding: "0.75rem 1rem", borderBottom: "1px solid #ddd", display: "flex", gap: "1rem", alignItems: "center" }}>
+            <label style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+              <strong>Preset bodování:</strong>
+              <select value={selectedPreset} onChange={(e) => setSelectedPreset(e.target.value)} style={{ padding: "0.25rem 0.5rem" }}>
+                {Object.entries(scoringPresets).map(([key, preset]) => (
+                  <option key={key} value={key}>
+                    {preset.name || key}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {scoringPresets[selectedPreset]?.description && (
+              <span style={{ fontSize: "0.85rem", color: "#666" }}>
+                {scoringPresets[selectedPreset].description}
+              </span>
+            )}
+          </div>
+
           <div className="table-wrap">
             {items.length === 0 ? (
               <p className="empty">Žádné výsledky — spusť scraper a obnov.</p>
@@ -962,9 +1163,15 @@ export default function App() {
                         <button className={`mark-chip${marked ? " marked" : ""}`} onClick={() => markSelected(marked ? false : true)} disabled={!selected && !marked}>★</button>
                       </td>
                       <td>
-                        <span className={`score ${(item.score ?? 0) >= 90 ? "score-hi" : ""}`}>
-                          {item.score ?? "—"}
-                        </span>
+                        {(() => {
+                          const preset = scoringPresets[selectedPreset];
+                          const calculatedScore = getItemScore(item, preset);
+                          return (
+                            <span className={`score ${calculatedScore >= 90 ? "score-hi" : ""}`}>
+                              {calculatedScore}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="name-cell">{item.name || "—"}</td>
                       <td>{item.price ? item.price.toLocaleString("cs-CZ") : "—"}</td>

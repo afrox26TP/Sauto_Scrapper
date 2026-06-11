@@ -16,6 +16,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "sauto" / "spiders"))
+from sauto_spider import CarEvaluator
+
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 PARAMS_PATH = ROOT_DIR / "params.json"
@@ -478,6 +482,26 @@ def get_catalog_models(brand: str, force_refresh: bool = False) -> dict[str, Any
     _save_catalog_cache(cache)
 
     return {"brand": selected_brand, "items": items, "cached": False, "updated_at": now}
+
+
+@app.get("/api/scoring/presets")
+def get_scoring_presets() -> dict[str, Any]:
+    """Return all available scoring presets for frontend use (Varianta A)."""
+    presets_data = {}
+    for preset_name, preset_config in CarEvaluator.SCORING_PRESETS.items():
+        presets_data[preset_name] = {
+            "name": preset_config.get("name", preset_name),
+            "description": preset_config.get("description", ""),
+            "multipliers": {
+                "age": preset_config.get("age_multiplier", 1.0),
+                "mileage": preset_config.get("mileage_multiplier", 1.0),
+                "consumption": preset_config.get("consumption_multiplier", 1.0),
+                "equipment": preset_config.get("equipment_multiplier", 1.0),
+                "flags": preset_config.get("flag_multiplier", 1.0),
+                "power_bonus": preset_config.get("power_bonus", 0),
+            }
+        }
+    return {"presets": presets_data}
 
 
 @app.get("/api/results/export")

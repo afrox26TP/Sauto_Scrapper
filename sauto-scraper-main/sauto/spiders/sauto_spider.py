@@ -64,6 +64,48 @@ class CarEvaluator:
         (r"led|xenon", 6, "lighting package"),
     )
 
+    SCORING_PRESETS = {
+        "standard": {
+            "name": "Standard (Vybalancované)",
+            "age_multiplier": 1.0,
+            "mileage_multiplier": 1.0,
+            "consumption_multiplier": 1.0,
+            "equipment_multiplier": 1.0,
+            "flag_multiplier": 1.0,
+            "power_bonus": 0,
+        },
+        "classic": {
+            "name": "Classic (Robustnost & Cena/km)",
+            "description": "Priorita: nízký nájezd, robustní vozidla, servisní historie",
+            "age_multiplier": 0.7,
+            "mileage_multiplier": 2.0,
+            "consumption_multiplier": 0.6,
+            "equipment_multiplier": 0.15,
+            "flag_multiplier": 1.6,
+            "power_bonus": 0,
+        },
+        "sport": {
+            "name": "Sport (Výkon & Dynamika)",
+            "description": "Priorita: vysoký výkon (kW), mladší vozidla",
+            "age_multiplier": 1.3,
+            "mileage_multiplier": 0.8,
+            "consumption_multiplier": 0.5,
+            "equipment_multiplier": 1.0,
+            "flag_multiplier": 0.8,
+            "power_bonus": 20,
+        },
+        "premium": {
+            "name": "Premium (Výbava & Luxus)",
+            "description": "Priorita: moderní výbava, funkce, komfort",
+            "age_multiplier": 1.5,
+            "mileage_multiplier": 1.1,
+            "consumption_multiplier": 0.3,
+            "equipment_multiplier": 2.5,
+            "flag_multiplier": 0.9,
+            "power_bonus": 0,
+        },
+    }
+
     PREMIUM_BRANDS = {
         "alfa-romeo",
         "audi",
@@ -94,6 +136,11 @@ class CarEvaluator:
         "suzuki",
         "toyota",
     }
+
+    @classmethod
+    def _get_preset_config(cls, preset_name):
+        """Get scoring preset configuration by name. Defaults to 'standard' if not found."""
+        return cls.SCORING_PRESETS.get(preset_name, cls.SCORING_PRESETS["standard"])
 
     @staticmethod
     def _safe_int(value, default=0):
@@ -452,15 +499,13 @@ class CarEvaluator:
         item,
         current_year=None,
         allow_automatic=False,
-        min_score=90,
         min_price=20000,
-        target_annual_km=15000,
-        prefer_gearbox="any",
-        prefer_drive="any",
     ):
+        """
+        Extract and normalize raw car metrics. NO SCORING.
+        Varianta A: Frontend handles all scoring and preset application.
+        """
         current_year = current_year or datetime.datetime.now().year
-        prefer_gearbox = cls._normalize_choice(prefer_gearbox, {"any", "manual", "automatic"}, "any")
-        prefer_drive = cls._normalize_choice(prefer_drive, {"any", "fwd", "rwd", "awd"}, "any")
 
         detail_raw = item.get("detail_raw", {})
         result = detail_raw.get("result")
@@ -544,90 +589,15 @@ class CarEvaluator:
             for eq in (result.get("equipment_cb") or [])
             if eq.get("name")
         ]
-        equipment_text = " ".join(equipment_list)
         images_count = len(result.get("images") or [])
-
-        score = 0
-        reasons = []
 
         first_owner = bool(result.get("first_owner"))
         service_book = bool(result.get("service_book"))
         tuning = bool(result.get("tuning"))
 
-        if age_years <= 5:
-            score += 60
-            reasons.append(f"+60 (very low age: {age_years}y)")
-        elif age_years <= 8:
-            score += 45
-            reasons.append(f"+45 (low age: {age_years}y)")
-        elif age_years <= 12:
-            score += 25
-            reasons.append(f"+25 (reasonable age: {age_years}y)")
-        elif age_years <= 16:
-            score += 5
-            reasons.append(f"+5 (higher age: {age_years}y)")
-        elif age_years <= 20:
-            score -= 20
-            reasons.append(f"-20 (old car: {age_years}y)")
-        else:
-            score -= 35
-            reasons.append(f"-35 (very old car: {age_years}y)")
-
-        if tachometer > 0:
-            if tachometer <= 80000:
-                score += 60
-                reasons.append(f"+60 (very low mileage: {tachometer} km)")
-            elif tachometer <= 140000:
-                score += 40
-                reasons.append(f"+40 (low mileage: {tachometer} km)")
-            elif tachometer <= 200000:
-                score += 15
-                reasons.append(f"+15 (acceptable mileage: {tachometer} km)")
-            elif tachometer <= 260000:
-                score -= 10
-                reasons.append(f"-10 (higher mileage: {tachometer} km)")
-            else:
-                score -= 30
-                reasons.append(f"-30 (very high mileage: {tachometer} km)")
-
-        if estimated_consumption <= 5.5:
-            score += 30
-            reasons.append(f"+30 (low consumption: {estimated_consumption:.1f} l/100km)")
-        elif estimated_consumption <= 6.8:
-            score += 20
-            reasons.append(f"+20 (good consumption: {estimated_consumption:.1f} l/100km)")
-        elif estimated_consumption <= 8.0:
-            score += 8
-            reasons.append(f"+8 (acceptable consumption: {estimated_consumption:.1f} l/100km)")
-        elif estimated_consumption <= 9.5:
-            score -= 8
-            reasons.append(f"-8 (higher consumption: {estimated_consumption:.1f} l/100km)")
-        else:
-            score -= 20
-            reasons.append(f"-20 (high consumption: {estimated_consumption:.1f} l/100km)")
-
-        equipment_score, equipment_reasons = cls._apply_pattern_score(equipment_text, cls.EQUIPMENT_BONUS)
-        score += equipment_score
-        reasons.extend(equipment_reasons)
-
-        depth_score, depth_reasons = cls._equipment_depth_score(equipment_list)
-        score += depth_score
-        reasons.extend(depth_reasons)
-
-        if service_book:
-            score += 8
-            reasons.append("+8 (service book)")
-        if first_owner:
-            score += 5
-            reasons.append("+5 (first owner)")
-        if tuning:
-            score -= 12
-            reasons.append("-12 (tuning flag)")
-
         euro_value = cls._safe_int((result.get("euro_level_cb") or {}).get("value"), 0)
         vin = str(result.get("vin") or "").strip()
         airbags = cls._safe_int(result.get("airbags"), 0)
-        user = result.get("user") or item.get("user") or {}
 
         annual_insurance = cls._estimate_annual_insurance(
             price=price,
@@ -655,40 +625,6 @@ class CarEvaluator:
         )
         annual_total_cost = annual_fuel_cost + annual_insurance + annual_maintenance
 
-        completeness_checks = [
-            price > 0,
-            power_kw > 0,
-            tachometer > 0,
-            year_match is not None,
-            images_count > 0,
-            bool(item.get("url")),
-            drive_type != "unknown",
-            gearbox_type != "unknown",
-            months_to_stk is not None,
-            euro_value > 0,
-            len(vin) >= 10,
-            bool(result.get("manufacturer_cb")),
-            bool(result.get("model_cb")),
-            bool(result.get("fuel_cb")),
-            bool(result.get("vehicle_body_cb")),
-        ]
-        completeness_ratio = sum(1 for v in completeness_checks if v) / len(completeness_checks)
-        confidence_score = int(round(completeness_ratio * 28))
-
-        if images_count >= 10:
-            confidence_score += 5
-        elif images_count >= 5:
-            confidence_score += 3
-
-        if (result.get("equipment_cb") or []):
-            confidence_score += 3
-        if listing_age_days is not None:
-            confidence_score += 2
-
-        if service_book:
-            confidence_score += 2
-
-        confidence_score = min(45, confidence_score)
         age_bucket = cls._age_bucket(age_years)
         cohort_key = f"{manufacturer_seo}:{model_seo}:{fuel_seo}:{age_bucket}:{gearbox_type}:{drive_type}"
         model_family_key = f"{manufacturer_seo}:{model_seo}"
@@ -701,10 +637,6 @@ class CarEvaluator:
             "power_kw": power_kw,
             "tachometer": tachometer,
             "age_years": age_years,
-            "base_score": score,
-            "score": score,
-            "interesting": score >= min_score,
-            "reasons": reasons,
             "url": item.get("url", "URL missing"),
             "price_per_kw": price_per_kw,
             "price_per_km": price_per_km,
@@ -721,7 +653,6 @@ class CarEvaluator:
             "cohort_key": cohort_key,
             "model_family_key": model_family_key,
             "model_key": model_key,
-            "confidence_score": confidence_score,
             "listing_age_days": listing_age_days,
             "months_to_stk": months_to_stk,
             "euro_value": euro_value,
@@ -733,6 +664,11 @@ class CarEvaluator:
             "annual_insurance": annual_insurance,
             "annual_maintenance": annual_maintenance,
             "annual_total_cost": annual_total_cost,
+            "first_owner": first_owner,
+            "service_book": service_book,
+            "tuning": tuning,
+            "equipment_list": equipment_list,
+            "images_count": images_count,
         }
 
 
@@ -1324,28 +1260,21 @@ class SautoSpider(scrapy.Spider):
         base_item["detail_fetch_ok"] = True
         base_item["detail_raw"] = detail
 
-        scored_offer = CarEvaluator.evaluate(
+        raw_offer = CarEvaluator.evaluate(
             base_item,
             allow_automatic=self.allow_automatic,
-            min_score=self.min_interesting_score,
             min_price=self.min_price,
-            target_annual_km=self.target_annual_km,
-            prefer_gearbox=self.prefer_gearbox,
-            prefer_drive=self.prefer_drive,
         )
-        if scored_offer:
-            self.scored_cars.append(scored_offer)
-            base_item["offer_score"] = scored_offer["score"]
-            base_item["offer_interesting"] = scored_offer["interesting"]
-            base_item["offer_reasons"] = scored_offer["reasons"]
+        if raw_offer:
+            self.scored_cars.append(raw_offer)
             base_item["offer_metrics"] = {
-                "price_per_kw": scored_offer["price_per_kw"],
-                "price_per_km": scored_offer["price_per_km"],
-                "km_per_year": scored_offer["km_per_year"],
-                "age_years": scored_offer["age_years"],
-                "gearbox_type": scored_offer["gearbox_type"],
-                "drive_type": scored_offer["drive_type"],
-                "brand_tier": scored_offer["brand_tier"],
+                "price_per_kw": raw_offer["price_per_kw"],
+                "price_per_km": raw_offer["price_per_km"],
+                "km_per_year": raw_offer["km_per_year"],
+                "age_years": raw_offer["age_years"],
+                "gearbox_type": raw_offer["gearbox_type"],
+                "drive_type": raw_offer["drive_type"],
+                "brand_tier": raw_offer["brand_tier"],
                 "confidence_score": scored_offer["confidence_score"],
                 "listing_age_days": scored_offer["listing_age_days"],
                 "months_to_stk": scored_offer["months_to_stk"],
@@ -1353,14 +1282,17 @@ class SautoSpider(scrapy.Spider):
                 "annual_fuel_cost": scored_offer["annual_fuel_cost"],
                 "annual_insurance": scored_offer["annual_insurance"],
                 "annual_maintenance": scored_offer["annual_maintenance"],
-                "annual_total_cost": scored_offer["annual_total_cost"],
-                "estimated_consumption_per_100km": scored_offer["estimated_consumption_per_100km"],
-                "model_family_key": scored_offer["model_family_key"],
+                "annual_total_cost": raw_offer["annual_total_cost"],
+                "estimated_consumption_per_100km": raw_offer["estimated_consumption_per_100km"],
+                "model_family_key": raw_offer["model_family_key"],
+                "first_owner": raw_offer["first_owner"],
+                "service_book": raw_offer["service_book"],
+                "tuning": raw_offer["tuning"],
+                "equipment_list": raw_offer["equipment_list"],
+                "images_count": raw_offer["images_count"],
             }
         else:
-            base_item["offer_score"] = None
-            base_item["offer_interesting"] = False
-            base_item["offer_reasons"] = []
+            pass
 
         self.items_scraped += 1
         self.all_items.append(base_item)
@@ -1399,6 +1331,9 @@ class SautoSpider(scrapy.Spider):
                 f"prefer gearbox={self.prefer_gearbox}, prefer drive={self.prefer_drive}"
             ),
             (
+                f"Note: Scoring and preset selection moved to frontend (Varianta A)"
+            ),
+            (
                 f"Model valuation: min samples={self.model_price_min_samples}, "
                 f"undervalued<= {self.undervalue_ratio_threshold:.2f}x, "
                 f"deep<= {self.deep_undervalue_ratio_threshold:.2f}x, "
@@ -1415,18 +1350,15 @@ class SautoSpider(scrapy.Spider):
         lines.append("")
         for index, offer in enumerate(offers, 1):
             new_prefix = "NEW " if offer.get("is_new") else ""
-            reasons = ", ".join(offer.get("reasons", [])[:4]) or "no specific reasons"
             lines.extend(
                 [
                     (
-                        f"{index}. {new_prefix}{offer['name']} | {offer['price']} CZK | "
-                        f"score {offer['score']} (base {offer.get('base_score', offer['score'])}, "
-                        f"adj {offer.get('market_adjustment', 0):+d})"
+                        f"{index}. {new_prefix}{offer['name']} | {offer['price']} CZK"
                     ),
                     (
                         f"   {offer.get('power_kw', 0)} kW | {offer.get('tachometer', 0)} km "
                         f"| age {offer.get('age_years', 0)}y | {offer.get('gearbox_type', 'unknown')}/"
-                        f"{offer.get('drive_type', 'unknown')} | conf {offer.get('confidence_score', 0)}"
+                        f"{offer.get('drive_type', 'unknown')}"
                     ),
                     (
                         f"   price/kW: {offer.get('price_per_kw')} | price/km: {offer.get('price_per_km')} "
@@ -1434,14 +1366,13 @@ class SautoSpider(scrapy.Spider):
                     ),
                     (
                         f"   annual cost: {offer.get('annual_total_cost')} (fuel {offer.get('annual_fuel_cost')}, "
-                        f"insurance {offer.get('annual_insurance')}, service {offer.get('annual_maintenance')}) "
-                        f"| STK m: {offer.get('months_to_stk')} | EURO: {offer.get('euro_value')}"
+                        f"insurance {offer.get('annual_insurance')}, service {offer.get('annual_maintenance')})"
                     ),
                     (
-                        f"   model avg: {offer.get('model_avg_price')} | ratio: {offer.get('model_price_ratio')} "
-                        f"| valuation: {offer.get('valuation_label')} | brand: {offer.get('brand_tier')}"
+                        f"   flags: first_owner={offer.get('first_owner')}, service_book={offer.get('service_book')}, "
+                        f"tuning={offer.get('tuning')} | brand: {offer.get('brand_tier')}"
                     ),
-                    f"   reasons: {reasons}",
+                    f"   (scoring applied on frontend)",
                     f"   {offer.get('url') or 'URL missing'}",
                     "",
                 ]
