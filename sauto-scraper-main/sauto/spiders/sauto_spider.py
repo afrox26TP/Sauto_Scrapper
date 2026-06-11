@@ -65,44 +65,73 @@ class CarEvaluator:
     )
 
     SCORING_PRESETS = {
-        "standard": {
-            "name": "Standard (Vybalancované)",
-            "age_multiplier": 1.0,
-            "mileage_multiplier": 1.0,
-            "consumption_multiplier": 1.0,
-            "equipment_multiplier": 1.0,
-            "flag_multiplier": 1.0,
-            "power_bonus": 0,
+        "value": {
+            "name": "Cena / výkon",
+            "description": "Hledá nejvíc muziky za peníze: nízká cena za kW, levný provoz, rozumný nájezd.",
+            "weights": {
+                "age": 0.75,
+                "mileage": 1.10,
+                "price": 1.40,
+                "consumption": 1.15,
+                "cost": 1.45,
+                "price_power": 1.85,
+                "power": 0.85,
+                "equipment": 0.45,
+                "flags": 1.15,
+                "sport": 0.25,
+                "luxury": 0.15,
+            },
         },
-        "classic": {
-            "name": "Classic (Robustnost & Cena/km)",
-            "description": "Priorita: nízký nájezd, robustní vozidla, servisní historie",
-            "age_multiplier": 0.7,
-            "mileage_multiplier": 2.0,
-            "consumption_multiplier": 0.6,
-            "equipment_multiplier": 0.15,
-            "flag_multiplier": 1.6,
-            "power_bonus": 0,
+        "balanced": {
+            "name": "Balanced",
+            "description": "Nejuniverzálnější hodnocení: stav, nájezd, provozní náklady, výkon i výbava mají podobnou váhu.",
+            "weights": {
+                "age": 1.00,
+                "mileage": 1.00,
+                "price": 1.00,
+                "consumption": 1.00,
+                "cost": 1.00,
+                "price_power": 1.00,
+                "power": 0.75,
+                "equipment": 0.85,
+                "flags": 1.00,
+                "sport": 0.35,
+                "luxury": 0.35,
+            },
         },
         "sport": {
-            "name": "Sport (Výkon & Dynamika)",
-            "description": "Priorita: vysoký výkon (kW), mladší vozidla",
-            "age_multiplier": 1.3,
-            "mileage_multiplier": 0.8,
-            "consumption_multiplier": 0.5,
-            "equipment_multiplier": 1.0,
-            "flag_multiplier": 0.8,
-            "power_bonus": 20,
+            "name": "Sport",
+            "description": "Priorita: výkon, dynamika, cena za kW, pohon a mladší kusy. Spotřeba a luxus jsou méně důležité.",
+            "weights": {
+                "age": 1.05,
+                "mileage": 0.75,
+                "price": 0.55,
+                "consumption": 0.35,
+                "cost": 0.55,
+                "price_power": 1.30,
+                "power": 2.10,
+                "equipment": 0.45,
+                "flags": 0.80,
+                "sport": 1.45,
+                "luxury": 0.20,
+            },
         },
-        "premium": {
-            "name": "Premium (Výbava & Luxus)",
-            "description": "Priorita: moderní výbava, funkce, komfort",
-            "age_multiplier": 1.5,
-            "mileage_multiplier": 1.1,
-            "consumption_multiplier": 0.3,
-            "equipment_multiplier": 2.5,
-            "flag_multiplier": 0.9,
-            "power_bonus": 0,
+        "luxury": {
+            "name": "Luxury",
+            "description": "Priorita: prémiová značka, výbava, komfort, mladší vůz a kultivovaný výkon. Cena/provoz má menší váhu.",
+            "weights": {
+                "age": 1.35,
+                "mileage": 0.90,
+                "price": 0.25,
+                "consumption": 0.25,
+                "cost": 0.35,
+                "price_power": 0.45,
+                "power": 0.80,
+                "equipment": 2.10,
+                "flags": 0.90,
+                "sport": 0.25,
+                "luxury": 1.90,
+            },
         },
     }
 
@@ -139,8 +168,8 @@ class CarEvaluator:
 
     @classmethod
     def _get_preset_config(cls, preset_name):
-        """Get scoring preset configuration by name. Defaults to 'standard' if not found."""
-        return cls.SCORING_PRESETS.get(preset_name, cls.SCORING_PRESETS["standard"])
+        """Get scoring preset configuration by name. Defaults to 'balanced' if not found."""
+        return cls.SCORING_PRESETS.get(preset_name, cls.SCORING_PRESETS["balanced"])
 
     @staticmethod
     def _safe_int(value, default=0):
@@ -500,6 +529,7 @@ class CarEvaluator:
         current_year=None,
         allow_automatic=False,
         min_price=20000,
+        target_annual_km=15000,
     ):
         """
         Extract and normalize raw car metrics. NO SCORING.
@@ -703,10 +733,22 @@ class SautoSpider(scrapy.Spider):
         self.strict_model_set = set()
         self.strict_seller_type = None
 
+        self.filter_year_from = None
+        self.filter_year_to = None
+        self.filter_tachometer_from = None
+        self.filter_tachometer_to = None
+        self.filter_power_from = None
+        self.filter_power_to = None
+        self.filter_fuel_set = set()
+        self.filter_body_set = set()
+        self.filter_gearbox = None
+        self.filter_drive = None
+        self.required_equipment_terms = []
+
         self.discord_webhook_url = os.getenv("SAUTO_DISCORD_WEBHOOK_URL", "").strip()
         self.min_interesting_score = 90
         self.top_n = 10
-        self.min_price = 20000
+        self.min_price = 0
         self.allow_automatic = False
         self.discord_notify_only_new = True
 
@@ -799,6 +841,15 @@ class SautoSpider(scrapy.Spider):
         normalized = str(value).strip().lower()
         return normalized if normalized in allowed else default
 
+    def _to_optional_int(self, value):
+        normalized = self._norm_str(value)
+        if normalized is None:
+            return None
+        try:
+            return int(float(normalized))
+        except (TypeError, ValueError):
+            return None
+
     @staticmethod
     def _median(values):
         seq = sorted(v for v in values if v is not None)
@@ -867,6 +918,28 @@ class SautoSpider(scrapy.Spider):
             self.prefer_drive,
         )
 
+        self.filter_year_from = self._to_optional_int(params.pop("year_from", None))
+        self.filter_year_to = self._to_optional_int(params.pop("year_to", None))
+        self.filter_tachometer_from = self._to_optional_int(params.pop("tachometer_from", None))
+        self.filter_tachometer_to = self._to_optional_int(params.pop("tachometer_to", None))
+        self.filter_power_from = self._to_optional_int(params.pop("power_from", None))
+        self.filter_power_to = self._to_optional_int(params.pop("power_to", None))
+        self.filter_fuel_set = {x.lower() for x in self._split_csv(params.pop("fuel_seo", ""))}
+        self.filter_body_set = {x.lower() for x in self._split_csv(params.pop("body_seo", ""))}
+        self.filter_gearbox = self._to_choice(
+            params.pop("gearbox_filter", None),
+            {"manual", "automatic"},
+            None,
+        )
+        self.filter_drive = self._to_choice(
+            params.pop("drive_filter", None),
+            {"fwd", "rwd", "awd"},
+            None,
+        )
+        self.required_equipment_terms = [
+            x.lower() for x in self._split_csv(params.pop("required_equipment", ""))
+        ]
+
         self.model_price_min_samples = max(
             2,
             self._to_int(
@@ -933,6 +1006,40 @@ class SautoSpider(scrapy.Spider):
             if self.strict_seller_type == "bazar" and not is_bazar:
                 return False
             if self.strict_seller_type == "soukromy" and is_bazar:
+                return False
+
+        return True
+
+    def _passes_detail_filters(self, offer: dict) -> bool:
+        year = datetime.datetime.now().year - int(offer.get("age_years") or 0)
+        tachometer = offer.get("tachometer") or 0
+        power_kw = offer.get("power_kw") or 0
+
+        if self.filter_year_from is not None and year < self.filter_year_from:
+            return False
+        if self.filter_year_to is not None and year > self.filter_year_to:
+            return False
+        if self.filter_tachometer_from is not None and tachometer < self.filter_tachometer_from:
+            return False
+        if self.filter_tachometer_to is not None and tachometer > self.filter_tachometer_to:
+            return False
+        if self.filter_power_from is not None and power_kw < self.filter_power_from:
+            return False
+        if self.filter_power_to is not None and power_kw > self.filter_power_to:
+            return False
+
+        if self.filter_fuel_set and offer.get("fuel_seo") not in self.filter_fuel_set:
+            return False
+        if self.filter_body_set and offer.get("body_seo") not in self.filter_body_set:
+            return False
+        if self.filter_gearbox and offer.get("gearbox_type") != self.filter_gearbox:
+            return False
+        if self.filter_drive and offer.get("drive_type") != self.filter_drive:
+            return False
+
+        if self.required_equipment_terms:
+            equipment_text = " ".join(offer.get("equipment_list") or []).lower()
+            if any(term not in equipment_text for term in self.required_equipment_terms):
                 return False
 
         return True
@@ -1012,6 +1119,17 @@ class SautoSpider(scrapy.Spider):
         search_params.pop("model_seo_name", None)
         if manufacturer_model_seo:
             search_params["manufacturer_model_seo"] = manufacturer_model_seo
+
+        for key in list(search_params.keys()):
+            if self._norm_str(search_params.get(key)) is None:
+                search_params.pop(key, None)
+
+        price_to = self._to_int(search_params.get("price_to"), 0)
+        if price_to <= 0:
+            search_params.pop("price_to", None)
+        price_from = self._to_int(search_params.get("price_from"), 0)
+        if price_from <= 0:
+            search_params.pop("price_from", None)
 
         search_params["offset"] = str(search_params.get("offset", "0"))
         return search_params
@@ -1150,35 +1268,26 @@ class SautoSpider(scrapy.Spider):
         context = self._build_market_context(offers)
 
         for offer in offers:
-            base_score = offer.get("base_score", offer.get("score", 0))
             adjustment, market_reasons, components = self._market_adjustment_for_offer(offer, context)
 
-            offer["base_score"] = base_score
             offer["market_adjustment"] = adjustment
             offer["market_components"] = components
-            offer["score"] = base_score + adjustment
-            offer["interesting"] = offer["score"] >= self.min_interesting_score
             offer["model_avg_price"] = components.get("model_avg_price")
             offer["model_price_ratio"] = components.get("model_price_ratio")
             offer["model_price_sample"] = components.get("model_price_sample")
             offer["valuation_label"] = components.get("valuation_label")
             offer["is_undervalued"] = components.get("valuation_label") in {"undervalued", "deep_undervalued"}
-
-            merged_reasons = list(offer.get("reasons") or [])
-            merged_reasons.extend(market_reasons)
-            offer["reasons"] = merged_reasons
+            if market_reasons:
+                offer["market_reasons"] = market_reasons
 
         return sorted(
             offers,
             key=lambda x: (
-                x.get("score", 0),
-                (x.get("market_components") or {}).get("model_price", 0),
-                (x.get("market_components") or {}).get("ownership", 0),
-                (x.get("market_components") or {}).get("value", 0),
-                x.get("confidence_score", 0),
-                -(x.get("price") or 0),
+                x.get("price_per_kw") is None,
+                x.get("price_per_kw") or 999999999,
+                x.get("annual_total_cost") or 999999999,
+                x.get("price") or 999999999,
             ),
-            reverse=True,
         )
 
     def start_requests(self):
@@ -1264,8 +1373,9 @@ class SautoSpider(scrapy.Spider):
             base_item,
             allow_automatic=self.allow_automatic,
             min_price=self.min_price,
+            target_annual_km=self.target_annual_km,
         )
-        if raw_offer:
+        if raw_offer and self._passes_detail_filters(raw_offer):
             self.scored_cars.append(raw_offer)
             base_item["offer_metrics"] = {
                 "price_per_kw": raw_offer["price_per_kw"],
@@ -1275,13 +1385,12 @@ class SautoSpider(scrapy.Spider):
                 "gearbox_type": raw_offer["gearbox_type"],
                 "drive_type": raw_offer["drive_type"],
                 "brand_tier": raw_offer["brand_tier"],
-                "confidence_score": scored_offer["confidence_score"],
-                "listing_age_days": scored_offer["listing_age_days"],
-                "months_to_stk": scored_offer["months_to_stk"],
-                "euro_value": scored_offer["euro_value"],
-                "annual_fuel_cost": scored_offer["annual_fuel_cost"],
-                "annual_insurance": scored_offer["annual_insurance"],
-                "annual_maintenance": scored_offer["annual_maintenance"],
+                "listing_age_days": raw_offer["listing_age_days"],
+                "months_to_stk": raw_offer["months_to_stk"],
+                "euro_value": raw_offer["euro_value"],
+                "annual_fuel_cost": raw_offer["annual_fuel_cost"],
+                "annual_insurance": raw_offer["annual_insurance"],
+                "annual_maintenance": raw_offer["annual_maintenance"],
                 "annual_total_cost": raw_offer["annual_total_cost"],
                 "estimated_consumption_per_100km": raw_offer["estimated_consumption_per_100km"],
                 "model_family_key": raw_offer["model_family_key"],
@@ -1292,6 +1401,7 @@ class SautoSpider(scrapy.Spider):
                 "images_count": raw_offer["images_count"],
             }
         else:
+            base_item["filtered_out"] = raw_offer is not None
             pass
 
         self.items_scraped += 1
@@ -1319,9 +1429,8 @@ class SautoSpider(scrapy.Spider):
             f"SAUTO scrape finished ({reason})",
             f"Filters: brand={brand} | model={model} | seller={seller_type}",
             f"Checked ads: {self.items_scraped}",
-            f"Scored ads: {len(self.scored_cars)}",
-            f"Interesting ads (score >= {self.min_interesting_score}): {total_interesting}",
-            f"Ranked output: {self.INTERESTING_OFFERS_FILE}",
+            f"Raw matched ads: {len(self.scored_cars)}",
+            f"Output: {self.INTERESTING_OFFERS_FILE}",
             (
                 f"Market tuning: cohort>={self.market_min_cohort_size}, "
                 f"expected km/year={self.market_expected_km_per_year}"
@@ -1346,7 +1455,7 @@ class SautoSpider(scrapy.Spider):
             lines.append("No matching offers to notify on Discord in this run.")
             return "\n".join(lines)
 
-        lines.append(f"Top {len(offers)} interesting offers:")
+        lines.append(f"Top {len(offers)} raw offers:")
         lines.append("")
         for index, offer in enumerate(offers, 1):
             new_prefix = "NEW " if offer.get("is_new") else ""
@@ -1380,13 +1489,8 @@ class SautoSpider(scrapy.Spider):
         return "\n".join(lines)
 
     def closed(self, reason):
-        sorted_offers = self._apply_advanced_sorting(list(self.scored_cars))
-        # Keep every scored matching ad in the ranked output, including negative
-        # scores. Raw base items are still yielded to Scrapy's feed, but the UI
-        # result file must contain evaluated offers with real `score` fields.
-        all_offers = sorted_offers
-        interesting_offers = [offer for offer in sorted_offers if offer["interesting"]]
-        top_offers = interesting_offers[: self.top_n]
+        all_offers = self._apply_advanced_sorting(list(self.scored_cars))
+        top_offers = all_offers[: self.top_n]
 
         for offer in top_offers:
             is_new = offer["ad_id"] not in self.notified_ids
@@ -1403,5 +1507,5 @@ class SautoSpider(scrapy.Spider):
         if top_offers:
             self._save_notified()
 
-        message = self._format_discord_message(reason, offers_for_discord, len(interesting_offers))
+        message = self._format_discord_message(reason, offers_for_discord, len(all_offers))
         self._send_discord(message)

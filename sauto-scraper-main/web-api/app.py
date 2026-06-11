@@ -489,15 +489,18 @@ def get_scoring_presets() -> dict[str, Any]:
     """Return all available scoring presets for frontend use (Varianta A)."""
     presets_data = {}
     for preset_name, preset_config in CarEvaluator.SCORING_PRESETS.items():
+        weights = preset_config.get("weights", {})
         presets_data[preset_name] = {
             "name": preset_config.get("name", preset_name),
             "description": preset_config.get("description", ""),
+            "weights": weights,
             "multipliers": {
-                "age": preset_config.get("age_multiplier", 1.0),
-                "mileage": preset_config.get("mileage_multiplier", 1.0),
-                "consumption": preset_config.get("consumption_multiplier", 1.0),
-                "equipment": preset_config.get("equipment_multiplier", 1.0),
-                "flags": preset_config.get("flag_multiplier", 1.0),
+                "age": weights.get("age", preset_config.get("age_multiplier", 1.0)),
+                "mileage": weights.get("mileage", preset_config.get("mileage_multiplier", 1.0)),
+                "price": weights.get("price", 1.0),
+                "consumption": weights.get("consumption", preset_config.get("consumption_multiplier", 1.0)),
+                "equipment": weights.get("equipment", preset_config.get("equipment_multiplier", 1.0)),
+                "flags": weights.get("flags", preset_config.get("flag_multiplier", 1.0)),
                 "power_bonus": preset_config.get("power_bonus", 0),
             }
         }

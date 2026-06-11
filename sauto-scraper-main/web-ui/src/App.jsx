@@ -1,6 +1,47 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  ArrowLeft,
+  ChevronDown,
+  ChevronUp,
+  Download,
+  History,
+  LoaderCircle,
+  Menu,
+  Moon,
+  Play,
+  RefreshCw,
+  Save,
+  Star,
+  Sun,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
 
 const API_BASE = "http://localhost:8000";
+
+const LOCAL_SCORING_PRESETS = {
+  value: {
+    name: "Cena / výkon",
+    description: "Nejlepší poměr ceny, výkonu a provozních nákladů.",
+    weights: { age: 0.75, mileage: 1.1, price: 1.4, price_power: 1.85, cost: 1.45, consumption: 1.15, power: 0.85, equipment: 0.45, flags: 1.15, sport: 0.25, luxury: 0.15 },
+  },
+  balanced: {
+    name: "Balanced",
+    description: "Univerzální hodnocení: stav, nájezd, cena, výkon, náklady i výbava.",
+    weights: { age: 1, mileage: 1, price: 1, price_power: 1, cost: 1, consumption: 1, power: 0.75, equipment: 0.85, flags: 1, sport: 0.35, luxury: 0.35 },
+  },
+  sport: {
+    name: "Sport",
+    description: "Priorita: výkon, dynamika, cena za kW, pohon a mladší kusy.",
+    weights: { age: 1.05, mileage: 0.75, price: 0.55, price_power: 1.3, cost: 0.55, consumption: 0.35, power: 2.1, equipment: 0.45, flags: 0.8, sport: 1.45, luxury: 0.2 },
+  },
+  luxury: {
+    name: "Luxury",
+    description: "Priorita: prémiová značka, výbava, komfort a kultivovaný výkon.",
+    weights: { age: 1.35, mileage: 0.9, price: 0.25, price_power: 0.45, cost: 0.35, consumption: 0.25, power: 0.8, equipment: 2.1, flags: 0.9, sport: 0.25, luxury: 1.9 },
+  },
+};
 
 const PARAM_GROUPS = [
   {
@@ -22,8 +63,24 @@ const PARAM_GROUPS = [
   {
     label: "Cena (Kč)",
     fields: [
-      { key: "price_from", type: "slider", label: "Cena od", min: 0, max: 2000000, step: 10000, fmt: "price" },
-      { key: "price_to", type: "slider", label: "Cena do", min: 0, max: 2000000, step: 10000, fmt: "price" },
+      { key: "price_from", type: "slider", label: "Cena od", min: 0, max: 10000000, step: 10000, fmt: "price" },
+      { key: "price_to", type: "slider", label: "Cena do (0 = bez limitu)", min: 0, max: 10000000, step: 10000, fmt: "price" },
+    ],
+  },
+  {
+    label: "Technické filtry scraperu",
+    fields: [
+      { key: "year_from", type: "number", label: "Rok od" },
+      { key: "year_to", type: "number", label: "Rok do" },
+      { key: "tachometer_from", type: "number", label: "Nájezd od (km)" },
+      { key: "tachometer_to", type: "number", label: "Nájezd do (km)" },
+      { key: "power_from", type: "number", label: "Výkon od (kW)" },
+      { key: "power_to", type: "number", label: "Výkon do (kW)" },
+      { key: "fuel_seo", type: "text", label: "Palivo (např. benzin,nafta,hybrid,elektro)" },
+      { key: "gearbox_filter", type: "select", label: "Převodovka scraper", options: ["", "manual", "automatic"] },
+      { key: "drive_filter", type: "select", label: "Pohon scraper", options: ["", "fwd", "rwd", "awd"] },
+      { key: "body_seo", type: "text", label: "Karoserie (např. suv,kombi,hatchback)" },
+      { key: "required_equipment", type: "text", label: "Musí mít výbavu/funkce (čárkou)" },
     ],
   },
   {
@@ -183,10 +240,10 @@ export default function App() {
   const [brandFilterText, setBrandFilterText] = useState("");
   const [modelFilterText, setModelFilterText] = useState("");
   const [tickerStep, setTickerStep] = useState(0);
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
+  const [sortConfig, setSortConfig] = useState({ key: "score", direction: "desc" });
   const [isSidebarHidden, setIsSidebarHidden] = useState(false);
-  const [scoringPresets, setScoringPresets] = useState({});
-  const [selectedPreset, setSelectedPreset] = useState("standard");
+  const [scoringPresets, setScoringPresets] = useState(LOCAL_SCORING_PRESETS);
+  const [selectedPreset, setSelectedPreset] = useState("balanced");
   const fileInputRef = useRef(null);
   const logsModalBodyRef = useRef(null);
   const prevIsRunningRef = useRef(null);
@@ -198,6 +255,12 @@ export default function App() {
     document.documentElement.classList.toggle("theme-dark", theme === "dark");
     window.localStorage.setItem("sauto_theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    if (Object.keys(scoringPresets).length > 0 && !scoringPresets[selectedPreset]) {
+      setSelectedPreset(scoringPresets.balanced ? "balanced" : Object.keys(scoringPresets)[0]);
+    }
+  }, [scoringPresets, selectedPreset]);
 
   function fmtUptime(s) {
     if (!s && s !== 0) return "—";
@@ -259,9 +322,9 @@ export default function App() {
     try {
       const res = await fetch(`${API_BASE}/api/scoring/presets`, { signal: AbortSignal.timeout(4000) });
       const data = await res.json();
-      setScoringPresets(data.presets || {});
+      setScoringPresets(Object.keys(data.presets || {}).length ? data.presets : LOCAL_SCORING_PRESETS);
     } catch {
-      setScoringPresets({});
+      setScoringPresets(LOCAL_SCORING_PRESETS);
     }
   }
 
@@ -344,7 +407,7 @@ export default function App() {
 
   function toggleSort(key) {
     setSortConfig((prev) => {
-      if (prev.key !== key) return { key, direction: "asc" };
+      if (prev.key !== key) return { key, direction: key === "score" ? "desc" : "asc" };
       return { key, direction: prev.direction === "asc" ? "desc" : "asc" };
     });
   }
@@ -354,170 +417,135 @@ export default function App() {
     return sortConfig.direction === "asc" ? "↑" : "↓";
   }
 
-  // Varianta A: Score calculation on frontend
-  function calculateBaseScore(item) {
-    let score = 0;
+  const DEFAULT_SCORE_WEIGHTS = {
+    age: 1,
+    mileage: 1,
+    price: 1,
+    consumption: 1,
+    cost: 1,
+    price_power: 1,
+    power: 0.75,
+    equipment: 0.85,
+    flags: 1,
+    sport: 0.35,
+    luxury: 0.35,
+  };
 
-    // Age scoring
-    const age_years = item.age_years || 0;
-    if (age_years <= 5) {
-      score += 60;
-    } else if (age_years <= 8) {
-      score += 45;
-    } else if (age_years <= 12) {
-      score += 25;
-    } else if (age_years <= 16) {
-      score += 5;
-    } else if (age_years <= 20) {
-      score -= 20;
-    } else {
-      score -= 35;
-    }
-
-    // Mileage scoring
-    const tachometer = item.tachometer || 0;
-    if (tachometer > 0) {
-      if (tachometer <= 80000) {
-        score += 60;
-      } else if (tachometer <= 140000) {
-        score += 40;
-      } else if (tachometer <= 200000) {
-        score += 15;
-      } else if (tachometer <= 260000) {
-        score -= 10;
-      } else {
-        score -= 30;
-      }
-    }
-
-    // Consumption scoring
-    const consumption = item.estimated_consumption_per_100km || 0;
-    if (consumption <= 5.5) {
-      score += 30;
-    } else if (consumption <= 6.8) {
-      score += 20;
-    } else if (consumption <= 8.0) {
-      score += 8;
-    } else if (consumption <= 9.5) {
-      score -= 8;
-    } else {
-      score -= 20;
-    }
-
-    // Equipment scoring (simplified - count items as proxy)
-    const equipment_list = item.equipment_list || [];
-    if (equipment_list.length >= 40) {
-      score += 15;
-    } else if (equipment_list.length >= 25) {
-      score += 8;
-    }
-
-    // Flags scoring
-    if (item.service_book) {
-      score += 8;
-    }
-    if (item.first_owner) {
-      score += 5;
-    }
-    if (item.tuning) {
-      score -= 12;
-    }
-
-    return score;
+  function num(value, fallback = null) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
   }
 
-  function applyPresetMultipliers(baseScore, item, preset) {
-    if (!preset || !preset.multipliers) return baseScore;
-    const m = preset.multipliers;
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
 
-    let adjustedScore = 0;
+  function scoreMax(value, bands, fallback = 0) {
+    const n = num(value);
+    if (n === null || n <= 0) return fallback;
+    for (const [max, score] of bands) {
+      if (n <= max) return score;
+    }
+    return bands[bands.length - 1][1];
+  }
 
-    // Re-apply age component with multiplier
-    const age_years = item.age_years || 0;
-    let age_component = 0;
-    if (age_years <= 5) {
-      age_component = 60;
-    } else if (age_years <= 8) {
-      age_component = 45;
-    } else if (age_years <= 12) {
-      age_component = 25;
-    } else if (age_years <= 16) {
-      age_component = 5;
-    } else if (age_years <= 20) {
-      age_component = -20;
-    } else {
-      age_component = -35;
+  function scoreMin(value, bands, fallback = 0) {
+    const n = num(value);
+    if (n === null || n <= 0) return fallback;
+    for (const [min, score] of bands) {
+      if (n >= min) return score;
     }
-    adjustedScore += Math.round(age_component * m.age);
+    return bands[bands.length - 1][1];
+  }
 
-    // Re-apply mileage component with multiplier
-    const tachometer = item.tachometer || 0;
-    let mileage_component = 0;
-    if (tachometer > 0) {
-      if (tachometer <= 80000) {
-        mileage_component = 60;
-      } else if (tachometer <= 140000) {
-        mileage_component = 40;
-      } else if (tachometer <= 200000) {
-        mileage_component = 15;
-      } else if (tachometer <= 260000) {
-        mileage_component = -10;
-      } else {
-        mileage_component = -30;
-      }
-    }
-    adjustedScore += Math.round(mileage_component * m.mileage);
+  function equipmentText(item) {
+    return (Array.isArray(item.equipment_list) ? item.equipment_list : [])
+      .join(" ")
+      .toLowerCase();
+  }
 
-    // Re-apply consumption component with multiplier
-    const consumption = item.estimated_consumption_per_100km || 0;
-    let consumption_component = 0;
-    if (consumption <= 5.5) {
-      consumption_component = 30;
-    } else if (consumption <= 6.8) {
-      consumption_component = 20;
-    } else if (consumption <= 8.0) {
-      consumption_component = 8;
-    } else if (consumption <= 9.5) {
-      consumption_component = -8;
-    } else {
-      consumption_component = -20;
-    }
-    adjustedScore += Math.round(consumption_component * m.consumption);
+  function hasAny(text, patterns) {
+    return patterns.some((pattern) => pattern.test(text));
+  }
 
-    // Equipment with multiplier
-    const equipment_list = item.equipment_list || [];
-    let equipment_component = 0;
-    if (equipment_list.length >= 40) {
-      equipment_component = 15;
-    } else if (equipment_list.length >= 25) {
-      equipment_component = 8;
-    }
-    adjustedScore += Math.round(equipment_component * m.equipment);
+  function calculateScoreComponents(item) {
+    const equipment = Array.isArray(item.equipment_list) ? item.equipment_list : [];
+    const eqText = equipmentText(item);
+    const power = num(item.power_kw, 0);
+    const fuel = String(item.fuel_seo || "").toLowerCase();
+    const gearbox = String(item.gearbox_type || "").toLowerCase();
+    const drive = String(item.drive_type || "").toLowerCase();
+    const brandTier = String(item.brand_tier || "").toLowerCase();
 
-    // Flags with multiplier
-    let flags_component = 0;
-    if (item.service_book) {
-      flags_component += 8;
-    }
-    if (item.first_owner) {
-      flags_component += 5;
-    }
-    if (item.tuning) {
-      flags_component -= 12;
-    }
-    adjustedScore += Math.round(flags_component * m.flags);
+    const components = {
+      age: scoreMax(item.age_years, [[2, 78], [5, 62], [8, 43], [12, 24], [16, 6], [20, -18], [999, -35]]),
+      mileage: scoreMax(item.tachometer, [[50000, 72], [80000, 58], [140000, 38], [200000, 14], [260000, -12], [9999999, -36]]),
+      price: scoreMax(item.price, [[120000, 56], [200000, 40], [350000, 22], [600000, 4], [1000000, -12], [99999999, -30]]),
+      price_power: scoreMax(item.price_per_kw, [[1200, 72], [1800, 52], [2600, 32], [3600, 10], [5200, -14], [999999, -36]]),
+      power: scoreMin(power, [[220, 72], [170, 56], [130, 36], [100, 16], [75, 2], [55, -12], [0, -28]]),
+      cost: scoreMax(item.annual_total_cost, [[35000, 48], [50000, 32], [70000, 14], [95000, -8], [9999999, -28]]),
+      consumption: fuel === "elektro"
+        ? scoreMax(item.estimated_consumption_per_100km, [[16, 34], [20, 24], [24, 10], [30, -6], [999, -18]])
+        : scoreMax(item.estimated_consumption_per_100km, [[5.5, 34], [6.8, 24], [8.0, 10], [9.5, -8], [999, -24]]),
+      equipment: 0,
+      flags: 0,
+      sport: 0,
+      luxury: 0,
+    };
 
-    // Power bonus
-    if (m.power_bonus > 0 && (item.power_kw || 0) >= 150) {
-      adjustedScore += m.power_bonus;
-    }
+    if (equipment.length >= 45) components.equipment += 18;
+    else if (equipment.length >= 30) components.equipment += 11;
+    else if (equipment.length >= 18) components.equipment += 5;
 
-    return adjustedScore;
+    if (hasAny(eqText, [/adaptivn[ií]\s*tempomat/, /front assist/, /nouzov[eé]\s*brzd/])) components.equipment += 12;
+    if (hasAny(eqText, [/parkovac[ií]\s*kamera/, /360/, /couvac[ií]\s*kamera/])) components.equipment += 8;
+    if (hasAny(eqText, [/parkovac[ií]\s*senzory/])) components.equipment += 5;
+    if (hasAny(eqText, [/apple\s*car\s*play/, /android\s*auto/, /navigace/])) components.equipment += 8;
+    if (hasAny(eqText, [/vyh[rř]ivan[aá]\s*sedadla/, /vyh[rř]ivan[eé]\s*celn[ií]\s*sklo/])) components.equipment += 6;
+    if (hasAny(eqText, [/led\s*sv[eě]tl/, /xenon/, /matrix/])) components.equipment += 6;
+    if (hasAny(eqText, [/mrtv[eé]ho\s*[uú]hlu/, /j[ií]zdn[ií]ho\s*pruhu/, /lane assist/])) components.equipment += 8;
+    components.equipment = clamp(components.equipment, 0, 70);
+
+    if (item.service_book) components.flags += 14;
+    if (item.first_owner) components.flags += 9;
+    if (item.tuning) components.flags -= 28;
+
+    if (power >= 220) components.sport += 36;
+    else if (power >= 170) components.sport += 28;
+    else if (power >= 130) components.sport += 16;
+    else if (power < 75) components.sport -= 12;
+    if (drive === "rwd") components.sport += 12;
+    else if (drive === "awd") components.sport += 9;
+    if (gearbox === "manual") components.sport += 6;
+    if (num(item.price_per_kw, 999999) <= 2200) components.sport += 10;
+    if (item.tuning) components.sport -= 18;
+
+    if (brandTier === "premium") components.luxury += 24;
+    else if (brandTier === "budget") components.luxury -= 6;
+    if (gearbox === "automatic") components.luxury += 10;
+    if (hasAny(eqText, [/ko[zž]en[aá]/, /alcantara/, /mas[aá][zž]/])) components.luxury += 13;
+    if (hasAny(eqText, [/panoramatick[aá]\s*st[rř]echa/, /st[rř]e[sš]n[ií]\s*okno/])) components.luxury += 9;
+    if (equipment.length >= 40) components.luxury += 14;
+    else if (equipment.length >= 25) components.luxury += 8;
+    if (num(item.age_years, 99) <= 5) components.luxury += 12;
+    if (power >= 130) components.luxury += 7;
+    components.luxury = clamp(components.luxury, -20, 75);
+
+    return components;
+  }
+
+  function getPresetWeights(preset) {
+    return preset?.weights || preset?.multipliers || DEFAULT_SCORE_WEIGHTS;
   }
 
   function getItemScore(item, preset) {
-    const baseScore = calculateBaseScore(item);
-    return applyPresetMultipliers(baseScore, item, preset);
+    const components = calculateScoreComponents(item);
+    const weights = getPresetWeights(preset);
+    const weightedScore = Object.entries(components).reduce((sum, [key, value]) => {
+      return sum + value * (weights[key] ?? DEFAULT_SCORE_WEIGHTS[key] ?? 1);
+    }, 0);
+
+    return Math.round(weightedScore * 0.55);
   }
 
   function sortValue(item, key) {
@@ -829,7 +857,11 @@ export default function App() {
     <>
     <div className="app">
       <div className="topbar">
-        <h1>DobráKára</h1>
+        <div className="brand-block">
+          <div>
+            <h1>Sauto Scraper</h1>
+          </div>
+        </div>
         <span className={`status-dot${busy ? " running" : ""}`}>
           {statusLabel()}
         </span>
@@ -840,7 +872,7 @@ export default function App() {
           onClick={() => setIsSidebarHidden((prev) => !prev)}
           title={isSidebarHidden ? "Zobrazit panel filtrů" : "Skrýt panel filtrů"}
         >
-          {isSidebarHidden ? "Zobrazit panel" : "Skrýt panel"}
+          {isSidebarHidden ? <><Menu className="ui-icon" aria-hidden="true" /> Filtry</> : <><ArrowLeft className="ui-icon" aria-hidden="true" /> Skrýt</>}
         </button>
         <button
           type="button"
@@ -848,22 +880,12 @@ export default function App() {
           onClick={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
           title="Přepnout tmavý režim"
         >
-          {theme === "dark" ? "Světlý režim" : "Tmavý režim"}
+          {theme === "dark" ? <><Sun className="ui-icon" aria-hidden="true" /> Světlý</> : <><Moon className="ui-icon" aria-hidden="true" /> Tmavý</>}
         </button>
         {apiHealth && (
           <div className={`api-status-chip${apiHealth.status === "ok" ? " up" : " down"}`}>
             <span className="api-status-dot" />
             <span className="api-status-label">API {apiHealth.status === "ok" ? "UP" : "DOWN"}</span>
-            {apiHealth.status === "ok" && (
-              <>
-                <span className="api-status-sep">|</span>
-                <span className="api-status-meta">v{apiHealth.version}</span>
-                <span className="api-status-sep">·</span>
-                <span className="api-status-meta">Python {apiHealth.python}</span>
-                <span className="api-status-sep">·</span>
-                <span className="api-status-meta">↑ {fmtUptime(apiHealth.uptime_s)}</span>
-              </>
-            )}
           </div>
         )}
       </div>
@@ -872,13 +894,16 @@ export default function App() {
         {/* Sidebar */}
         {!isSidebarHidden && <aside className="sidebar">
           <div className="sidebar-head">
+            <div>
+              <strong>Filtry</strong>
+            </div>
             <button
               type="button"
               className="link-btn"
               onClick={() => setIsSidebarHidden(true)}
               title="Skrýt levý panel"
             >
-              Schovat filtry
+              <X className="ui-icon" aria-hidden="true" />
             </button>
           </div>
           {initialLoading && (
@@ -892,16 +917,7 @@ export default function App() {
           )}
 
           {!initialLoading && (
-            <div className="status-panel">
-              <div className="status-panel-row">
-                <span className={`mini-dot${isRunning ? " running" : ""}`} />
-                <strong>{statusLabel()}</strong>
-              </div>
-              <div className="status-panel-meta">
-                <span>PID: {status?.pid || "—"}</span>
-                <span>Exit: {status?.last_exit_code ?? "—"}</span>
-              </div>
-            </div>
+            null
           )}
 
           {BASIC_GROUPS.map((group) => (
@@ -991,7 +1007,7 @@ export default function App() {
 
           <div className="advanced-toggle-row">
             <button className="link-btn" onClick={() => setShowAdvanced((v) => !v)}>
-              {showAdvanced ? "Skrýt advanced nastavení" : "Zobrazit advanced nastavení"}
+              {showAdvanced ? <><ChevronUp className="ui-icon" aria-hidden="true" /> Skrýt pokročilé</> : <><ChevronDown className="ui-icon" aria-hidden="true" /> Pokročilé filtry</>}
             </button>
             <span className="muted">{ADVANCED_GROUPS.length} sekcí</span>
           </div>
@@ -1024,29 +1040,17 @@ export default function App() {
 
           <div className="actions sticky-actions">
             <button className="btn-primary" onClick={run} disabled={busy}>
-              {busy ? "Pracuji…" : "Spustit"}
+              {busy ? <><LoaderCircle className="ui-icon icon-spin" aria-hidden="true" /> Pracuji…</> : <><Play className="ui-icon" aria-hidden="true" /> Spustit scraper</>}
             </button>
-            <button onClick={save} disabled={busy}>Uložit</button>
-            <button onClick={refreshAll} disabled={busy}>Obnovit</button>
+            <button onClick={save} disabled={busy}><Save className="ui-icon" aria-hidden="true" /> Uložit</button>
+            <button onClick={refreshAll} disabled={busy}><RefreshCw className="ui-icon" aria-hidden="true" /> Obnovit</button>
           </div>
           {message && <p className="msg">{message}</p>}
         </aside>}
 
         {/* Main */}
         <div className="main">
-          {isSidebarHidden && (
-            <div className="sidebar-reopen-row">
-              <button
-                type="button"
-                className="link-btn"
-                onClick={() => setIsSidebarHidden(false)}
-                title="Zobrazit levý panel"
-              >
-                Zobrazit filtry
-              </button>
-            </div>
-          )}
-          <div className="debug-ticker-wrap">
+          {(isRunning || logs.length > 0) && <div className="debug-ticker-wrap">
             <span className={`debug-ticker-dot${isRunning ? " active" : ""}`} title={isRunning ? "Běží" : "Nečinný"} />
             <span className="debug-ticker-text" title={logs.length > 0 ? logs[logs.length - 1] : ""}>
               <span className="debug-prefix">[{tickerPrefix()}]</span>{" "}
@@ -1056,9 +1060,9 @@ export default function App() {
               className="debug-history-btn"
               onClick={() => { setShowLogsModal(true); setTimeout(() => { if (logsModalBodyRef.current) logsModalBodyRef.current.scrollTop = logsModalBodyRef.current.scrollHeight; }, 50); }}
             >
-              Historie ({logs.length})
+              <History className="ui-icon" aria-hidden="true" /> Historie ({logs.length})
             </button>
-          </div>
+          </div>}
 
           {status && (
             <div className="status-bar">
@@ -1071,20 +1075,32 @@ export default function App() {
           )}
 
           <div className="results-hd results-header">
-            <div>
-              <strong>Výsledky</strong>
-              <span className="muted">{items.length} záznamů</span>
-              {scraperRunningFromResults && <span className="muted"> · běží scrape, data se doplňují</span>}
+            <div className="results-title-block">
+              <div className="results-title-row">
+                <strong>Výsledky</strong>
+                <span className="muted">{items.length} záznamů</span>
+                {scraperRunningFromResults && <span className="muted"> · scrape běží</span>}
+              </div>
+              <label className="score-control-inline">
+                <span>Bodování</span>
+                <select value={selectedPreset} onChange={(e) => setSelectedPreset(e.target.value)}>
+                  {Object.entries(scoringPresets).map(([key, preset]) => (
+                    <option key={key} value={key}>
+                      {preset.name || key}
+                    </option>
+                  ))}
+                </select>
+                {scoringPresets[selectedPreset]?.description && (
+                  <span className="score-control-description">
+                    {scoringPresets[selectedPreset].description}
+                  </span>
+                )}
+              </label>
             </div>
             <div className="results-actions">
-              <button className="link-btn" onClick={() => exportResults("all")}>Export všech</button>
-              <button className="link-btn" onClick={() => exportResults("selected")} disabled={selectedCount === 0}>Export vybraných</button>
-              <button className="link-btn" onClick={() => markSelected(true)} disabled={selectedCount === 0}>Označit</button>
-              <button className="link-btn" onClick={() => markSelected(false)} disabled={selectedCount === 0}>Odznačit</button>
-              <button className="link-btn danger" onClick={deleteSelected} disabled={selectedCount === 0}>Smazat</button>
-              <button className="link-btn danger" onClick={clearAllResults}>Smazat vše</button>
-              <button className="link-btn" onClick={() => fileInputRef.current?.click()}>Import</button>
-              <button className="link-btn" onClick={refreshAll}>Obnovit</button>
+              <button className="link-btn" onClick={() => exportResults("all")}><Download className="ui-icon" aria-hidden="true" /> Export</button>
+              <button className="link-btn" onClick={() => fileInputRef.current?.click()}><Upload className="ui-icon" aria-hidden="true" /> Import</button>
+              <button className="link-btn" onClick={refreshAll}><RefreshCw className="ui-icon" aria-hidden="true" /> Obnovit</button>
             </div>
           </div>
           <input
@@ -1095,36 +1111,22 @@ export default function App() {
             onChange={(e) => importResultsFile(e.target.files?.[0])}
           />
 
-          <div className="selection-bar">
+          {selectedCount > 0 && <div className="selection-bar">
             <div>
               <strong>{selectedCount}</strong> vybraných
               <span className="muted"> · zdroj {resultsPath}</span>
             </div>
             <div className="selection-actions">
+              <button className="link-btn" onClick={() => exportResults("selected")}><Download className="ui-icon" aria-hidden="true" /> Export</button>
+              <button className="link-btn" onClick={() => markSelected(true)}><Star className="ui-icon" aria-hidden="true" /> Označit</button>
+              <button className="link-btn" onClick={() => markSelected(false)}><Star className="ui-icon icon-muted" aria-hidden="true" /> Odznačit</button>
+              <button className="link-btn danger" onClick={deleteSelected}><Trash2 className="ui-icon" aria-hidden="true" /> Smazat</button>
               <button className="link-btn" onClick={toggleSelectVisible}>
                 {visibleItems.every((item) => selectedIds.includes(resultKey(item))) ? "Odznačit viditelné" : "Vybrat viditelné"}
               </button>
               <button className="link-btn" onClick={() => setSelectedIds([])} disabled={selectedCount === 0}>Vyčistit výběr</button>
             </div>
-          </div>
-
-          <div style={{ padding: "0.75rem 1rem", borderBottom: "1px solid #ddd", display: "flex", gap: "1rem", alignItems: "center" }}>
-            <label style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-              <strong>Preset bodování:</strong>
-              <select value={selectedPreset} onChange={(e) => setSelectedPreset(e.target.value)} style={{ padding: "0.25rem 0.5rem" }}>
-                {Object.entries(scoringPresets).map(([key, preset]) => (
-                  <option key={key} value={key}>
-                    {preset.name || key}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {scoringPresets[selectedPreset]?.description && (
-              <span style={{ fontSize: "0.85rem", color: "#666" }}>
-                {scoringPresets[selectedPreset].description}
-              </span>
-            )}
-          </div>
+          </div>}
 
           <div className="table-wrap">
             {items.length === 0 ? (
@@ -1160,7 +1162,9 @@ export default function App() {
                         <input type="checkbox" checked={selected} onChange={() => toggleSelected(key)} />
                       </td>
                       <td className="cell-mark">
-                        <button className={`mark-chip${marked ? " marked" : ""}`} onClick={() => markSelected(marked ? false : true)} disabled={!selected && !marked}>★</button>
+                        <button className={`mark-chip${marked ? " marked" : ""}`} onClick={() => markSelected(marked ? false : true)} disabled={!selected && !marked} title={marked ? "Odznačit" : "Označit"}>
+                          <Star className="ui-icon" aria-hidden="true" />
+                        </button>
                       </td>
                       <td>
                         {(() => {
@@ -1204,7 +1208,7 @@ export default function App() {
           <div className="debug-modal-head">
             <strong>Debug výpis — Historie</strong>
             <span className="muted">{logs.length} řádků</span>
-            <button className="debug-modal-close" onClick={() => setShowLogsModal(false)}>✕</button>
+            <button className="debug-modal-close" onClick={() => setShowLogsModal(false)}><X className="ui-icon" aria-hidden="true" /></button>
           </div>
           <div className="debug-modal-body" ref={logsModalBodyRef}>
             {logs.length === 0 ? (
@@ -1227,7 +1231,7 @@ export default function App() {
         <div className="log-popup" onClick={(e) => e.stopPropagation()}>
           <div className="log-popup-head">
             <strong>Detail řádku</strong>
-            <button className="debug-modal-close" onClick={() => setPopupLog(null)}>✕</button>
+            <button className="debug-modal-close" onClick={() => setPopupLog(null)}><X className="ui-icon" aria-hidden="true" /></button>
           </div>
           <pre className="log-popup-body">{popupLog}</pre>
           <div className="log-popup-foot">
