@@ -1,249 +1,318 @@
-# sauto-scraper
+# Sauto Scraper — Used Car Deal Finder for Sauto.cz
 
-## Description
-
-This is a Scrapy-based web scraper that extracts car listings from the [sauto.cz](https://www.sauto.cz/) API.
-The scraper queries the API using configurable parameters stored in `params.json` and saves the output in JSON or CSV format for further analysis.
+A full-stack web scraper and deal analyzer for the Czech car marketplace [Sauto.cz](https://www.sauto.cz). It scrapes listings, evaluates car value using a sophisticated scoring engine, and notifies you via Discord when underpriced cars appear.
 
 ## Features
 
-- Configurable search parameters via `params.json`
-- Supports filtering by manufacturer + model
-- Supports filtering by seller type (private / dealer)
-- Supports price range filtering
-- Logs all scraped URLs to `sauto_spider.log`
-- Outputs data in JSON / CSV / JSONL format
-- Uses the sauto.cz API endpoint
-
-## Installation
-
-1. Clone the repository
-
-```bash
-git clone https://github.com/karlosmatos/sauto-scraper.git
-cd sauto-scraper
-```
-
-2. Create a virtual environment (recommended)
-
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. Install the requirements
-
-```bash
-pip install -r requirements.txt
-```
-
-## Configuration
-
-Modify the `params.json` file to customize your search parameters:
-
-```json
-{
-  "limit": "1000",
-  "offset": "0",
-
-  "category_id": "838",
-
-  "manufacturer_seo_name": "volkswagen",
-  "model_seo_name": "golf",
-
-  "condition_seo": "nove,ojete,predvadeci",
-  "operating_lease": "false",
-  "seller_type": "soukromy",
-
-  "price_from": "0",
-  "price_to": "300000"
-}
-```
-
----
-
-## Parameter Descriptions
-
-### Pagination / output size
-- `limit`: Maximum number of results per request (usually max 1000)
-- `offset`: Starting offset for pagination (default: `"0"`)
-
-### Vehicle category
-- `category_id`: Vehicle category filter
-  - `838` = Osobní (personal cars)
-  - Other categories exist (e.g. užitkové), but this scraper example focuses on personal cars
-
-### Manufacturer + model filtering
-- `manufacturer_seo_name`: Manufacturer filter (SEO name)
-  - Example: `"volkswagen"`, `"audi"`, `"bmw"`, `"skoda"`
-- `model_seo_name`: Model filter (SEO name)
-  - Example: `"golf"`, `"passat"`, `"a4"`, `"octavia"`
-
-### Condition filter
-- `condition_seo`: Filter by car condition (comma-separated)
-  - `nove` = new
-  - `ojete` = used
-  - `predvadeci` = demo
-
-### Seller filter
-- `seller_type`: Filter by seller type
-  - `"soukromy"` = private seller
-  - `"bazar"` = dealer / car lot
-
-### Lease filter
-- `operating_lease`: Filter operating lease vehicles (`"true"` / `"false"`)
-
-### Price filter
-- `price_from`: Minimum price in CZK
-- `price_to`: Maximum price in CZK
-
----
-
-## Example Configurations
-
-### Volkswagen Golf (private sellers only)
-```json
-{
-  "limit": "1000",
-  "offset": "0",
-  "category_id": "838",
-  "manufacturer_seo_name": "volkswagen",
-  "model_seo_name": "golf",
-  "seller_type": "soukromy",
-  "condition_seo": "nove,ojete,predvadeci",
-  "operating_lease": "false",
-  "price_from": "0",
-  "price_to": "300000"
-}
-```
-
-### Volkswagen Golf (dealers / bazaars only)
-```json
-{
-  "limit": "1000",
-  "offset": "0",
-  "category_id": "838",
-  "manufacturer_seo_name": "volkswagen",
-  "model_seo_name": "golf",
-  "seller_type": "bazar",
-  "condition_seo": "nove,ojete,predvadeci",
-  "operating_lease": "false",
-  "price_from": "0",
-  "price_to": "300000"
-}
-```
-
-### Audi A4 (any seller type)
-```json
-{
-  "limit": "1000",
-  "offset": "0",
-  "category_id": "838",
-  "manufacturer_seo_name": "audi",
-  "model_seo_name": "a4",
-  "condition_seo": "ojete",
-  "operating_lease": "false",
-  "price_from": "0",
-  "price_to": "500000"
-}
-```
-
----
-
-## Usage
-
-### Basic Usage
-
-Run the scraper to output JSON:
-
-```bash
-python -m scrapy crawl sauto -O data/sauto.json
-```
-
-### Output Formats
-
-```bash
-# JSON format
-python -m scrapy crawl sauto -O data/sauto.json
-
-# CSV format
-python -m scrapy crawl sauto -O data/sauto.csv
-
-# JSON Lines format
-python -m scrapy crawl sauto -O data/sauto.jl
-```
-
----
-
-## Web Mode (React + API)
-
-This repository now includes a web control panel:
-
-- `web-api/` = FastAPI wrapper around the existing Scrapy spider
-- `web-ui/` = React (Vite) frontend for editing params and launching scraper runs
-
-### 1. Start API backend
-
-```bash
-cd sauto-scraper-main
-uvicorn web-api.app:app --reload --port 8000
-```
-
-### 2. Start React frontend
-
-```bash
-cd sauto-scraper-main/web-ui
-npm install
-npm run dev
-```
-
-Open `http://localhost:5173`.
-
-### Available API endpoints
-
-- `GET /api/health`
-- `GET /api/params`
-- `PUT /api/params`
-- `POST /api/run`
-- `GET /api/status`
-- `GET /api/results`
-
----
-
-## Logs
-
-The scraper logs all scraped URLs with timestamps to `sauto_spider.log` for debugging and monitoring purposes.
+- **Scrapes Sauto.cz API** — search listings and full detail pages
+- **Multi-brand & multi-model** filtering with live catalog browser
+- **Smart car evaluation** — scores cars based on price, power, mileage, age, fuel costs, equipment, and more
+- **Market analysis** — compares each car against similar listings (cohort-based pricing)
+- **4 scoring presets**: Value, Balanced, Sport, Luxury
+- **Discord notifications** — get pinged when under-priced deals appear
+- **Web dashboard** — React UI for live param editing, scraper control, and results browsing
+- **Result management** — sort, filter, mark, export, import, and delete results
 
 ---
 
 ## Project Structure
 
 ```
-sauto-scraper/
-├── sauto/
+sauto-scraper-main/
+├── sauto/                          # Scrapy spider package
 │   ├── spiders/
-│   │   └── sauto_spider.py    # Main spider implementation
-│   ├── items.py                # Item definitions
-│   ├── pipelines.py           # Data processing pipelines
-│   └── settings.py            # Scrapy settings
-├── data/                       # Output directory
-├── params.json                 # Search parameters configuration
-├── requirements.txt            # Python dependencies
-└── scrapy.cfg                  # Scrapy configuration
+│   │   └── sauto_spider.py         # Main spider (1511 lines) — scraping + evaluation logic
+│   ├── items.py                    # Scrapy item definitions (placeholder)
+│   ├── middlewares.py              # Random User-Agent rotation middleware
+│   ├── pipelines.py                # Item pipeline (placeholder)
+│   └── settings.py                 # Scrapy settings (concurrency, delays, headers)
+├── web-api/
+│   └── app.py                      # FastAPI backend (569 lines) — wraps spider, serves API
+├── web-ui/                         # React (Vite) frontend
+│   ├── src/
+│   │   ├── App.jsx                 # Main React component (1247 lines)
+│   │   ├── App.css                 # Styles
+│   │   └── main.jsx                # Entry point
+│   ├── index.html
+│   ├── package.json
+│   └── vite.config.js
+├── data/                           # Output & cache files
+│   ├── sauto_raw.json              # Raw scraped listings
+│   ├── sauto_interesting.json      # Scored/interesting deals
+│   ├── sauto_catalog_cache.json    # Cached brand/model catalog
+│   ├── sauto.json                  # Alternative output
+│   └── ... (test files)
+├── params.json                     # Search parameters config
+├── notified_ids.json               # IDs already sent to Discord
+├── marked_ids.json                 # User-marked result IDs
+├── requirements.txt                # Python dependencies
+├── scrapy.cfg                      # Scrapy project config
+└── startup.txt                     # Startup notes
 ```
 
 ---
 
 ## How It Works
 
-1. The spider reads parameters from `params.json`
-2. It queries the sauto.cz API endpoint:  
-   `https://www.sauto.cz/api/v1/items/search?`
-3. Results are parsed from JSON responses and saved to the output file
-4. All URLs are logged to `sauto_spider.log` with timestamps
+### 1. Scraping Flow
+
+```
+params.json → Search API → Parse listings → Detail API → Evaluate → Score → Sort → Notify
+```
+
+1. **Read `params.json`** for search filters (brand, model, price, year, fuel, gearbox, etc.)
+2. **Query Sauto.cz search API** (`/api/v1/items/search`) page by page
+3. **Apply strict post-filters** — the API sometimes returns broader results, so the spider double-checks brand, model, seller type
+4. **Fetch detail API** (`/api/v1/items/{ad_id}`) for each matching listing to get full specs (VIN, equipment list, STK dates, service history, images, etc.)
+5. **Evaluate each car** — `CarEvaluator` class computes:
+   - Price per kW, price per km, annual costs (fuel, insurance, maintenance)
+   - Flags: first owner, service book, tuning, equipment count
+   - Brand tier (premium/budget/mainstream)
+   - Drive type, gearbox type inference
+   - Hard rejection patterns (engine issues, parts-only, legal problems, total loss)
+   - Bonus/penalty text patterns in descriptions
+6. **Market context** — groups scored cars into cohorts by brand+generation+fuel+gearbox, computes median price/kW and price/km, flags undervalued/deep undervalued/overpriced
+7. **Output** — saves `data/sauto_interesting.json` with all scored offers (+ market context)
+8. **Discord notification** — sends top N offers to configured webhook (only new ones if enabled)
+
+### 2. Car Scoring Engine
+
+The `CarEvaluator` class (inside `sauto_spider.py`) contains:
+
+| Component | What it scores | Best score |
+|---|---|---|
+| `age` | Age in years (≤2y best) | 78 |
+| `mileage` | Tachometer km (≤50k best) | 72 |
+| `price` | Price in CZK (≤120k best) | 56 |
+| `price_power` | Price per kW (≤1200 best) | 72 |
+| `power` | Power in kW (≥220 best) | 72 |
+| `cost` | Annual total cost (≤35k best) | 48 |
+| `consumption` | L/100km or kWh/100km | 34 |
+| `equipment` | Equipment count + key features | 0–70 |
+| `flags` | Service book (+14), first owner (+9), tuning (-28) | varies |
+| `sport` | Power, RWD/AWD, manual, price/kW | 0–73 |
+| `luxury` | Premium brand, auto, leather, pano roof, young | -20–75 |
+
+**4 presets** weigh these components differently:
+- **Value (Cena/výkon)**: heavy on price, cost, price/kW
+- **Balanced**: equal weight across all factors
+- **Sport**: heavy on power, sportiness, price/kW
+- **Luxury**: heavy on equipment, premium brand, comfort
+
+### 3. Market Valuation
+
+The spider groups cars into "cohorts" (same brand tier + model family + generation + fuel + gearbox). For each car, it compares:
+- **Price/kW** vs cohort median → undervalue/deep_undervalue/overprice label
+- **Price/km** vs cohort median
+- **Model family avg price** (when enough samples)
+
+### 4. Web Dashboard
+
+The React UI at `http://localhost:5173` provides:
+
+- **Search params panel** — all filters with sliders, selects, checkboxes
+- **Brand/Model browser** — multi-select from live Sauto.cz catalog (via API proxy)
+- **Scoring preset selector** — switch between Value/Balanced/Sport/Luxury (scoring applied client-side)
+- **Run button** — saves params, launches the scraper subprocess
+- **Live logs** — streaming log viewer during scrape
+- **Results table** — sortable by score, price, power, mileage, age, annual cost
+- **Result actions** — mark, delete, clear, export JSON, import JSON
+- **Dark/light theme** toggle
+- **Sidebar hide/show**
+
+---
+
+## Installation
+
+### Prerequisites
+
+- **Python 3.9+** (with pip)
+- **Node.js 18+** (with npm) — for web UI
+- **Git** (optional)
+
+### 1. Clone & Setup
+
+```bash
+git clone https://github.com/karlosmatos/sauto-scraper.git
+cd sauto-scraper-main
+```
+
+### 2. Install Python Dependencies
+
+```bash
+# Create virtual environment (recommended)
+python -m venv venv
+
+# Activate (Windows)
+venv\Scripts\activate
+
+# Activate (Linux/Mac)
+source venv/bin/activate
+
+# Install packages
+pip install -r requirements.txt
+```
+
+### 3. Install Web UI Dependencies
+
+```bash
+cd web-ui
+npm install
+cd ..
+```
+
+---
+
+## Usage
+
+### Quick Start — Web Mode (Recommended)
+
+Two terminals needed:
+
+**Terminal 1 — Backend API:**
+```bash
+cd sauto-scraper-main
+uvicorn web-api.app:app --reload --port 8000
+```
+
+**Terminal 2 — Frontend:**
+```bash
+cd sauto-scraper-main/web-ui
+npm run dev
+```
+
+Open `http://localhost:5173` in your browser.
+
+### CLI Mode — Run Scraper Directly
+
+```bash
+# JSON output (default)
+python -m scrapy crawl sauto -O data/sauto.json
+
+# CSV output
+python -m scrapy crawl sauto -O data/sauto.csv
+
+# JSON Lines output
+python -m scrapy crawl sauto -O data/sauto.jl
+```
+
+### Configuration
+
+All search parameters live in `params.json`. You can edit it directly or use the web UI.
+
+#### Parameter Reference
+
+| Key | Type | Description | Default |
+|---|---|---|---|
+| `limit` | int | Results per page (max 1000) | `"35"` |
+| `offset` | int | Starting offset for pagination | `"0"` |
+| `category_id` | string | Vehicle category (`838` = personal cars) | `"838"` |
+| `manufacturer_seo_name` | string | Brand SEO name (comma-separated for multiple) | `""` |
+| `model_seo_name` | string | Model SEO name (comma-separated) | `""` |
+| `condition_seo` | string | Condition: `nove,ojete,predvadeci` (new/used/demo) | `"nove,ojete,predvadeci"` |
+| `seller_type` | string | `soukromy` (private) or `bazar` (dealer) | `"soukromy"` |
+| `operating_lease` | string | `"true"` / `"false"` | `"false"` |
+| `price_from` | int | Min price (CZK, 0 = no limit) | `"0"` |
+| `price_to` | int | Max price (CZK, 0 = no limit) | `"0"` |
+| `year_from` | int | Min year | `""` |
+| `year_to` | int | Max year | `""` |
+| `tachometer_from` | int | Min mileage (km) | `""` |
+| `tachometer_to` | int | Max mileage (km) | `""` |
+| `power_from` | int | Min power (kW) | `""` |
+| `power_to` | int | Max power (kW) | `""` |
+| `fuel_seo` | string | Fuel type (comma-separated): `benzin,nafta,hybrid,elektro,lpg-benzin,cng-benzin` | `""` |
+| `gearbox_filter` | string | `manual` or `automatic` | `""` |
+| `drive_filter` | string | `fwd`, `rwd`, or `awd` | `""` |
+| `body_seo` | string | Body type (comma-separated): `suv,kombi,hatchback,sedan,coupe,...` | `""` |
+| `required_equipment` | string | Must-have equipment keywords (comma-separated) | `""` |
+
+#### Scoring & Evaluation Parameters
+
+| Key | Type | Description | Default |
+|---|---|---|---|
+| `interesting_min_score` | int | Minimum score to include (-1000 = all) | `"-1000"` |
+| `interesting_top_n` | int | Max results to keep/notify | `"5000"` |
+| `interesting_min_price` | int | Min price to evaluate (CZK) | `"0"` |
+| `allow_automatic` | bool | Allow automatic transmissions | `"true"` |
+| `prefer_gearbox` | string | `any`, `manual`, or `automatic` | `"any"` |
+| `prefer_drive` | string | `any`, `fwd`, `rwd`, or `awd` | `"any"` |
+| `target_annual_km` | int | Expected annual km for cost calculation | `"15000"` |
+
+#### Market Analysis Parameters
+
+| Key | Type | Description | Default |
+|---|---|---|---|
+| `market_min_cohort_size` | int | Min cars for a valid comparison cohort | `"6"` |
+| `market_expected_km_per_year` | int | Expected km/year for age-normalized comparisons | `"16000"` |
+| `model_price_min_samples` | int | Min samples for model-level price reference | `"5"` |
+| `undervalue_ratio_threshold` | float | Price/median ratio ≤ this = undervalued | `"0.88"` |
+| `deep_undervalue_ratio_threshold` | float | Price/median ratio ≤ this = deeply undervalued | `"0.75"` |
+| `overprice_ratio_threshold` | float | Price/median ratio ≥ this = overpriced | `"1.18"` |
+
+#### Notification Parameters
+
+| Key | Type | Description | Default |
+|---|---|---|---|
+| `discord_webhook_url` | string | Discord webhook URL for notifications | `""` |
+| `discord_notify_only_new` | bool | Only notify for newly seen cars | `"true"` |
+
+---
+
+## API Endpoints
+
+The FastAPI backend serves on `http://localhost:8000`:
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/health` | Health check (uptime, version) |
+| `GET` | `/api/params` | Load current params |
+| `PUT` | `/api/params` | Save params |
+| `POST` | `/api/run` | Start scraper subprocess |
+| `GET` | `/api/status` | Scraper status (running, PID, exit code) |
+| `GET` | `/api/logs` | Live scraper logs (last 250 lines) |
+| `GET` | `/api/results` | Load scored results with marked status |
+| `GET` | `/api/catalog/brands` | Fetch brand list from Sauto.cz (24h cache) |
+| `GET` | `/api/catalog/models?brand=...` | Fetch models for a brand (24h cache) |
+| `GET` | `/api/scoring/presets` | Get all scoring preset definitions |
+| `GET` | `/api/results/export` | Export results JSON |
+| `POST` | `/api/results/delete` | Delete selected results by ID |
+| `POST` | `/api/results/clear` | Clear all results |
+| `POST` | `/api/results/import` | Import results JSON |
+| `POST` | `/api/results/mark` | Mark/unmark results by ID |
+
+---
+
+## Data Files
+
+| File | Description |
+|---|---|
+| `data/sauto_raw.json` | All raw scraped listings (full detail) |
+| `data/sauto_interesting.json` | Scored, filtered, sorted interesting deals |
+| `data/sauto_catalog_cache.json` | Cached brand/model catalog (24h TTL) |
+| `notified_ids.json` | Car ad IDs already sent to Discord |
+| `marked_ids.json` | User-marked result IDs (from web UI) |
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Scraper** | Python 3, Scrapy 2.13, Twisted |
+| **Backend API** | FastAPI, Uvicorn, Pydantic |
+| **Frontend** | React 18, Vite, Lucide icons |
+| **User-Agent rotation** | fake-useragent |
+| **HTTP (catalog fetch)** | requests, urllib |
+| **Notifications** | Discord webhooks |
 
 ---
 
 ## License
 
 [MIT](https://choosealicense.com/licenses/mit/)
+
+---
+
+## Credits
+
+Original scraper by [karlosmatos](https://github.com/karlosmatos/sauto-scraper). Extended with web dashboard, scoring engine, market analysis, and Discord notifications.

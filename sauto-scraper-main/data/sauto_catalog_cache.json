@@ -274,17 +274,8 @@
   },
   "models": {
     "alfa-romeo": {
-      "updated_at": 1780948634,
-      "items": [
-        {
-          "value": "giulietta",
-          "label": "Giulietta"
-        },
-        {
-          "value": "stelvio",
-          "label": "Stelvio"
-        }
-      ],
+      "updated_at": 1781214601,
+      "items": [],
       "collector_version": 2
     },
     "bentley": {
@@ -1151,7 +1142,7 @@
       ]
     },
     "aston-martin": {
-      "updated_at": 1780948639,
+      "updated_at": 1781214605,
       "items": [],
       "collector_version": 2
     },
@@ -1316,27 +1307,16 @@
       "collector_version": 2
     },
     "abarth": {
-      "updated_at": 1780947291,
-      "items": []
+      "updated_at": 1781214597,
+      "items": [],
+      "collector_version": 2
     },
     "ford": {
-      "updated_at": 1780948651,
+      "updated_at": 1781214987,
       "items": [
         {
-          "value": "c-max",
-          "label": "C-MAX"
-        },
-        {
-          "value": "edge",
-          "label": "Edge"
-        },
-        {
-          "value": "explorer",
-          "label": "Explorer"
-        },
-        {
-          "value": "fiesta",
-          "label": "Fiesta"
+          "value": "f-150",
+          "label": "F-150"
         },
         {
           "value": "focus",
@@ -1347,8 +1327,8 @@
           "label": "Galaxy"
         },
         {
-          "value": "ka",
-          "label": "Ka"
+          "value": "grand-c-max",
+          "label": "Grand C-MAX"
         },
         {
           "value": "kuga",
@@ -1363,8 +1343,8 @@
           "label": "Mustang"
         },
         {
-          "value": "puma",
-          "label": "Puma"
+          "value": "ranger",
+          "label": "Ranger"
         },
         {
           "value": "s-max",
@@ -1381,10 +1361,6 @@
         {
           "value": "transit",
           "label": "Transit"
-        },
-        {
-          "value": "transit-custom",
-          "label": "Transit Custom"
         }
       ],
       "collector_version": 2
@@ -1404,31 +1380,11 @@
       "collector_version": 2
     },
     "fiat": {
-      "updated_at": 1781025847,
+      "updated_at": 1781214983,
       "items": [
-        {
-          "value": "500",
-          "label": "500"
-        },
-        {
-          "value": "500l",
-          "label": "500L"
-        },
-        {
-          "value": "500x",
-          "label": "500X"
-        },
         {
           "value": "ducato",
           "label": "Ducato"
-        },
-        {
-          "value": "freemont",
-          "label": "Freemont"
-        },
-        {
-          "value": "panda",
-          "label": "Panda"
         },
         {
           "value": "scudo",
@@ -1590,23 +1546,19 @@
       "collector_version": 2
     },
     "bmw": {
-      "updated_at": 1781026061,
+      "updated_at": 1781214971,
       "items": [
-        {
-          "value": "i3",
-          "label": "i3"
-        },
-        {
-          "value": "i5",
-          "label": "i5"
-        },
-        {
-          "value": "i8",
-          "label": "i8"
-        },
         {
           "value": "m2",
           "label": "M2"
+        },
+        {
+          "value": "m3",
+          "label": "M3"
+        },
+        {
+          "value": "m4",
+          "label": "M4"
         },
         {
           "value": "m5",
@@ -1617,20 +1569,20 @@
           "label": "Řada 1"
         },
         {
-          "value": "rada-2",
-          "label": "Řada 2"
-        },
-        {
           "value": "rada-3",
           "label": "Řada 3"
+        },
+        {
+          "value": "rada-4",
+          "label": "Řada 4"
         },
         {
           "value": "rada-5",
           "label": "Řada 5"
         },
         {
-          "value": "rada-6",
-          "label": "Řada 6"
+          "value": "rada-7",
+          "label": "Řada 7"
         },
         {
           "value": "rada-8",
@@ -1639,10 +1591,6 @@
         {
           "value": "x1",
           "label": "X1"
-        },
-        {
-          "value": "x2",
-          "label": "X2"
         },
         {
           "value": "x3",
@@ -1669,6 +1617,21 @@
           "label": "Z4"
         }
       ],
+      "collector_version": 2
+    },
+    "acura": {
+      "updated_at": 1781214961,
+      "items": [],
+      "collector_version": 2
+    },
+    "alpine": {
+      "updated_at": 1781214966,
+      "items": [],
+      "collector_version": 2
+    },
+    "cadillac": {
+      "updated_at": 1781214977,
+      "items": [],
       "collector_version": 2
     }
   },

@@ -120,6 +120,122 @@ const PARAM_GROUPS = [
   },
 ];
 
+const BRAND_LOGOS = {
+  skoda: "https://www.carlogos.org/car-logos/skoda-logo.png",
+  volkswagen: "https://www.carlogos.org/car-logos/volkswagen-logo.png",
+  vw: "https://www.carlogos.org/car-logos/volkswagen-logo.png",
+  audi: "https://www.carlogos.org/car-logos/audi-logo.png",
+  bmw: "https://www.carlogos.org/car-logos/bmw-logo.png",
+  mercedes: "https://www.carlogos.org/car-logos/mercedes-benz-logo.png",
+  "mercedes-benz": "https://www.carlogos.org/car-logos/mercedes-benz-logo.png",
+  benz: "https://www.carlogos.org/car-logos/mercedes-benz-logo.png",
+  ford: "https://www.carlogos.org/car-logos/ford-logo.png",
+  toyota: "https://www.carlogos.org/car-logos/toyota-logo.png",
+  honda: "https://www.carlogos.org/car-logos/honda-logo.png",
+  hyundai: "https://www.carlogos.org/car-logos/hyundai-logo.png",
+  kia: "https://www.carlogos.org/car-logos/kia-logo.png",
+  mazda: "https://www.carlogos.org/car-logos/mazda-logo.png",
+  nissan: "https://www.carlogos.org/car-logos/nissan-logo.png",
+  opel: "https://www.carlogos.org/car-logos/opel-logo.png",
+  peugeot: "https://www.carlogos.org/car-logos/peugeot-logo.png",
+  renault: "https://www.carlogos.org/car-logos/renault-logo.png",
+  seat: "https://www.carlogos.org/car-logos/seat-logo.png",
+  citroen: "https://www.carlogos.org/car-logos/citroen-logo.png",
+  "citroën": "https://www.carlogos.org/car-logos/citroen-logo.png",
+  fiat: "https://www.carlogos.org/car-logos/fiat-logo.png",
+  volvo: "https://www.carlogos.org/car-logos/volvo-logo.png",
+  dacia: "https://www.carlogos.org/car-logos/dacia-logo.png",
+  suzuki: "https://www.carlogos.org/car-logos/suzuki-logo.png",
+  mitsubishi: "https://www.carlogos.org/car-logos/mitsubishi-logo.png",
+  subaru: "https://www.carlogos.org/car-logos/subaru-logo.png",
+  porsche: "https://www.carlogos.org/car-logos/porsche-logo.png",
+  landrover: "https://www.carlogos.org/car-logos/land-rover-logo.png",
+  "land rover": "https://www.carlogos.org/car-logos/land-rover-logo.png",
+  jaguar: "https://www.carlogos.org/car-logos/jaguar-logo.png",
+  tesla: "https://www.carlogos.org/car-logos/tesla-logo.png",
+  mini: "https://www.carlogos.org/car-logos/mini-logo.png",
+  ferrari: "https://www.carlogos.org/car-logos/ferrari-logo.png",
+  lamborghini: "https://www.carlogos.org/car-logos/lamborghini-logo.png",
+  maserati: "https://www.carlogos.org/car-logos/maserati-logo.png",
+  alfaromeo: "https://www.carlogos.org/car-logos/alfa-romeo-logo.png",
+  "alfa romeo": "https://www.carlogos.org/car-logos/alfa-romeo-logo.png",
+  chevrolet: "https://www.carlogos.org/car-logos/chevrolet-logo.png",
+  lexus: "https://www.carlogos.org/car-logos/lexus-logo.png",
+  infiniti: "https://www.carlogos.org/car-logos/infiniti-logo.png",
+  acura: "https://www.carlogos.org/car-logos/acura-logo.png",
+  cadillac: "https://www.carlogos.org/car-logos/cadillac-logo.png",
+  buick: "https://www.carlogos.org/car-logos/buick-logo.png",
+  chrysler: "https://www.carlogos.org/car-logos/chrysler-logo.png",
+  dodge: "https://www.carlogos.org/car-logos/dodge-logo.png",
+  jeep: "https://www.carlogos.org/car-logos/jeep-logo.png",
+  bentley: "https://www.carlogos.org/car-logos/bentley-logo.png",
+  bugatti: "https://www.carlogos.org/car-logos/bugatti-logo.png",
+  astonmartin: "https://www.carlogos.org/car-logos/aston-martin-logo.png",
+  "aston martin": "https://www.carlogos.org/car-logos/aston-martin-logo.png",
+  mclaren: "https://www.carlogos.org/car-logos/mclaren-logo.png",
+  saab: "https://www.carlogos.org/car-logos/saab-logo.png",
+  genesis: "https://www.carlogos.org/car-logos/genesis-logo.png",
+  smart: "https://www.carlogos.org/car-logos/smart-logo.png",
+  lada: "https://www.carlogos.org/car-logos/lada-logo.png",
+};
+
+const BRAND_FALLBACK_COLORS = {
+  skoda: { bg: "#4ba82e", fg: "#fff" },
+  volkswagen: { bg: "#1e3a5f", fg: "#fff" },
+  vw: { bg: "#1e3a5f", fg: "#fff" },
+  audi: { bg: "#000", fg: "#fff" },
+  bmw: { bg: "#1c69d4", fg: "#fff" },
+  mercedes: { bg: "#1a1a1a", fg: "#fff" },
+  "mercedes-benz": { bg: "#1a1a1a", fg: "#fff" },
+  benz: { bg: "#1a1a1a", fg: "#fff" },
+  ford: { bg: "#003399", fg: "#fff" },
+  toyota: { bg: "#eb0a1e", fg: "#fff" },
+  honda: { bg: "#cc0000", fg: "#fff" },
+  hyundai: { bg: "#003469", fg: "#fff" },
+  kia: { bg: "#bb162b", fg: "#fff" },
+  mazda: { bg: "#910a2d", fg: "#fff" },
+  nissan: { bg: "#c3002f", fg: "#fff" },
+  opel: { bg: "#ffcc00", fg: "#000" },
+  peugeot: { bg: "#003355", fg: "#fff" },
+  renault: { bg: "#ffcc00", fg: "#000" },
+  seat: { bg: "#cc0000", fg: "#fff" },
+  citroen: { bg: "#da291c", fg: "#fff" },
+  "citroën": { bg: "#da291c", fg: "#fff" },
+  fiat: { bg: "#c41230", fg: "#fff" },
+  volvo: { bg: "#003057", fg: "#fff" },
+  dacia: { bg: "#646b52", fg: "#fff" },
+  suzuki: { bg: "#003366", fg: "#fff" },
+  mitsubishi: { bg: "#e60012", fg: "#fff" },
+  subaru: { bg: "#1e3b6f", fg: "#fff" },
+  porsche: { bg: "#000", fg: "#fff" },
+  landrover: { bg: "#005a3c", fg: "#fff" },
+  "land rover": { bg: "#005a3c", fg: "#fff" },
+  jaguar: { bg: "#1f1f1f", fg: "#fff" },
+  tesla: { bg: "#cc0000", fg: "#fff" },
+  mini: { bg: "#000", fg: "#fff" },
+  ferrari: { bg: "#ff2800", fg: "#fff" },
+  lamborghini: { bg: "#dbb321", fg: "#000" },
+  maserati: { bg: "#003893", fg: "#fff" },
+  alfaromeo: { bg: "#920037", fg: "#fff" },
+  "alfa romeo": { bg: "#920037", fg: "#fff" },
+};
+
+function getBrandLogo(brandValue) {
+  const key = (brandValue || "").toLowerCase().trim();
+  return BRAND_LOGOS[key] || null;
+}
+
+function getBrandFallbackColor(brandValue) {
+  const key = (brandValue || "").toLowerCase().trim();
+  return BRAND_FALLBACK_COLORS[key] || null;
+}
+
+function brandInitials(label) {
+  const words = (label || "").trim().split(/\s+/);
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+  return (label || "?").slice(0, 2).toUpperCase();
+}
+
 const BASIC_GROUPS = PARAM_GROUPS.slice(0, 3);
 const ADVANCED_GROUPS = PARAM_GROUPS.slice(3);
 const IGNORED_KEYS = new Set(PARAM_GROUPS.flatMap((g) => g.fields.map((f) => f.key)));
@@ -242,8 +358,12 @@ export default function App() {
   const [tickerStep, setTickerStep] = useState(0);
   const [sortConfig, setSortConfig] = useState({ key: "score", direction: "desc" });
   const [isSidebarHidden, setIsSidebarHidden] = useState(false);
+  const [showApiDetails, setShowApiDetails] = useState(false);
   const [scoringPresets, setScoringPresets] = useState(LOCAL_SCORING_PRESETS);
   const [selectedPreset, setSelectedPreset] = useState("balanced");
+  const [toastMsg, setToastMsg] = useState("");
+  const [toastType, setToastType] = useState("");
+  const toastTimer = useRef(null);
   const fileInputRef = useRef(null);
   const logsModalBodyRef = useRef(null);
   const prevIsRunningRef = useRef(null);
@@ -591,11 +711,11 @@ export default function App() {
     setLoading(true);
     try {
       await postResultAction("/api/results/delete", { ids: selectedIds, path: resultsPath });
-      setMessage(`Smazáno ${selectedCount} záznamů.`);
+      showToast(`Smazáno ${selectedCount} záznamů`, "success");
       setSelectedIds([]);
       await refreshAll();
     } catch (e) {
-      setMessage(e.message);
+      showToast(e.message, "error");
     } finally {
       setLoading(false);
     }
@@ -606,11 +726,11 @@ export default function App() {
     setLoading(true);
     try {
       await postResultAction("/api/results/clear", { path: resultsPath });
-      setMessage("Výsledky byly smazány.");
+      showToast("Výsledky smazány", "success");
       setSelectedIds([]);
       await refreshAll();
     } catch (e) {
-      setMessage(e.message);
+      showToast(e.message, "error");
     } finally {
       setLoading(false);
     }
@@ -621,10 +741,10 @@ export default function App() {
     setLoading(true);
     try {
       await postResultAction("/api/results/mark", { ids: selectedIds, marked });
-      setMessage(marked ? "Výsledky označeny." : "Označení zrušeno.");
+      showToast(marked ? "Označeno" : "Označení zrušeno", "success");
       await fetchResults();
     } catch (e) {
-      setMessage(e.message);
+      showToast(e.message, "error");
     } finally {
       setLoading(false);
     }
@@ -715,6 +835,13 @@ export default function App() {
     const t = setInterval(() => fetchApiHealth().catch(() => null), 10000);
     return () => clearInterval(t);
   }, []);
+
+  function showToast(msg, type = "") {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToastMsg(msg);
+    setToastType(type);
+    toastTimer.current = setTimeout(() => { setToastMsg(""); setToastType(""); }, 3000);
+  }
 
   function setParam(key, val) {
     setParams((prev) => ({ ...prev, [key]: val }));
@@ -862,6 +989,9 @@ export default function App() {
             <h1>Sauto Scraper</h1>
           </div>
         </div>
+        <button className="btn-primary" onClick={run} disabled={busy} style={{ marginLeft: 8 }}>
+          {busy ? <><LoaderCircle className="ui-icon icon-spin" aria-hidden="true" /> Pracuji…</> : <><Play className="ui-icon" aria-hidden="true" /> Spustit</>}
+        </button>
         <span className={`status-dot${busy ? " running" : ""}`}>
           {statusLabel()}
         </span>
@@ -883,9 +1013,25 @@ export default function App() {
           {theme === "dark" ? <><Sun className="ui-icon" aria-hidden="true" /> Světlý</> : <><Moon className="ui-icon" aria-hidden="true" /> Tmavý</>}
         </button>
         {apiHealth && (
-          <div className={`api-status-chip${apiHealth.status === "ok" ? " up" : " down"}`}>
-            <span className="api-status-dot" />
-            <span className="api-status-label">API {apiHealth.status === "ok" ? "UP" : "DOWN"}</span>
+          <div className="api-chip-wrapper">
+            <div
+              className={`api-status-chip${apiHealth.status === "ok" ? " up" : " down"}${showApiDetails ? " open" : ""}`}
+              onClick={() => setShowApiDetails((v) => !v)}
+              title="Klikni pro dev info"
+            >
+              <span className="api-status-dot" />
+              <span className="api-status-label">API {apiHealth.status === "ok" ? "UP" : "DOWN"}</span>
+              <ChevronDown className="ui-icon" style={{ width: 12, height: 12 }} />
+            </div>
+            {showApiDetails && (
+              <div className="api-detail-dropdown">
+                <div className="api-detail-row"><span className="api-detail-lbl">Verze</span> <span className="api-detail-val">{apiHealth.version || "—"}</span></div>
+                <div className="api-detail-row"><span className="api-detail-lbl">Uptime</span> <span className="api-detail-val">{fmtUptime(apiHealth.uptime)}</span></div>
+                <div className="api-detail-row"><span className="api-detail-lbl">PID</span> <span className="api-detail-val">{apiHealth.pid || "—"}</span></div>
+                <div className="api-detail-row"><span className="api-detail-lbl">URL</span> <span className="api-detail-val">{API_BASE}</span></div>
+                <div className="api-detail-row"><span className="api-detail-lbl">Endpoint</span> <span className="api-detail-val">/api/health</span></div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -937,16 +1083,41 @@ export default function App() {
                     <div className="catalog-list">
                       {brandOptions
                         .filter((b) => b.label.toLowerCase().includes(brandFilterText.toLowerCase()) || b.value.toLowerCase().includes(brandFilterText.toLowerCase()))
-                        .map((b) => (
+                        .map((b) => {
+                          const logoUrl = getBrandLogo(b.value);
+                          const fc = getBrandFallbackColor(b.value);
+                          return (
                           <label key={b.value} className="catalog-item">
                             <input
                               type="checkbox"
                               checked={selectedBrands.includes(b.value)}
                               onChange={() => toggleBrand(b.value)}
                             />
+                            {logoUrl ? (
+                              <img
+                                className="catalog-brand-logo"
+                                src={logoUrl}
+                                alt={b.label}
+                                loading="lazy"
+                                referrerPolicy="no-referrer"
+                                crossOrigin="anonymous"
+                                onError={(e) => {
+                                  e.target.style.display = "none";
+                                  const bdg = e.target.parentElement.querySelector(".catalog-brand-badge");
+                                  if (bdg) bdg.style.display = "inline-flex";
+                                }}
+                              />
+                            ) : null}
+                            <span
+                              className="catalog-brand-badge"
+                              style={fc ? { background: fc.bg, color: fc.fg, display: logoUrl ? "none" : "inline-flex" } : { display: logoUrl ? "none" : "inline-flex" }}
+                            >
+                              {brandInitials(b.label)}
+                            </span>
                             <span>{b.label}</span>
                           </label>
-                        ))}
+                          );
+                        })}
                     </div>
                   </div>
 
@@ -1039,9 +1210,6 @@ export default function App() {
           )}
 
           <div className="actions sticky-actions">
-            <button className="btn-primary" onClick={run} disabled={busy}>
-              {busy ? <><LoaderCircle className="ui-icon icon-spin" aria-hidden="true" /> Pracuji…</> : <><Play className="ui-icon" aria-hidden="true" /> Spustit scraper</>}
-            </button>
             <button onClick={save} disabled={busy}><Save className="ui-icon" aria-hidden="true" /> Uložit</button>
             <button onClick={refreshAll} disabled={busy}><RefreshCw className="ui-icon" aria-hidden="true" /> Obnovit</button>
           </div>
@@ -1157,7 +1325,7 @@ export default function App() {
                     const selected = selectedIds.includes(key);
                     const marked = markedIds.includes(String(item.ad_id));
                     return (
-                    <tr key={item.ad_id || i} className={`${selected ? "row-selected" : ""}${marked ? " row-marked" : ""}`}>
+                    <tr key={item.ad_id || i} className={`${selected ? "row-selected" : ""}${marked ? " row-marked" : ""} ${(() => { const s = getItemScore(item, scoringPresets[selectedPreset]); return s >= 80 ? "row-score-hi" : s >= 50 ? "row-score-mid" : "row-score-lo"; })()}`}>
                       <td className="cell-check">
                         <input type="checkbox" checked={selected} onChange={() => toggleSelected(key)} />
                       </td>
@@ -1170,8 +1338,9 @@ export default function App() {
                         {(() => {
                           const preset = scoringPresets[selectedPreset];
                           const calculatedScore = getItemScore(item, preset);
+                          const scoreClass = calculatedScore >= 80 ? "score-hi" : calculatedScore >= 50 ? "score-mid" : "score-lo";
                           return (
-                            <span className={`score ${calculatedScore >= 90 ? "score-hi" : ""}`}>
+                            <span className={`score ${scoreClass}`}>
                               {calculatedScore}
                             </span>
                           );
@@ -1239,6 +1408,15 @@ export default function App() {
             <button className="btn-sm secondary" onClick={() => setPopupLog(null)}>Zavřít</button>
           </div>
         </div>
+      </div>
+    )}
+
+    {toastMsg && (
+      <div className={`toast toast-${toastType || "info"}`}>
+        <span>{toastMsg}</span>
+        <button className="toast-close" onClick={() => { setToastMsg(""); setToastType(""); }}>
+          <X className="ui-icon" style={{ width: 13, height: 13 }} />
+        </button>
       </div>
     )}
     </div>
