@@ -17,6 +17,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
+import { CustomCheckbox, CustomSlider, CustomToggle } from "./components";
 
 const API_BASE = "http://localhost:8000";
 
@@ -121,62 +122,71 @@ const PARAM_GROUPS = [
 ];
 
 const BRAND_LOGOS = {
-  skoda: "https://www.carlogos.org/car-logos/skoda-logo.png",
-  volkswagen: "https://www.carlogos.org/car-logos/volkswagen-logo.png",
-  vw: "https://www.carlogos.org/car-logos/volkswagen-logo.png",
-  audi: "https://www.carlogos.org/car-logos/audi-logo.png",
-  bmw: "https://www.carlogos.org/car-logos/bmw-logo.png",
-  mercedes: "https://www.carlogos.org/car-logos/mercedes-benz-logo.png",
-  "mercedes-benz": "https://www.carlogos.org/car-logos/mercedes-benz-logo.png",
-  benz: "https://www.carlogos.org/car-logos/mercedes-benz-logo.png",
-  ford: "https://www.carlogos.org/car-logos/ford-logo.png",
-  toyota: "https://www.carlogos.org/car-logos/toyota-logo.png",
-  honda: "https://www.carlogos.org/car-logos/honda-logo.png",
-  hyundai: "https://www.carlogos.org/car-logos/hyundai-logo.png",
-  kia: "https://www.carlogos.org/car-logos/kia-logo.png",
-  mazda: "https://www.carlogos.org/car-logos/mazda-logo.png",
-  nissan: "https://www.carlogos.org/car-logos/nissan-logo.png",
-  opel: "https://www.carlogos.org/car-logos/opel-logo.png",
-  peugeot: "https://www.carlogos.org/car-logos/peugeot-logo.png",
-  renault: "https://www.carlogos.org/car-logos/renault-logo.png",
-  seat: "https://www.carlogos.org/car-logos/seat-logo.png",
-  citroen: "https://www.carlogos.org/car-logos/citroen-logo.png",
-  "citroën": "https://www.carlogos.org/car-logos/citroen-logo.png",
-  fiat: "https://www.carlogos.org/car-logos/fiat-logo.png",
-  volvo: "https://www.carlogos.org/car-logos/volvo-logo.png",
-  dacia: "https://www.carlogos.org/car-logos/dacia-logo.png",
-  suzuki: "https://www.carlogos.org/car-logos/suzuki-logo.png",
-  mitsubishi: "https://www.carlogos.org/car-logos/mitsubishi-logo.png",
-  subaru: "https://www.carlogos.org/car-logos/subaru-logo.png",
-  porsche: "https://www.carlogos.org/car-logos/porsche-logo.png",
-  landrover: "https://www.carlogos.org/car-logos/land-rover-logo.png",
-  "land rover": "https://www.carlogos.org/car-logos/land-rover-logo.png",
-  jaguar: "https://www.carlogos.org/car-logos/jaguar-logo.png",
-  tesla: "https://www.carlogos.org/car-logos/tesla-logo.png",
-  mini: "https://www.carlogos.org/car-logos/mini-logo.png",
-  ferrari: "https://www.carlogos.org/car-logos/ferrari-logo.png",
-  lamborghini: "https://www.carlogos.org/car-logos/lamborghini-logo.png",
-  maserati: "https://www.carlogos.org/car-logos/maserati-logo.png",
-  alfaromeo: "https://www.carlogos.org/car-logos/alfa-romeo-logo.png",
-  "alfa romeo": "https://www.carlogos.org/car-logos/alfa-romeo-logo.png",
-  chevrolet: "https://www.carlogos.org/car-logos/chevrolet-logo.png",
-  lexus: "https://www.carlogos.org/car-logos/lexus-logo.png",
-  infiniti: "https://www.carlogos.org/car-logos/infiniti-logo.png",
-  acura: "https://www.carlogos.org/car-logos/acura-logo.png",
-  cadillac: "https://www.carlogos.org/car-logos/cadillac-logo.png",
-  buick: "https://www.carlogos.org/car-logos/buick-logo.png",
-  chrysler: "https://www.carlogos.org/car-logos/chrysler-logo.png",
-  dodge: "https://www.carlogos.org/car-logos/dodge-logo.png",
-  jeep: "https://www.carlogos.org/car-logos/jeep-logo.png",
-  bentley: "https://www.carlogos.org/car-logos/bentley-logo.png",
-  bugatti: "https://www.carlogos.org/car-logos/bugatti-logo.png",
-  astonmartin: "https://www.carlogos.org/car-logos/aston-martin-logo.png",
-  "aston martin": "https://www.carlogos.org/car-logos/aston-martin-logo.png",
-  mclaren: "https://www.carlogos.org/car-logos/mclaren-logo.png",
-  saab: "https://www.carlogos.org/car-logos/saab-logo.png",
-  genesis: "https://www.carlogos.org/car-logos/genesis-logo.png",
-  smart: "https://www.carlogos.org/car-logos/smart-logo.png",
-  lada: "https://www.carlogos.org/car-logos/lada-logo.png",
+  skoda: "/logos/skoda.png",
+  volkswagen: "/logos/volkswagen.png",
+  vw: "/logos/volkswagen.png",
+  audi: "/logos/audi.png",
+  bmw: "/logos/bmw.png",
+  mercedes: "/logos/mercedes-benz.png",
+  "mercedes-benz": "/logos/mercedes-benz.png",
+  benz: "/logos/mercedes-benz.png",
+  ford: "/logos/ford.png",
+  toyota: "/logos/toyota.png",
+  honda: "/logos/honda.png",
+  hyundai: "/logos/hyundai.png",
+  kia: "/logos/kia.png",
+  mazda: "/logos/mazda.png",
+  nissan: "/logos/nissan.png",
+  opel: "/logos/opel.png",
+  peugeot: "/logos/peugeot.png",
+  renault: "/logos/renault.png",
+  seat: "/logos/seat.png",
+  citroen: "/logos/citroen.png",
+  "citroën": "/logos/citroen.png",
+  fiat: "/logos/fiat.png",
+  volvo: "/logos/volvo.png",
+  dacia: "/logos/dacia.png",
+  suzuki: "/logos/suzuki.png",
+  mitsubishi: "/logos/mitsubishi.png",
+  subaru: "/logos/subaru.png",
+  porsche: "/logos/porsche.png",
+  landrover: "/logos/land-rover.png",
+  "land rover": "/logos/land-rover.png",
+  jaguar: "/logos/jaguar.png",
+  tesla: "/logos/tesla.png",
+  mini: "/logos/mini.png",
+  ferrari: "/logos/ferrari.png",
+  lamborghini: "/logos/lamborghini.png",
+  maserati: "/logos/maserati.png",
+  alfaromeo: "/logos/alfa-romeo.png",
+  "alfa romeo": "/logos/alfa-romeo.png",
+  chevrolet: "/logos/chevrolet.png",
+  lexus: "/logos/lexus.png",
+  infiniti: "/logos/infiniti.png",
+  acura: "/logos/acura.png",
+  cadillac: "/logos/cadillac.png",
+  chrysler: "/logos/chrysler.png",
+  dodge: "/logos/dodge.png",
+  jeep: "/logos/jeep.png",
+  bentley: "/logos/bentley.png",
+  astonmartin: "/logos/aston-martin.png",
+  "aston martin": "/logos/aston-martin.png",
+  mclaren: "/logos/mclaren.png",
+  saab: "/logos/saab.png",
+  genesis: "/logos/genesis.png",
+  smart: "/logos/smart.png",
+  lada: "/logos/lada.png",
+  alpina: "/logos/alpina.png",
+  byd: "/logos/byd.png",
+  daewoo: "/logos/daewoo.png",
+  daihatsu: "/logos/daihatsu.png",
+  ds: "/logos/ds.png",
+  hummer: "/logos/hummer.png",
+  lancia: "/logos/lancia.png",
+  mb: "/logos/mercedes-benz.png",
+  polestar: "/logos/polestar.png",
+  ram: "/logos/ram.png",
+  ssangyong: "/logos/ssangyong.png",
 };
 
 const BRAND_FALLBACK_COLORS = {
@@ -220,9 +230,24 @@ const BRAND_FALLBACK_COLORS = {
   "alfa romeo": { bg: "#920037", fg: "#fff" },
 };
 
+const DARK_INVERT_BRANDS = new Set([
+  "audi", "bmw", "mercedes", "mercedes-benz", "benz", "porsche",
+  "jaguar", "landrover", "land rover", "bentley", "maserati",
+  "lexus", "acura", "cadillac", "chrysler", "dodge", "jeep",
+  "astonmartin", "aston martin", "mclaren", "alfaromeo", "alfa romeo",
+  "genesis", "ferrari", "lamborghini", "smart", "mini", "mb",
+]);
+
 function getBrandLogo(brandValue) {
-  const key = (brandValue || "").toLowerCase().trim();
-  return BRAND_LOGOS[key] || null;
+  const raw = (brandValue || "").toLowerCase().trim();
+  // direct match
+  if (BRAND_LOGOS[raw]) return BRAND_LOGOS[raw];
+  // try without hyphens and underscores
+  const clean = raw.replace(/[-_\s]+/g, "");
+  for (const [k, v] of Object.entries(BRAND_LOGOS)) {
+    if (k.replace(/[-_\s]+/g, "") === clean) return v;
+  }
+  return null;
 }
 
 function getBrandFallbackColor(brandValue) {
@@ -273,14 +298,15 @@ function Field({ def, value, onChange }) {
     const num = parseFloat(raw);
     const safe = isNaN(num) ? min : num;
     return (
-      <div className="field">
-        <label>{label}</label>
-        <div className="slider-row">
-          <input type="range" min={min} max={max} step={step} value={safe}
-            onChange={(e) => onChange(key, e.target.value)} />
-          <span className="slider-val">{fmtVal(safe, fmt)}</span>
-        </div>
-      </div>
+      <CustomSlider
+        label={label}
+        value={safe}
+        min={min}
+        max={max}
+        step={step}
+        formatValue={(v) => fmtVal(v, fmt)}
+        onChange={(val) => onChange(key, String(val))}
+      />
     );
   }
 
@@ -288,11 +314,12 @@ function Field({ def, value, onChange }) {
     const checked = raw === "true" || raw === true;
     return (
       <div className="field">
-        <div className="bool-row">
-          <input type="checkbox" id={key} checked={checked}
-            onChange={(e) => onChange(key, String(e.target.checked))} />
-          <label htmlFor={key} style={{ marginBottom: 0, cursor: "pointer" }}>{label}</label>
-        </div>
+        <CustomToggle
+          label={label}
+          checked={checked}
+          onChange={(val) => onChange(key, String(val))}
+          id={key}
+        />
       </div>
     );
   }
@@ -1087,20 +1114,18 @@ export default function App() {
                           const logoUrl = getBrandLogo(b.value);
                           const fc = getBrandFallbackColor(b.value);
                           return (
-                          <label key={b.value} className="catalog-item">
-                            <input
-                              type="checkbox"
+                          <div key={b.value} className="catalog-item">
+                            <CustomCheckbox
                               checked={selectedBrands.includes(b.value)}
                               onChange={() => toggleBrand(b.value)}
+                              size="sm"
                             />
                             {logoUrl ? (
                               <img
-                                className="catalog-brand-logo"
+                                className={`catalog-brand-logo${theme === "dark" && DARK_INVERT_BRANDS.has(b.value.toLowerCase().trim()) ? " invert" : ""}`}
                                 src={logoUrl}
                                 alt={b.label}
                                 loading="lazy"
-                                referrerPolicy="no-referrer"
-                                crossOrigin="anonymous"
                                 onError={(e) => {
                                   e.target.style.display = "none";
                                   const bdg = e.target.parentElement.querySelector(".catalog-brand-badge");
@@ -1115,7 +1140,7 @@ export default function App() {
                               {brandInitials(b.label)}
                             </span>
                             <span>{b.label}</span>
-                          </label>
+                          </div>
                           );
                         })}
                     </div>
@@ -1147,14 +1172,14 @@ export default function App() {
                           return [
                             <div key={`head-${brand}`} className="catalog-subhead">{brand}</div>,
                             ...filtered.map((m) => (
-                              <label key={`${brand}-${m.value}`} className="catalog-item model">
-                                <input
-                                  type="checkbox"
+                              <div key={`${brand}-${m.value}`} className="catalog-item model">
+                                <CustomCheckbox
                                   checked={selectedModels.includes(m.value)}
                                   onChange={() => toggleModel(m.value)}
+                                  size="sm"
                                 />
                                 <span>{m.label}</span>
-                              </label>
+                              </div>
                             )),
                           ];
                         })}
@@ -1303,7 +1328,7 @@ export default function App() {
               <table>
                 <thead>
                   <tr>
-                    <th className="cell-check"><input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectVisible} /></th>
+                    <th className="cell-check"><CustomCheckbox checked={allVisibleSelected} onChange={toggleSelectVisible} size="sm" /></th>
                     <th className="cell-mark"></th>
                     <th className="sortable-th" onClick={() => toggleSort("score")}>Skóre <span>{sortIndicator("score")}</span></th>
                     <th className="sortable-th" onClick={() => toggleSort("name")}>Název <span>{sortIndicator("name")}</span></th>
@@ -1327,7 +1352,7 @@ export default function App() {
                     return (
                     <tr key={item.ad_id || i} className={`${selected ? "row-selected" : ""}${marked ? " row-marked" : ""} ${(() => { const s = getItemScore(item, scoringPresets[selectedPreset]); return s >= 80 ? "row-score-hi" : s >= 50 ? "row-score-mid" : "row-score-lo"; })()}`}>
                       <td className="cell-check">
-                        <input type="checkbox" checked={selected} onChange={() => toggleSelected(key)} />
+                        <CustomCheckbox checked={selected} onChange={() => toggleSelected(key)} size="sm" />
                       </td>
                       <td className="cell-mark">
                         <button className={`mark-chip${marked ? " marked" : ""}`} onClick={() => markSelected(marked ? false : true)} disabled={!selected && !marked} title={marked ? "Odznačit" : "Označit"}>

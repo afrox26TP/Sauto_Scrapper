@@ -50,6 +50,18 @@ LOGOS = {
     "genesis": "https://www.carlogos.org/car-logos/genesis-logo.png",
     "smart": "https://www.carlogos.org/car-logos/smart-logo.png",
     "lada": "https://www.carlogos.org/car-logos/lada-logo.png",
+    "alpina": "https://www.carlogos.org/car-logos/alpina-logo.png",
+    "byd": "https://www.carlogos.org/car-logos/byd-logo.png",
+    "cupra": "https://www.carlogos.org/car-logos/cupra-logo.png",
+    "daewoo": "https://www.carlogos.org/car-logos/daewoo-logo.png",
+    "daihatsu": "https://www.carlogos.org/car-logos/daihatsu-logo.png",
+    "ds": "https://www.carlogos.org/car-logos/ds-logo.png",
+    "hummer": "https://www.carlogos.org/car-logos/hummer-logo.png",
+    "jaecoo": "https://www.carlogos.org/car-logos/jaecoo-logo.png",
+    "lancia": "https://www.carlogos.org/car-logos/lancia-logo.png",
+    "polestar": "https://www.carlogos.org/car-logos/polestar-logo.png",
+    "ram": "https://www.carlogos.org/car-logos/ram-logo.png",
+    "ssangyong": "https://www.carlogos.org/car-logos/ssangyong-logo.png",
 }
 
 OUT_DIR = os.path.join(os.path.dirname(__file__), "web-ui", "public", "logos")

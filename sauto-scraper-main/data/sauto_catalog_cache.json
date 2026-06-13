@@ -1,15 +1,7 @@
 {
   "brands": {
-    "updated_at": 1781185829,
+    "updated_at": 1781361998,
     "items": [
-      {
-        "value": "abarth",
-        "label": "Abarth"
-      },
-      {
-        "value": "acura",
-        "label": "Acura"
-      },
       {
         "value": "alfa-romeo",
         "label": "Alfa Romeo"
@@ -17,14 +9,6 @@
       {
         "value": "alpina",
         "label": "Alpina"
-      },
-      {
-        "value": "alpine",
-        "label": "Alpine"
-      },
-      {
-        "value": "aston-martin",
-        "label": "Aston Martin"
       },
       {
         "value": "audi",
@@ -35,16 +19,16 @@
         "label": "BAIC"
       },
       {
+        "value": "bentley",
+        "label": "Bentley"
+      },
+      {
         "value": "bmw",
         "label": "BMW"
       },
       {
         "value": "byd",
         "label": "BYD"
-      },
-      {
-        "value": "cadillac",
-        "label": "Cadillac"
       },
       {
         "value": "chevrolet",
@@ -65,6 +49,10 @@
       {
         "value": "dacia",
         "label": "Dacia"
+      },
+      {
+        "value": "daewoo",
+        "label": "Daewoo"
       },
       {
         "value": "daihatsu",
@@ -91,8 +79,8 @@
         "label": "Ford"
       },
       {
-        "value": "foton",
-        "label": "FOTON"
+        "value": "genesis",
+        "label": "Genesis"
       },
       {
         "value": "honda",
@@ -107,14 +95,6 @@
         "label": "Hyundai"
       },
       {
-        "value": "infiniti",
-        "label": "Infiniti"
-      },
-      {
-        "value": "isuzu",
-        "label": "Isuzu"
-      },
-      {
         "value": "jaecoo",
         "label": "Jaecoo"
       },
@@ -127,16 +107,8 @@
         "label": "Jeep"
       },
       {
-        "value": "kgm",
-        "label": "KGM"
-      },
-      {
         "value": "kia",
         "label": "Kia"
-      },
-      {
-        "value": "lada",
-        "label": "Lada"
       },
       {
         "value": "lamborghini",
@@ -151,16 +123,12 @@
         "label": "Land Rover"
       },
       {
-        "value": "leapmotor",
-        "label": "Leapmotor"
-      },
-      {
         "value": "lexus",
         "label": "Lexus"
       },
       {
-        "value": "ligier",
-        "label": "Ligier"
+        "value": "lynk-co",
+        "label": "Lynk & Co"
       },
       {
         "value": "maserati",
@@ -189,10 +157,6 @@
       {
         "value": "nissan",
         "label": "Nissan"
-      },
-      {
-        "value": "omoda",
-        "label": "Omoda"
       },
       {
         "value": "opel",
@@ -247,10 +211,6 @@
         "label": "Suzuki"
       },
       {
-        "value": "tatra",
-        "label": "Tatra"
-      },
-      {
         "value": "tesla",
         "label": "Tesla"
       },
@@ -265,27 +225,35 @@
       {
         "value": "volvo",
         "label": "Volvo"
-      },
-      {
-        "value": "xpeng",
-        "label": "XPENG"
       }
     ]
   },
   "models": {
     "alfa-romeo": {
-      "updated_at": 1781214601,
-      "items": [],
+      "updated_at": 1781363323,
+      "items": [
+        {
+          "value": "159",
+          "label": "159"
+        },
+        {
+          "value": "giulia",
+          "label": "Giulia"
+        },
+        {
+          "value": "spider",
+          "label": "Spider"
+        },
+        {
+          "value": "stelvio",
+          "label": "Stelvio"
+        }
+      ],
       "collector_version": 2
     },
     "bentley": {
-      "updated_at": 1780948644,
-      "items": [
-        {
-          "value": "continental-gt",
-          "label": "Continental GT"
-        }
-      ],
+      "updated_at": 1781365161,
+      "items": [],
       "collector_version": 2
     },
     "byd": {
@@ -1147,8 +1115,12 @@
       "collector_version": 2
     },
     "audi": {
-      "updated_at": 1781044244,
+      "updated_at": 1781365066,
       "items": [
+        {
+          "value": "a1",
+          "label": "A1"
+        },
         {
           "value": "a3",
           "label": "A3"
@@ -1156,14 +1128,6 @@
         {
           "value": "a4",
           "label": "A4"
-        },
-        {
-          "value": "a4-allroad",
-          "label": "A4 allroad"
-        },
-        {
-          "value": "a4-avant",
-          "label": "A4 Avant"
         },
         {
           "value": "a5",
@@ -1182,16 +1146,8 @@
           "label": "A7"
         },
         {
-          "value": "e-tron",
-          "label": "e-tron"
-        },
-        {
-          "value": "q2",
-          "label": "Q2"
-        },
-        {
-          "value": "q4-e-tron",
-          "label": "Q4 e-tron"
+          "value": "q3",
+          "label": "Q3"
         },
         {
           "value": "q5",
@@ -1202,28 +1158,16 @@
           "label": "Q7"
         },
         {
-          "value": "q8",
-          "label": "Q8"
+          "value": "s3",
+          "label": "S3"
         },
         {
-          "value": "q8-e-tron",
-          "label": "Q8 e-tron"
+          "value": "s4",
+          "label": "S4"
         },
         {
-          "value": "rs-q8",
-          "label": "RS Q8"
-        },
-        {
-          "value": "rs4",
-          "label": "RS4"
-        },
-        {
-          "value": "rs5",
-          "label": "RS5"
-        },
-        {
-          "value": "rs6",
-          "label": "RS6"
+          "value": "s5",
+          "label": "S5"
         },
         {
           "value": "s6",
@@ -1234,20 +1178,8 @@
           "label": "S7"
         },
         {
-          "value": "s8",
-          "label": "S8"
-        },
-        {
-          "value": "sq5",
-          "label": "SQ5"
-        },
-        {
-          "value": "sq7",
-          "label": "SQ7"
-        },
-        {
-          "value": "sq8",
-          "label": "SQ8"
+          "value": "tt",
+          "label": "TT"
         }
       ],
       "collector_version": 2
@@ -1546,43 +1478,27 @@
       "collector_version": 2
     },
     "bmw": {
-      "updated_at": 1781214971,
+      "updated_at": 1781365164,
       "items": [
-        {
-          "value": "m2",
-          "label": "M2"
-        },
-        {
-          "value": "m3",
-          "label": "M3"
-        },
-        {
-          "value": "m4",
-          "label": "M4"
-        },
-        {
-          "value": "m5",
-          "label": "M5"
-        },
         {
           "value": "rada-1",
           "label": "Řada 1"
+        },
+        {
+          "value": "rada-2",
+          "label": "Řada 2"
         },
         {
           "value": "rada-3",
           "label": "Řada 3"
         },
         {
-          "value": "rada-4",
-          "label": "Řada 4"
-        },
-        {
           "value": "rada-5",
           "label": "Řada 5"
         },
         {
-          "value": "rada-7",
-          "label": "Řada 7"
+          "value": "rada-6",
+          "label": "Řada 6"
         },
         {
           "value": "rada-8",
@@ -1591,6 +1507,10 @@
         {
           "value": "x1",
           "label": "X1"
+        },
+        {
+          "value": "x2",
+          "label": "X2"
         },
         {
           "value": "x3",
@@ -1631,6 +1551,26 @@
     },
     "cadillac": {
       "updated_at": 1781214977,
+      "items": [],
+      "collector_version": 2
+    },
+    "ferrari": {
+      "updated_at": 1781364463,
+      "items": [],
+      "collector_version": 2
+    },
+    "ds": {
+      "updated_at": 1781364468,
+      "items": [],
+      "collector_version": 2
+    },
+    "baic": {
+      "updated_at": 1781365063,
+      "items": [],
+      "collector_version": 2
+    },
+    "alpina": {
+      "updated_at": 1781365153,
       "items": [],
       "collector_version": 2
     }
