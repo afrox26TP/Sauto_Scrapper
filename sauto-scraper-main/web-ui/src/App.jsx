@@ -386,6 +386,7 @@ export default function App() {
   const [sortConfig, setSortConfig] = useState({ key: "score", direction: "desc" });
   const [isSidebarHidden, setIsSidebarHidden] = useState(false);
   const [showApiDetails, setShowApiDetails] = useState(false);
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [scoringPresets, setScoringPresets] = useState(LOCAL_SCORING_PRESETS);
   const [selectedPreset, setSelectedPreset] = useState("balanced");
   const [toastMsg, setToastMsg] = useState("");
@@ -1019,9 +1020,29 @@ export default function App() {
         <button className="btn-primary" onClick={run} disabled={busy} style={{ marginLeft: 8 }}>
           {busy ? <><LoaderCircle className="ui-icon icon-spin" aria-hidden="true" /> Pracuji…</> : <><Play className="ui-icon" aria-hidden="true" /> Spustit</>}
         </button>
-        <span className={`status-dot${busy ? " running" : ""}`}>
-          {statusLabel()}
-        </span>
+
+        {/* Status dropdown */}
+        <div className="status-chip-wrapper">
+          <div
+            className={`status-chip${busy ? " running" : ""}${showStatusDropdown ? " open" : ""}`}
+            onClick={() => setShowStatusDropdown((v) => !v)}
+            title="Klikni pro detail stavu"
+          >
+            <span className={`mini-dot${busy ? " running" : ""}`} />
+            <span className="status-chip-label">{statusLabel()}</span>
+            <ChevronDown className="ui-icon" style={{ width: 12, height: 12 }} />
+          </div>
+          {showStatusDropdown && (
+            <div className="status-detail-dropdown">
+              <div className="status-detail-row"><span className="status-detail-lbl">Stav</span> <span className="status-detail-val">{statusLabel()}</span></div>
+              <div className="status-detail-row"><span className="status-detail-lbl">Start</span> <span className="status-detail-val">{fmtDate(status?.last_started_at)}</span></div>
+              <div className="status-detail-row"><span className="status-detail-lbl">Konec</span> <span className="status-detail-val">{fmtDate(status?.last_finished_at)}</span></div>
+              <div className="status-detail-row"><span className="status-detail-lbl">Exit</span> <span className="status-detail-val">{status?.last_exit_code ?? "—"}</span></div>
+              <div className="status-detail-row"><span className="status-detail-lbl">PID</span> <span className="status-detail-val">{status?.pid || "—"}</span></div>
+            </div>
+          )}
+        </div>
+
         <div className="topbar-spacer" />
         <button
           type="button"
@@ -1256,16 +1277,6 @@ export default function App() {
               <History className="ui-icon" aria-hidden="true" /> Historie ({logs.length})
             </button>
           </div>}
-
-          {status && (
-            <div className="status-bar">
-              <span><span className="lbl">Stav</span> {statusLabel()}</span>
-              <span><span className="lbl">Start</span> {fmtDate(status.last_started_at)}</span>
-              <span><span className="lbl">Konec</span> {fmtDate(status.last_finished_at)}</span>
-              <span><span className="lbl">Exit</span> {status.last_exit_code ?? "—"}</span>
-              <span><span className="lbl">PID</span> {status.pid || "—"}</span>
-            </div>
-          )}
 
           <div className="results-hd results-header">
             <div className="results-title-block">
