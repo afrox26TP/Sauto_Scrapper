@@ -51,12 +51,12 @@ const PARAM_GROUPS = [
       { key: "seller_type", type: "select", label: "Prodejce", options: ["", "soukromy", "bazar"] },
       { key: "condition_seo", type: "text", label: "Stav (čárkou)" },
       { key: "operating_lease", type: "boolean", label: "Operativní leasing" },
-      { key: "category_id", type: "text", label: "Kategorie ID" },
     ],
   },
   {
     label: "Stránkování",
     fields: [
+      { key: "category_id", type: "text", label: "Kategorie ID" },
       { key: "limit", type: "slider", label: "Limit výsledků", min: 1, max: 1000, step: 1 },
       { key: "offset", type: "number", label: "Offset" },
     ],
@@ -261,9 +261,9 @@ function brandInitials(label) {
   return (label || "?").slice(0, 2).toUpperCase();
 }
 
-const BASIC_GROUPS = PARAM_GROUPS.slice(0, 3);
-const ADVANCED_GROUPS = PARAM_GROUPS.slice(3);
-const IGNORED_KEYS = new Set(PARAM_GROUPS.flatMap((g) => g.fields.map((f) => f.key)));
+const BASIC_GROUPS = [PARAM_GROUPS[0], PARAM_GROUPS[2]];
+const ADVANCED_GROUPS = [PARAM_GROUPS[1], ...PARAM_GROUPS.slice(3)];
+const IGNORED_KEYS = new Set([...PARAM_GROUPS.flatMap((g) => g.fields.map((f) => f.key)), "exclude_manufacturer_seo_name", "exclude_model_seo_name"]);
 
 function fmtVal(val, fmt) {
   const n = parseFloat(val);
@@ -378,6 +378,8 @@ export default function App() {
   const [brandOptions, setBrandOptions] = useState([]);
   const [selectedBrands, setSelectedBrands] = useState([]);
   const [selectedModels, setSelectedModels] = useState([]);
+  const [excludedBrands, setExcludedBrands] = useState([]);
+  const [excludedModels, setExcludedModels] = useState([]);
   const [modelsByBrand, setModelsByBrand] = useState({});
   const [loadingModelsByBrand, setLoadingModelsByBrand] = useState({});
   const [brandFilterText, setBrandFilterText] = useState("");
@@ -492,31 +494,47 @@ export default function App() {
     }
   }
 
-  function syncFilterParams(brands, models) {
+  function syncFilterParams(brands, models, exclBrands = excludedBrands, exclModels = excludedModels) {
     const brandCsv = brands.join(",");
     const modelCsv = models.join(",");
+    const exclBrandCsv = exclBrands.join(",");
+    const exclModelCsv = exclModels.join(",");
     setParams((prev) => ({
       ...prev,
       manufacturer_seo_name: brandCsv,
       model_seo_name: modelCsv,
+      exclude_manufacturer_seo_name: exclBrandCsv,
+      exclude_model_seo_name: exclModelCsv,
     }));
   }
 
   function toggleBrand(brand) {
     const b = String(brand || "").trim();
     if (!b) return;
-    const nextBrands = selectedBrands.includes(b)
-      ? selectedBrands.filter((x) => x !== b)
-      : [...selectedBrands, b];
+
+    let nextBrands, nextExcluded;
+    if (excludedBrands.includes(b)) {
+      nextExcluded = excludedBrands.filter((x) => x !== b);
+      nextBrands = selectedBrands;
+    } else if (selectedBrands.includes(b)) {
+      nextBrands = selectedBrands.filter((x) => x !== b);
+      nextExcluded = [...excludedBrands, b];
+    } else {
+      nextBrands = [...selectedBrands, b];
+      nextExcluded = excludedBrands;
+    }
 
     const allowedModels = new Set(nextBrands.flatMap((k) => (modelsByBrand[k] || []).map((m) => m.value)));
     const nextModels = selectedModels.filter((m) => allowedModels.has(m));
+    const nextExclModels = excludedModels.filter((m) => allowedModels.has(m));
 
     setSelectedBrands(nextBrands);
+    setExcludedBrands(nextExcluded);
     setSelectedModels(nextModels);
-    syncFilterParams(nextBrands, nextModels);
+    setExcludedModels(nextExclModels);
+    syncFilterParams(nextBrands, nextModels, nextExcluded, nextExclModels);
 
-    if (nextBrands.length > 0) {
+    if (nextBrands.length > 0 && !selectedBrands.includes(b)) {
       fetchModelsForBrand(b).catch(() => null);
     }
   }
@@ -524,11 +542,22 @@ export default function App() {
   function toggleModel(model) {
     const m = String(model || "").trim();
     if (!m) return;
-    const nextModels = selectedModels.includes(m)
-      ? selectedModels.filter((x) => x !== m)
-      : [...selectedModels, m];
+
+    let nextModels, nextExcluded;
+    if (excludedModels.includes(m)) {
+      nextExcluded = excludedModels.filter((x) => x !== m);
+      nextModels = selectedModels;
+    } else if (selectedModels.includes(m)) {
+      nextModels = selectedModels.filter((x) => x !== m);
+      nextExcluded = [...excludedModels, m];
+    } else {
+      nextModels = [...selectedModels, m];
+      nextExcluded = excludedModels;
+    }
+
     setSelectedModels(nextModels);
-    syncFilterParams(selectedBrands, nextModels);
+    setExcludedModels(nextExcluded);
+    syncFilterParams(selectedBrands, nextModels, excludedBrands, nextExcluded);
   }
 
   async function refreshAll() {
@@ -829,8 +858,12 @@ export default function App() {
   useEffect(() => {
     const parsedBrands = uniq(csvToArray(params.manufacturer_seo_name));
     const parsedModels = uniq(csvToArray(params.model_seo_name));
+    const parsedExclBrands = uniq(csvToArray(params.exclude_manufacturer_seo_name));
+    const parsedExclModels = uniq(csvToArray(params.exclude_model_seo_name));
     setSelectedBrands(parsedBrands);
     setSelectedModels(parsedModels);
+    setExcludedBrands(parsedExclBrands);
+    setExcludedModels(parsedExclModels);
   }, [params.manufacturer_seo_name, params.model_seo_name]);
 
   useEffect(() => {
@@ -1135,12 +1168,14 @@ export default function App() {
                           const logoUrl = getBrandLogo(b.value);
                           const fc = getBrandFallbackColor(b.value);
                           return (
-                          <div key={b.value} className="catalog-item">
-                            <CustomCheckbox
-                              checked={selectedBrands.includes(b.value)}
-                              onChange={() => toggleBrand(b.value)}
-                              size="sm"
-                            />
+                          <div key={b.value} className={`catalog-item${excludedBrands.includes(b.value) ? " excluded" : ""}`}>
+                            <span
+                              className={`catalog-toggle-btn${selectedBrands.includes(b.value) ? " checked" : excludedBrands.includes(b.value) ? " excluded" : ""}`}
+                              onClick={(e) => { e.stopPropagation(); toggleBrand(b.value); }}
+                              title={selectedBrands.includes(b.value) ? "✓ Zahrnuto — klikni pro vyloučení" : excludedBrands.includes(b.value) ? "✕ Vyloučeno — klikni pro zrušení" : "Klikni pro zahrnutí"}
+                            >
+                              {selectedBrands.includes(b.value) ? "✓" : excludedBrands.includes(b.value) ? "✕" : ""}
+                            </span>
                             {logoUrl ? (
                               <img
                                 className={`catalog-brand-logo${theme === "dark" && DARK_INVERT_BRANDS.has(b.value.toLowerCase().trim()) ? " invert" : ""}`}
@@ -1193,12 +1228,14 @@ export default function App() {
                           return [
                             <div key={`head-${brand}`} className="catalog-subhead">{brand}</div>,
                             ...filtered.map((m) => (
-                              <div key={`${brand}-${m.value}`} className="catalog-item model">
-                                <CustomCheckbox
-                                  checked={selectedModels.includes(m.value)}
-                                  onChange={() => toggleModel(m.value)}
-                                  size="sm"
-                                />
+                              <div key={`${brand}-${m.value}`} className={`catalog-item model${excludedModels.includes(m.value) ? " excluded" : ""}`}>
+                                <span
+                                  className={`catalog-toggle-btn${selectedModels.includes(m.value) ? " checked" : excludedModels.includes(m.value) ? " excluded" : ""}`}
+                                  onClick={(e) => { e.stopPropagation(); toggleModel(m.value); }}
+                                  title={selectedModels.includes(m.value) ? "✓ Zahrnuto — klikni pro vyloučení" : excludedModels.includes(m.value) ? "✕ Vyloučeno — klikni pro zrušení" : "Klikni pro zahrnutí"}
+                                >
+                                  {selectedModels.includes(m.value) ? "✓" : excludedModels.includes(m.value) ? "✕" : ""}
+                                </span>
                                 <span>{m.label}</span>
                               </div>
                             )),
@@ -1209,7 +1246,7 @@ export default function App() {
                   )}
 
                   <div className="catalog-selected-note">
-                    {selectedBrands.length} značek, {selectedModels.length} modelů vybráno
+                    {selectedBrands.length > 0 && <>{selectedBrands.length} {selectedBrands.length === 1 ? "značka" : selectedBrands.length >= 2 && selectedBrands.length <= 4 ? "značky" : "značek"}</>}{selectedBrands.length === 0 && "0 značek"}{excludedBrands.length > 0 && ` + ${excludedBrands.length} vyloučeno`}{selectedModels.length > 0 && ` · ${selectedModels.length} ${selectedModels.length === 1 ? "model" : selectedModels.length >= 2 && selectedModels.length <= 4 ? "modely" : "modelů"}`}{excludedModels.length > 0 && ` + ${excludedModels.length} vyloučeno`}
                   </div>
                 </div>
               )}

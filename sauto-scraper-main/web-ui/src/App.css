@@ -231,13 +231,13 @@ button:disabled {
 }
 
 .btn-primary {
-  background: var(--accent);
+  background: #2563eb;
   color: #fff;
   font-weight: 800;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--accent-strong);
+  background: #1d4ed8;
 }
 
 .link-btn {
@@ -999,6 +999,40 @@ tr.row-selected.row-score-lo td { background: rgba(220, 38, 38, 0.07); border-bo
   0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.45); }
   70% { box-shadow: 0 0 0 8px transparent; }
   100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+.catalog-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  border: 2px solid var(--border-strong);
+  background: transparent;
+  cursor: pointer;
+  flex: 0 0 auto;
+  transition: all 0.15s ease;
+  font-size: 0.7rem;
+  font-weight: 900;
+  color: transparent;
+}
+
+.catalog-toggle-btn.checked {
+  border-color: var(--green);
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.catalog-toggle-btn.excluded {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.catalog-item.excluded {
+  text-decoration: line-through;
+  opacity: 0.55;
 }
 
 /* ── Responsive ── */

@@ -731,6 +731,8 @@ class SautoSpider(scrapy.Spider):
         self.strict_model_seo = None
         self.strict_manufacturer_set = set()
         self.strict_model_set = set()
+        self.exclude_manufacturer_set = set()
+        self.exclude_model_set = set()
         self.strict_seller_type = None
 
         self.filter_year_from = None
@@ -987,6 +989,16 @@ class SautoSpider(scrapy.Spider):
         self.strict_model_set = {
             x.strip() for x in (self.strict_model_seo or "").split(",") if x.strip()
         }
+        self.exclude_manufacturer_set = {
+            x.strip()
+            for x in (self._norm_str(params.get("exclude_manufacturer_seo_name")) or "").split(",")
+            if x.strip()
+        }
+        self.exclude_model_set = {
+            x.strip()
+            for x in (self._norm_str(params.get("exclude_model_seo_name")) or "").split(",")
+            if x.strip()
+        }
         self.strict_seller_type = self._norm_str(params.get("seller_type"))
 
     def _passes_strict_filter(self, item: dict) -> bool:
@@ -999,6 +1011,10 @@ class SautoSpider(scrapy.Spider):
         if self.strict_manufacturer_set and m_seo not in self.strict_manufacturer_set:
             return False
         if self.strict_model_set and mo_seo not in self.strict_model_set:
+            return False
+        if self.exclude_manufacturer_set and m_seo in self.exclude_manufacturer_set:
+            return False
+        if self.exclude_model_set and mo_seo in self.exclude_model_set:
             return False
 
         if self.strict_seller_type:
@@ -1117,6 +1133,8 @@ class SautoSpider(scrapy.Spider):
         # is actually broad. The real Sauto filter is manufacturer_model_seo.
         search_params.pop("manufacturer_seo_name", None)
         search_params.pop("model_seo_name", None)
+        search_params.pop("exclude_manufacturer_seo_name", None)
+        search_params.pop("exclude_model_seo_name", None)
         if manufacturer_model_seo:
             search_params["manufacturer_model_seo"] = manufacturer_model_seo
 
