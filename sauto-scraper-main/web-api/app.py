@@ -55,6 +55,14 @@ class ResultsImportPayload(BaseModel):
     path: str = "data/sauto_interesting.json"
 
 
+class CustomPresetPayload(BaseModel):
+    name: str = ""
+    description: str = ""
+    weights: dict[str, float] = Field(default_factory=dict)
+    hard_rejects: list[dict[str, str]] = Field(default_factory=list)
+    must_have_equipment: list[str] = Field(default_factory=list)
+
+
 class ResultMarkPayload(BaseModel):
     ids: list[str] = Field(default_factory=list)
     marked: bool = True
@@ -486,25 +494,113 @@ def get_catalog_models(brand: str, force_refresh: bool = False) -> dict[str, Any
 
 @app.get("/api/scoring/presets")
 def get_scoring_presets() -> dict[str, Any]:
-    """Return all available scoring presets for frontend use (Varianta A)."""
-    presets_data = {}
+    """Return all available scoring presets (built-in + custom) for frontend use."""
+    builtin = {}
     for preset_name, preset_config in CarEvaluator.SCORING_PRESETS.items():
         weights = preset_config.get("weights", {})
-        presets_data[preset_name] = {
+        builtin[preset_name] = {
             "name": preset_config.get("name", preset_name),
             "description": preset_config.get("description", ""),
             "weights": weights,
-            "multipliers": {
-                "age": weights.get("age", preset_config.get("age_multiplier", 1.0)),
-                "mileage": weights.get("mileage", preset_config.get("mileage_multiplier", 1.0)),
-                "price": weights.get("price", 1.0),
-                "consumption": weights.get("consumption", preset_config.get("consumption_multiplier", 1.0)),
-                "equipment": weights.get("equipment", preset_config.get("equipment_multiplier", 1.0)),
-                "flags": weights.get("flags", preset_config.get("flag_multiplier", 1.0)),
-                "power_bonus": preset_config.get("power_bonus", 0),
-            }
         }
-    return {"presets": presets_data}
+
+    all_params = load_json(PARAMS_PATH, {})
+    custom_presets = all_params.get("custom_presets", {})
+    if not isinstance(custom_presets, dict):
+        custom_presets = {}
+
+    return {"builtin": builtin, "custom": custom_presets}
+
+
+def _load_custom_presets() -> dict[str, Any]:
+    all_params = load_json(PARAMS_PATH, {})
+    custom = all_params.get("custom_presets", {})
+    return custom if isinstance(custom, dict) else {}
+
+
+def _save_custom_presets(presets: dict[str, Any]) -> None:
+    all_params = load_json(PARAMS_PATH, {})
+    if not isinstance(all_params, dict):
+        all_params = {}
+    # Keep custom_presets as a raw dict (not stringified), other params remain strings
+    clean = {}
+    for key, value in all_params.items():
+        if key == "custom_presets":
+            clean[key] = value if isinstance(value, dict) else {}
+        else:
+            clean[key] = "" if value is None else str(value)
+    clean["custom_presets"] = presets
+    dump_json(PARAMS_PATH, clean)
+
+
+def _sanitize_preset_id(preset_id: str) -> str:
+    import re
+    sanitized = re.sub(r"[^a-z0-9_-]", "", preset_id.strip().lower())
+    if not sanitized:
+        raise HTTPException(status_code=400, detail="Preset ID must contain at least one alphanumeric character.")
+    if sanitized in CarEvaluator.SCORING_PRESETS:
+        raise HTTPException(status_code=400, detail=f"'{sanitized}' is a built-in preset name and cannot be overwritten.")
+    return sanitized
+
+
+@app.post("/api/scoring/presets/custom")
+def create_custom_preset(payload: CustomPresetPayload) -> dict[str, Any]:
+    """Create a new custom scoring preset."""
+    if not payload.name or not payload.name.strip():
+        raise HTTPException(status_code=400, detail="Preset name is required.")
+
+    import re
+    preset_id = re.sub(r"[^a-z0-9_-]", "", payload.name.strip().lower().replace(" ", "-"))
+    if not preset_id:
+        raise HTTPException(status_code=400, detail="Preset name must contain at least one alphanumeric character.")
+    preset_id = _sanitize_preset_id(preset_id)
+
+    custom_presets = _load_custom_presets()
+    if preset_id in custom_presets:
+        raise HTTPException(status_code=409, detail=f"Custom preset '{preset_id}' already exists.")
+
+    weights = {str(k): float(v) for k, v in (payload.weights or {}).items()}
+    custom_presets[preset_id] = {
+        "name": payload.name.strip(),
+        "description": (payload.description or "").strip(),
+        "weights": weights,
+        "hard_rejects": payload.hard_rejects or [],
+        "must_have_equipment": payload.must_have_equipment or [],
+        "created_at": time.time(),
+    }
+    _save_custom_presets(custom_presets)
+    return {"preset_id": preset_id, "preset": custom_presets[preset_id]}
+
+
+@app.put("/api/scoring/presets/custom/{preset_id}")
+def update_custom_preset(preset_id: str, payload: CustomPresetPayload) -> dict[str, Any]:
+    """Update an existing custom scoring preset."""
+    custom_presets = _load_custom_presets()
+    if preset_id not in custom_presets:
+        raise HTTPException(status_code=404, detail=f"Custom preset '{preset_id}' not found.")
+
+    existing = custom_presets[preset_id]
+    existing["name"] = (payload.name or existing["name"]).strip()
+    existing["description"] = (payload.description or existing.get("description", "")).strip()
+    existing["weights"] = {str(k): float(v) for k, v in (payload.weights or existing.get("weights", {})).items()}
+    existing["hard_rejects"] = payload.hard_rejects if payload.hard_rejects is not None else existing.get("hard_rejects", [])
+    existing["must_have_equipment"] = payload.must_have_equipment if payload.must_have_equipment is not None else existing.get("must_have_equipment", [])
+    existing["updated_at"] = time.time()
+
+    _save_custom_presets(custom_presets)
+    return {"preset_id": preset_id, "preset": existing}
+
+
+@app.delete("/api/scoring/presets/custom/{preset_id}")
+def delete_custom_preset(preset_id: str) -> dict[str, Any]:
+    """Delete a custom scoring preset."""
+    custom_presets = _load_custom_presets()
+    if preset_id not in custom_presets:
+        raise HTTPException(status_code=404, detail=f"Custom preset '{preset_id}' not found.")
+
+    deleted = custom_presets.pop(preset_id)
+    _save_custom_presets(custom_presets)
+    return {"deleted": True, "preset_id": preset_id, "name": deleted.get("name", preset_id)}
 
 
 @app.get("/api/results/export")

@@ -1,14 +1,14 @@
 {
   "brands": {
-    "updated_at": 1781361998,
+    "updated_at": 1781465403,
     "items": [
+      {
+        "value": "abarth",
+        "label": "Abarth"
+      },
       {
         "value": "alfa-romeo",
         "label": "Alfa Romeo"
-      },
-      {
-        "value": "alpina",
-        "label": "Alpina"
       },
       {
         "value": "audi",
@@ -51,24 +51,8 @@
         "label": "Dacia"
       },
       {
-        "value": "daewoo",
-        "label": "Daewoo"
-      },
-      {
-        "value": "daihatsu",
-        "label": "Daihatsu"
-      },
-      {
         "value": "dodge",
         "label": "Dodge"
-      },
-      {
-        "value": "ds",
-        "label": "DS"
-      },
-      {
-        "value": "ferrari",
-        "label": "Ferrari"
       },
       {
         "value": "fiat",
@@ -79,20 +63,16 @@
         "label": "Ford"
       },
       {
-        "value": "genesis",
-        "label": "Genesis"
-      },
-      {
         "value": "honda",
         "label": "Honda"
       },
       {
-        "value": "hummer",
-        "label": "Hummer"
-      },
-      {
         "value": "hyundai",
         "label": "Hyundai"
+      },
+      {
+        "value": "infiniti",
+        "label": "Infiniti"
       },
       {
         "value": "jaecoo",
@@ -111,12 +91,8 @@
         "label": "Kia"
       },
       {
-        "value": "lamborghini",
-        "label": "Lamborghini"
-      },
-      {
-        "value": "lancia",
-        "label": "Lancia"
+        "value": "lada",
+        "label": "Lada"
       },
       {
         "value": "land-rover",
@@ -127,16 +103,16 @@
         "label": "Lexus"
       },
       {
-        "value": "lynk-co",
-        "label": "Lynk & Co"
-      },
-      {
         "value": "maserati",
         "label": "Maserati"
       },
       {
         "value": "mazda",
         "label": "Mazda"
+      },
+      {
+        "value": "mclaren",
+        "label": "McLaren"
       },
       {
         "value": "mercedes-benz",
@@ -157,6 +133,10 @@
       {
         "value": "nissan",
         "label": "Nissan"
+      },
+      {
+        "value": "omoda",
+        "label": "Omoda"
       },
       {
         "value": "opel",
@@ -183,10 +163,6 @@
         "label": "Renault"
       },
       {
-        "value": "saab",
-        "label": "Saab"
-      },
-      {
         "value": "seat",
         "label": "Seat"
       },
@@ -209,6 +185,14 @@
       {
         "value": "suzuki",
         "label": "Suzuki"
+      },
+      {
+        "value": "swm",
+        "label": "SWM"
+      },
+      {
+        "value": "tatra",
+        "label": "Tatra"
       },
       {
         "value": "tesla",

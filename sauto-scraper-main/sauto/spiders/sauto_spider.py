@@ -80,6 +80,10 @@ class CarEvaluator:
                 "flags": 1.15,
                 "sport": 0.25,
                 "luxury": 0.15,
+                "power_weight": 0.20,
+                "sport_badge": 0.10,
+                "premium_equipment": 0.15,
+                "tco": 1.50,
             },
         },
         "balanced": {
@@ -97,6 +101,10 @@ class CarEvaluator:
                 "flags": 1.00,
                 "sport": 0.35,
                 "luxury": 0.35,
+                "power_weight": 0.40,
+                "sport_badge": 0.30,
+                "premium_equipment": 0.50,
+                "tco": 0.60,
             },
         },
         "sport": {
@@ -114,6 +122,10 @@ class CarEvaluator:
                 "flags": 0.80,
                 "sport": 1.45,
                 "luxury": 0.20,
+                "power_weight": 1.60,
+                "sport_badge": 1.40,
+                "premium_equipment": 0.25,
+                "tco": 0.30,
             },
         },
         "luxury": {
@@ -131,6 +143,10 @@ class CarEvaluator:
                 "flags": 0.90,
                 "sport": 0.25,
                 "luxury": 1.90,
+                "power_weight": 0.30,
+                "sport_badge": 0.20,
+                "premium_equipment": 1.70,
+                "tco": 0.30,
             },
         },
     }
@@ -530,6 +546,8 @@ class CarEvaluator:
         allow_automatic=False,
         min_price=20000,
         target_annual_km=15000,
+        custom_hard_rejects=None,
+        custom_must_have_equipment=None,
     ):
         """
         Extract and normalize raw car metrics. NO SCORING.
@@ -574,6 +592,25 @@ class CarEvaluator:
         for pattern, _reason in cls.HARD_REJECT_PATTERNS:
             if re.search(pattern, full_text):
                 return None
+
+        # Custom hard rejects (from user presets)
+        if custom_hard_rejects:
+            for reject in custom_hard_rejects:
+                pattern = reject.get("pattern", "")
+                if pattern and re.search(pattern, full_text):
+                    return None
+
+        # Custom must-have equipment check
+        if custom_must_have_equipment:
+            equipment_list = [
+                eq.get("name", "").lower()
+                for eq in (result.get("equipment_cb") or [])
+                if eq.get("name")
+            ]
+            equipment_text = " ".join(equipment_list)
+            for term in custom_must_have_equipment:
+                if term.lower() not in equipment_text:
+                    return None
 
         price = cls._safe_int(result.get("price") or item.get("price"), 0)
         if price < min_price:

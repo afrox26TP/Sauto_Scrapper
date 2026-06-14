@@ -25,22 +25,22 @@ const LOCAL_SCORING_PRESETS = {
   value: {
     name: "Cena / výkon",
     description: "Nejlepší poměr ceny, výkonu a provozních nákladů.",
-    weights: { age: 0.75, mileage: 1.1, price: 1.4, price_power: 1.85, cost: 1.45, consumption: 1.15, power: 0.85, equipment: 0.45, flags: 1.15, sport: 0.25, luxury: 0.15 },
+    weights: { age: 0.75, mileage: 1.1, price: 1.4, price_power: 1.85, cost: 1.45, consumption: 1.15, power: 0.85, equipment: 0.45, flags: 1.15, sport: 0.25, luxury: 0.15, power_weight: 0.2, sport_badge: 0.1, premium_equipment: 0.15, tco: 1.5 },
   },
   balanced: {
     name: "Balanced",
     description: "Univerzální hodnocení: stav, nájezd, cena, výkon, náklady i výbava.",
-    weights: { age: 1, mileage: 1, price: 1, price_power: 1, cost: 1, consumption: 1, power: 0.75, equipment: 0.85, flags: 1, sport: 0.35, luxury: 0.35 },
+    weights: { age: 1, mileage: 1, price: 1, price_power: 1, cost: 1, consumption: 1, power: 0.75, equipment: 0.85, flags: 1, sport: 0.35, luxury: 0.35, power_weight: 0.4, sport_badge: 0.3, premium_equipment: 0.5, tco: 0.6 },
   },
   sport: {
     name: "Sport",
     description: "Priorita: výkon, dynamika, cena za kW, pohon a mladší kusy.",
-    weights: { age: 1.05, mileage: 0.75, price: 0.55, price_power: 1.3, cost: 0.55, consumption: 0.35, power: 2.1, equipment: 0.45, flags: 0.8, sport: 1.45, luxury: 0.2 },
+    weights: { age: 1.05, mileage: 0.75, price: 0.55, price_power: 1.3, cost: 0.55, consumption: 0.35, power: 2.1, equipment: 0.45, flags: 0.8, sport: 1.45, luxury: 0.2, power_weight: 1.6, sport_badge: 1.4, premium_equipment: 0.25, tco: 0.3 },
   },
   luxury: {
     name: "Luxury",
     description: "Priorita: prémiová značka, výbava, komfort a kultivovaný výkon.",
-    weights: { age: 1.35, mileage: 0.9, price: 0.25, price_power: 0.45, cost: 0.35, consumption: 0.25, power: 0.8, equipment: 2.1, flags: 0.9, sport: 0.25, luxury: 1.9 },
+    weights: { age: 1.35, mileage: 0.9, price: 0.25, price_power: 0.45, cost: 0.35, consumption: 0.25, power: 0.8, equipment: 2.1, flags: 0.9, sport: 0.25, luxury: 1.9, power_weight: 0.3, sport_badge: 0.2, premium_equipment: 1.7, tco: 0.3 },
   },
 };
 
@@ -391,6 +391,13 @@ export default function App() {
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [scoringPresets, setScoringPresets] = useState(LOCAL_SCORING_PRESETS);
   const [selectedPreset, setSelectedPreset] = useState("balanced");
+  const [customPresets, setCustomPresets] = useState({});
+  const [showPresetModal, setShowPresetModal] = useState(false);
+  const [editingPresetId, setEditingPresetId] = useState(null);
+  const [presetForm, setPresetForm] = useState({ name: "", description: "", weights: {}, hard_rejects: [], must_have_equipment: [] });
+  const [presetFormEquipInput, setPresetFormEquipInput] = useState("");
+  const [presetFormRejectPattern, setPresetFormRejectPattern] = useState("");
+  const [presetFormRejectReason, setPresetFormRejectReason] = useState("");
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState("");
   const toastTimer = useRef(null);
@@ -472,7 +479,11 @@ export default function App() {
     try {
       const res = await fetch(`${API_BASE}/api/scoring/presets`, { signal: AbortSignal.timeout(4000) });
       const data = await res.json();
-      setScoringPresets(Object.keys(data.presets || {}).length ? data.presets : LOCAL_SCORING_PRESETS);
+      const builtin = data.builtin || data.presets || LOCAL_SCORING_PRESETS;
+      const custom = data.custom || {};
+      const merged = { ...Object.keys(builtin).length ? builtin : LOCAL_SCORING_PRESETS, ...custom };
+      setScoringPresets(merged);
+      setCustomPresets(custom);
     } catch {
       setScoringPresets(LOCAL_SCORING_PRESETS);
     }
@@ -606,6 +617,10 @@ export default function App() {
     flags: 1,
     sport: 0.35,
     luxury: 0.35,
+    power_weight: 0.4,
+    sport_badge: 0.3,
+    premium_equipment: 0.5,
+    tco: 0.6,
   };
 
   function num(value, fallback = null) {
@@ -707,6 +722,49 @@ export default function App() {
     if (num(item.age_years, 99) <= 5) components.luxury += 12;
     if (power >= 130) components.luxury += 7;
     components.luxury = clamp(components.luxury, -20, 75);
+
+    // --- TEST signals (experimental) — folded into the existing presets ---
+    const listingName = String(item.name || "").toLowerCase();
+
+    // power_weight: power-to-weight ratio in kW per tonne.
+    // (No real curb weight in the data, so weight is estimated from body type.)
+    const BODY_WEIGHT_KG = {
+      hatchback: 1250, liftback: 1400, sedan: 1480, kombi: 1500,
+      coupe: 1450, kabriolet: 1550, mpv: 1700, suv: 1850,
+      terenni: 2000, "pick-up": 2100, van: 1950,
+    };
+    const estWeightKg = BODY_WEIGHT_KG[String(item.body_seo || "").toLowerCase()] || 1500;
+    const powerPerTonne = power > 0 ? power / (estWeightKg / 1000) : 0;
+    components.power_weight = scoreMin(powerPerTonne, [[180, 40], [145, 30], [115, 18], [88, 6], [62, -4], [0, -12]]);
+
+    // sport_badge: performance/sport badge detected in the listing name.
+    const STRONG_BADGE = /(\bamg\b|\bm[1-8]\b|\bm\s?performance\b|\brs\s?\d?\b|\bvrs\b|\bgti\b|\bgtd\b|\bgts\b|\btype[\s-]?r\b|\bsti\b|\bnismo\b|\babarth\b|\bpolestar\b|\bcupra\b|\bgr\b)/;
+    const MILD_BADGE = /(m[\s-]?paket|m[\s-]?sport|s[\s-]?line|r[\s-]?line|n[\s-]?line|st[\s-]?line|\bsport\b)/;
+    if (STRONG_BADGE.test(listingName)) components.sport_badge = 24;
+    else if (MILD_BADGE.test(listingName) || MILD_BADGE.test(eqText)) components.sport_badge = 8;
+    else components.sport_badge = 0;
+
+    // premium_equipment: richness of premium comfort/tech features (tiered).
+    const PREMIUM_FEATURES = [
+      /ko[zž]en|alcantara/,
+      /panoramatick|panorama/,
+      /matrix/,
+      /adaptivn[ií]\s*tempomat/,
+      /vzduchov[eé]\s*odpru|pneumatick[eé]\s*odpru|air\s*suspension/,
+      /ventilovan|mas[aá][zž]/,
+      /head[\s-]?up/,
+      /360/,
+      /bezkl[ií][cč]|keyless/,
+      /pam[eě][tť]\s*sedadel|memory/,
+      /ambientn/,
+    ];
+    const premiumCount = PREMIUM_FEATURES.reduce((c, re) => c + (re.test(eqText) ? 1 : 0), 0);
+    components.premium_equipment =
+      premiumCount >= 6 ? 32 : premiumCount >= 4 ? 22 : premiumCount >= 2 ? 12 : premiumCount >= 1 ? 5 : 0;
+
+    // tco: ~5-year total cost of ownership (purchase + running costs). Lower is better.
+    const tco5y = num(item.price, 0) + num(item.annual_total_cost, 0) * 5;
+    components.tco = scoreMax(tco5y, [[250000, 40], [400000, 28], [600000, 14], [900000, 0], [1400000, -14], [99999999, -30]]);
 
     return components;
   }
@@ -925,6 +983,149 @@ export default function App() {
       setLoading(false);
     }
   }
+
+  // ── Custom preset CRUD ──
+
+  function openNewPreset() {
+    setEditingPresetId(null);
+    setPresetForm({ name: "", description: "", weights: { ...DEFAULT_SCORE_WEIGHTS }, hard_rejects: [], must_have_equipment: [] });
+    setPresetFormEquipInput("");
+    setPresetFormRejectPattern("");
+    setPresetFormRejectReason("");
+    setShowPresetModal(true);
+  }
+
+  function openEditPreset(presetId) {
+    const preset = customPresets[presetId];
+    if (!preset) return;
+    setEditingPresetId(presetId);
+    setPresetForm({
+      name: preset.name || "",
+      description: preset.description || "",
+      weights: preset.weights ? { ...DEFAULT_SCORE_WEIGHTS, ...preset.weights } : { ...DEFAULT_SCORE_WEIGHTS },
+      hard_rejects: Array.isArray(preset.hard_rejects) ? [...preset.hard_rejects] : [],
+      must_have_equipment: Array.isArray(preset.must_have_equipment) ? [...preset.must_have_equipment] : [],
+    });
+    setPresetFormEquipInput("");
+    setPresetFormRejectPattern("");
+    setPresetFormRejectReason("");
+    setShowPresetModal(true);
+  }
+
+  async function deleteCustomPreset(presetId) {
+    if (!window.confirm(`Opravdu smazat preset "${customPresets[presetId]?.name || presetId}"?`)) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/scoring/presets/custom/${encodeURIComponent(presetId)}`, { method: "DELETE" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || "Smazání selhalo.");
+      }
+      // If currently selected, switch back to balanced
+      if (selectedPreset === presetId) setSelectedPreset("balanced");
+      showToast("Preset smazán", "success");
+      await fetchScoringPresets();
+    } catch (e) {
+      showToast(e.message, "error");
+    }
+  }
+
+  async function savePreset() {
+    if (!presetForm.name.trim()) {
+      showToast("Zadej název presetu", "error");
+      return;
+    }
+    const payload = {
+      name: presetForm.name.trim(),
+      description: presetForm.description.trim(),
+      weights: presetForm.weights,
+      hard_rejects: presetForm.hard_rejects.filter((r) => r.pattern),
+      must_have_equipment: presetForm.must_have_equipment.filter(Boolean),
+    };
+    try {
+      const url = editingPresetId
+        ? `/api/scoring/presets/custom/${encodeURIComponent(editingPresetId)}`
+        : "/api/scoring/presets/custom";
+      const method = editingPresetId ? "PUT" : "POST";
+      const res = await fetch(`${API_BASE}${url}`, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || "Uložení presetu selhalo.");
+      }
+      const data = await res.json();
+      showToast(editingPresetId ? "Preset upraven" : "Preset vytvořen", "success");
+      setShowPresetModal(false);
+      await fetchScoringPresets();
+      // Select the new/edited preset
+      setSelectedPreset(data.preset_id);
+    } catch (e) {
+      showToast(e.message, "error");
+    }
+  }
+
+  function addPresetEquipTag() {
+    const term = presetFormEquipInput.trim().toLowerCase();
+    if (!term) return;
+    setPresetForm((prev) => ({
+      ...prev,
+      must_have_equipment: [...prev.must_have_equipment, term],
+    }));
+    setPresetFormEquipInput("");
+  }
+
+  function removePresetEquipTag(index) {
+    setPresetForm((prev) => ({
+      ...prev,
+      must_have_equipment: prev.must_have_equipment.filter((_, i) => i !== index),
+    }));
+  }
+
+  function addPresetReject() {
+    const pattern = presetFormRejectPattern.trim();
+    const reason = presetFormRejectReason.trim();
+    if (!pattern) return;
+    setPresetForm((prev) => ({
+      ...prev,
+      hard_rejects: [...prev.hard_rejects, { pattern, reason }],
+    }));
+    setPresetFormRejectPattern("");
+    setPresetFormRejectReason("");
+  }
+
+  function removePresetReject(index) {
+    setPresetForm((prev) => ({
+      ...prev,
+      hard_rejects: prev.hard_rejects.filter((_, i) => i !== index),
+    }));
+  }
+
+  function setPresetWeight(key, val) {
+    setPresetForm((prev) => ({
+      ...prev,
+      weights: { ...prev.weights, [key]: parseFloat(val) || 0 },
+    }));
+  }
+
+  const ALL_WEIGHT_KEYS = [
+    { key: "age", label: "Stáří" },
+    { key: "mileage", label: "Nájezd" },
+    { key: "price", label: "Cena" },
+    { key: "price_power", label: "Cena/kW" },
+    { key: "power", label: "Výkon" },
+    { key: "consumption", label: "Spotřeba" },
+    { key: "cost", label: "Provozní náklady" },
+    { key: "equipment", label: "Výbava" },
+    { key: "flags", label: "Stav/Historie" },
+    { key: "sport", label: "Sport" },
+    { key: "luxury", label: "Luxus" },
+    { key: "power_weight", label: "Výkon/váha" },
+    { key: "sport_badge", label: "Sportovní označení" },
+    { key: "premium_equipment", label: "Prémiová výbava" },
+    { key: "tco", label: "TCO (5 let)" },
+  ];
 
   async function run() {
     setLoading(true);
@@ -1324,16 +1525,40 @@ export default function App() {
               </div>
               <label className="score-control-inline">
                 <span>Bodování</span>
-                <select value={selectedPreset} onChange={(e) => setSelectedPreset(e.target.value)}>
-                  {Object.entries(scoringPresets).map(([key, preset]) => (
-                    <option key={key} value={key}>
-                      {preset.name || key}
-                    </option>
-                  ))}
+                <select value={selectedPreset} onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "__new__") { openNewPreset(); return; }
+                  setSelectedPreset(val);
+                }}>
+                  <optgroup label="Vestavěné">
+                    {Object.entries(scoringPresets).map(([key, preset]) => (
+                      <option key={key} value={key}>
+                        {preset.name || key}
+                      </option>
+                    ))}
+                  </optgroup>
+                  {Object.keys(customPresets).length > 0 && (
+                    <optgroup label="Moje presety">
+                      {Object.entries(customPresets).map(([key, preset]) => (
+                        <option key={`custom-${key}`} value={key}>
+                          {preset.name || key}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  <option value="__new__" style={{ fontStyle: "italic", color: "var(--accent)" }}>
+                    ＋ Vytvořit nový preset...
+                  </option>
                 </select>
-                {scoringPresets[selectedPreset]?.description && (
+                {customPresets[selectedPreset] && (
+                  <span className="preset-actions-inline">
+                    <button className="link-btn" onClick={(e) => { e.stopPropagation(); openEditPreset(selectedPreset); }} title="Upravit preset">✎</button>
+                    <button className="link-btn danger" onClick={(e) => { e.stopPropagation(); deleteCustomPreset(selectedPreset); }} title="Smazat preset">🗑</button>
+                  </span>
+                )}
+                {(scoringPresets[selectedPreset]?.description || customPresets[selectedPreset]?.description) && (
                   <span className="score-control-description">
-                    {scoringPresets[selectedPreset].description}
+                    {scoringPresets[selectedPreset]?.description || customPresets[selectedPreset]?.description}
                   </span>
                 )}
               </label>
@@ -1490,6 +1715,126 @@ export default function App() {
         <button className="toast-close" onClick={() => { setToastMsg(""); setToastType(""); }}>
           <X className="ui-icon" style={{ width: 13, height: 13 }} />
         </button>
+      </div>
+    )}
+
+    {/* Custom Preset Modal */}
+    {showPresetModal && (
+      <div className="debug-modal-overlay" onClick={() => setShowPresetModal(false)}>
+        <div className="preset-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="preset-modal-head">
+            <strong>{editingPresetId ? "Upravit preset" : "Nový preset"}</strong>
+            <button className="debug-modal-close" onClick={() => setShowPresetModal(false)}><X className="ui-icon" aria-hidden="true" /></button>
+          </div>
+          <div className="preset-modal-body">
+            {/* Basic info */}
+            <div className="preset-section">
+              <div className="preset-section-title">Základní info</div>
+              <div className="field">
+                <label>Název presetu</label>
+                <input type="text" value={presetForm.name} onChange={(e) => setPresetForm((prev) => ({ ...prev, name: e.target.value }))} placeholder="např. Můj daily driver" />
+              </div>
+              <div className="field">
+                <label>Popis (nepovinný)</label>
+                <input type="text" value={presetForm.description} onChange={(e) => setPresetForm((prev) => ({ ...prev, description: e.target.value }))} placeholder="Stručný popis co preset hledá" />
+              </div>
+            </div>
+
+            {/* Scoring weights */}
+            <div className="preset-section">
+              <div className="preset-section-title">Scoring váhy</div>
+              <div className="preset-weights-grid">
+                {ALL_WEIGHT_KEYS.map(({ key, label }) => (
+                  <div key={key} className="preset-weight-row">
+                    <label>{label}</label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="2.5"
+                      step="0.05"
+                      value={presetForm.weights[key] ?? 1}
+                      onChange={(e) => setPresetWeight(key, e.target.value)}
+                    />
+                    <span className="preset-weight-val">{(presetForm.weights[key] ?? 1).toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Deal breakers */}
+            <div className="preset-section">
+              <div className="preset-section-title">Deal breakery (vyloučit)</div>
+              <div className="preset-quick-rejects">
+                {[
+                  { label: "Automat", pattern: "automat", reason: "Jen manuál" },
+                  { label: "Nafta", pattern: "\\b(diesel|nafta|tdi|tdci|cdti|dci|hdi|d4d|d5)\\b", reason: "Jen benzín" },
+                  { label: "Bouraný / totálka", pattern: "(bouran|havar|totaln[ií]\\s*[sš]kod)", reason: "Žádný bouraný" },
+                  { label: "Tuning / chip", pattern: "(tuning|chip|na[cč]ipov|upraven[eo])", reason: "Žádný tuning" },
+                  { label: "Koroze / rez", pattern: "(koroze|rez)", reason: "Žádná koroze" },
+                  { label: "Nefunkční díly", pattern: "(nefunk[cč]n[ií]|nefunguje)", reason: "Vše funkční" },
+                  { label: "Díly / na náhradní", pattern: "na\\s*n[aá]hradn[ií]\\s*d[ií]ly", reason: "Pojízdný" },
+                ].map((quick) => {
+                  const alreadyAdded = presetForm.hard_rejects.some((r) => r.pattern === quick.pattern);
+                  return (
+                    <button
+                      key={quick.pattern}
+                      className={`preset-chip-btn${alreadyAdded ? " active" : ""}`}
+                      onClick={() => {
+                        if (alreadyAdded) {
+                          setPresetForm((prev) => ({ ...prev, hard_rejects: prev.hard_rejects.filter((r) => r.pattern !== quick.pattern) }));
+                        } else {
+                          setPresetForm((prev) => ({ ...prev, hard_rejects: [...prev.hard_rejects, { pattern: quick.pattern, reason: quick.reason }] }));
+                        }
+                      }}
+                    >
+                      {alreadyAdded ? "✓" : "+"} {quick.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="preset-reject-custom">
+                <div className="preset-reject-row">
+                  <input type="text" placeholder="Regex pattern" value={presetFormRejectPattern} onChange={(e) => setPresetFormRejectPattern(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addPresetReject(); }} />
+                  <input type="text" placeholder="Důvod (nepovinný)" value={presetFormRejectReason} onChange={(e) => setPresetFormRejectReason(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addPresetReject(); }} />
+                  <button className="link-btn" onClick={addPresetReject}>+ Přidat</button>
+                </div>
+              </div>
+              {presetForm.hard_rejects.length > 0 && (
+                <div className="preset-tags">
+                  {presetForm.hard_rejects.map((r, i) => (
+                    <span key={i} className="preset-tag reject" title={r.reason || r.pattern}>
+                      ✕ {r.reason || r.pattern}
+                      <button onClick={() => removePresetReject(i)}>×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Must‑have equipment */}
+            <div className="preset-section">
+              <div className="preset-section-title">Musí mít výbavu</div>
+              <div className="preset-equip-input-row">
+                <input type="text" placeholder="Napiš klíčové slovo a Enter" value={presetFormEquipInput} onChange={(e) => setPresetFormEquipInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addPresetEquipTag(); } }} />
+                <button className="link-btn" onClick={addPresetEquipTag}>Přidat</button>
+              </div>
+              {presetForm.must_have_equipment.length > 0 && (
+                <div className="preset-tags">
+                  {presetForm.must_have_equipment.map((tag, i) => (
+                    <span key={i} className="preset-tag equip">
+                      ✓ {tag}
+                      <button onClick={() => removePresetEquipTag(i)}>×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="preset-modal-foot">
+            <button className="btn-primary" onClick={savePreset}>{editingPresetId ? "Uložit změny" : "Vytvořit preset"}</button>
+            <button className="link-btn" onClick={() => setShowPresetModal(false)}>Zrušit</button>
+          </div>
+        </div>
       </div>
     )}
     </div>

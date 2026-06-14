@@ -1056,3 +1056,236 @@ tr.row-selected.row-score-lo td { background: rgba(220, 38, 38, 0.07); border-bo
   .selection-actions { justify-content: flex-start; }
   .table-wrap { max-height: none; }
 }
+
+/* ── Preset modal ── */
+.preset-modal {
+  width: min(820px, 95vw);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.preset-modal-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-soft);
+}
+
+.preset-modal-head strong {
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.preset-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: grid;
+  gap: 18px;
+}
+
+.preset-modal-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-soft);
+}
+
+.preset-section {
+  background: var(--surface-soft);
+  padding: 14px 16px;
+}
+
+.preset-section-title {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--accent);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.preset-weights-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 20px;
+}
+
+@media (max-width: 600px) {
+  .preset-weights-grid { grid-template-columns: 1fr; }
+}
+
+.preset-weight-row {
+  display: grid;
+  grid-template-columns: 1fr minmax(0, 1fr) 52px;
+  align-items: center;
+  gap: 8px;
+}
+
+.preset-weight-row label {
+  font-size: 0.76rem;
+  color: var(--muted);
+  font-weight: 650;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preset-weight-row input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.preset-weight-val {
+  text-align: right;
+  font-size: 0.74rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  min-width: 42px;
+}
+
+.preset-quick-rejects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.preset-chip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-solid);
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.preset-chip-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.preset-chip-btn.active {
+  border-color: var(--green);
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.preset-reject-custom {
+  margin-top: 10px;
+}
+
+.preset-reject-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.preset-reject-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  background: var(--surface-solid);
+  color: var(--text);
+  outline: none;
+  min-height: 34px;
+  font-size: 0.78rem;
+}
+
+.preset-reject-row input:focus {
+  border-color: var(--accent);
+}
+
+.preset-equip-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.preset-equip-input-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  background: var(--surface-solid);
+  color: var(--text);
+  outline: none;
+  min-height: 34px;
+  font-size: 0.78rem;
+}
+
+.preset-equip-input-row input:focus {
+  border-color: var(--accent);
+}
+
+.preset-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.preset-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  border-radius: 5px;
+}
+
+.preset-tag.reject {
+  background: var(--danger-soft);
+  border: 1px solid var(--danger);
+  color: var(--danger);
+}
+
+.preset-tag.equip {
+  background: var(--green-soft);
+  border: 1px solid var(--green);
+  color: var(--green);
+}
+
+.preset-tag button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 900;
+  padding: 0 1px;
+  line-height: 1;
+  opacity: 0.7;
+}
+
+.preset-tag button:hover {
+  opacity: 1;
+}
+
+.preset-actions-inline {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.preset-actions-inline button {
+  padding: 2px 6px;
+  font-size: 0.9rem;
+}
