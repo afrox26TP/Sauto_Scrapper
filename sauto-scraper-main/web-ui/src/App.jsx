@@ -42,6 +42,31 @@ const LOCAL_SCORING_PRESETS = {
     description: "Priorita: prémiová značka, výbava, komfort a kultivovaný výkon.",
     weights: { age: 1.35, mileage: 0.9, price: 0.25, price_power: 0.45, cost: 0.35, consumption: 0.25, power: 0.8, equipment: 2.1, flags: 0.9, sport: 0.25, luxury: 1.9, power_weight: 0.3, sport_badge: 0.2, premium_equipment: 1.7, tco: 0.3 },
   },
+  daily: {
+    name: "Daily Driver",
+    description: "Spolehlivé auto na každý den s nízkými náklady a rozumným nájezdem.",
+    weights: { age: 0.9, mileage: 1.3, price: 1.1, price_power: 0.5, cost: 1.5, consumption: 1.4, power: 0.6, equipment: 1.2, flags: 1.3, sport: 0.15, luxury: 0.25, power_weight: 0.15, sport_badge: 0.05, premium_equipment: 0.3, tco: 1.6 },
+  },
+  weekend: {
+    name: "Weekend Toy",
+    description: "Víkendová hračka – výkon, dynamika a radost z jízdy nad všechno.",
+    weights: { age: 1.0, mileage: 0.4, price: 0.3, price_power: 1.6, cost: 0.2, consumption: 0.2, power: 2.0, equipment: 0.6, flags: 0.7, sport: 1.8, luxury: 0.4, power_weight: 2.0, sport_badge: 1.8, premium_equipment: 0.2, tco: 0.1 },
+  },
+  family: {
+    name: "Family Hauler",
+    description: "Rodinné auto – bezpečnost, prostor, výbava a přijatelné náklady.",
+    weights: { age: 1.2, mileage: 1.1, price: 1.0, price_power: 0.4, cost: 1.3, consumption: 1.1, power: 0.5, equipment: 1.8, flags: 1.5, sport: 0.1, luxury: 0.6, power_weight: 0.1, sport_badge: 0.0, premium_equipment: 1.5, tco: 1.2 },
+  },
+  budget: {
+    name: "Budget King",
+    description: "Nejlepší poměr cena/užitná hodnota – co nejvíc auta za co nejmíň peněz.",
+    weights: { age: 0.6, mileage: 0.8, price: 2.2, price_power: 2.0, cost: 1.8, consumption: 1.5, power: 0.4, equipment: 0.6, flags: 1.0, sport: 0.1, luxury: 0.1, power_weight: 0.1, sport_badge: 0.0, premium_equipment: 0.05, tco: 2.0 },
+  },
+  tech: {
+    name: "Tech & Comfort",
+    description: "Moderní technologické auto – výbava, asistenty a komfort na prvním místě.",
+    weights: { age: 1.4, mileage: 0.8, price: 0.5, price_power: 0.3, cost: 0.5, consumption: 0.7, power: 0.6, equipment: 2.3, flags: 0.9, sport: 0.2, luxury: 1.4, power_weight: 0.2, sport_badge: 0.1, premium_equipment: 2.2, tco: 0.4 },
+  },
 };
 
 const PARAM_GROUPS = [
@@ -80,8 +105,6 @@ const PARAM_GROUPS = [
       { key: "fuel_seo", type: "text", label: "Palivo (např. benzin,nafta,hybrid,elektro)" },
       { key: "gearbox_filter", type: "select", label: "Převodovka scraper", options: ["", "manual", "automatic"] },
       { key: "drive_filter", type: "select", label: "Pohon scraper", options: ["", "fwd", "rwd", "awd"] },
-      { key: "body_seo", type: "text", label: "Karoserie (např. suv,kombi,hatchback)" },
-      { key: "required_equipment", type: "text", label: "Musí mít výbavu/funkce (čárkou)" },
     ],
   },
   {
@@ -263,7 +286,7 @@ function brandInitials(label) {
 
 const BASIC_GROUPS = [PARAM_GROUPS[0], PARAM_GROUPS[2]];
 const ADVANCED_GROUPS = [PARAM_GROUPS[1], ...PARAM_GROUPS.slice(3)];
-const IGNORED_KEYS = new Set([...PARAM_GROUPS.flatMap((g) => g.fields.map((f) => f.key)), "exclude_manufacturer_seo_name", "exclude_model_seo_name"]);
+const IGNORED_KEYS = new Set([...PARAM_GROUPS.flatMap((g) => g.fields.map((f) => f.key)), "exclude_manufacturer_seo_name", "exclude_model_seo_name", "exclude_body_seo"]);
 
 function fmtVal(val, fmt) {
   const n = parseFloat(val);
@@ -351,6 +374,14 @@ const ResultsTable = memo(function ResultsTable({
               <span className={`score ${scoreClass}`}>
                 {cachedScore}
               </span>
+              {item._suspicious && (
+                <span
+                  className="suspicious-badge"
+                  title="Podezřelý nájezd: auto starší 10 let s méně než 80 000 km, nebo průměr pod 3 000 km/rok"
+                >
+                  ⚠️
+                </span>
+              )}
             </td>
             <td className="name-cell">{item.name || "—"}</td>
             <td>{item._fmt_price ?? "—"}</td>
@@ -479,6 +510,10 @@ export default function App() {
   const [loadingModelsByBrand, setLoadingModelsByBrand] = useState({});
   const [brandFilterText, setBrandFilterText] = useState("");
   const [modelFilterText, setModelFilterText] = useState("");
+  const [bodyOptions, setBodyOptions] = useState([]);
+  const [selectedBodies, setSelectedBodies] = useState([]);
+  const [excludedBodies, setExcludedBodies] = useState([]);
+  const [bodyFilterText, setBodyFilterText] = useState("");
   const [tickerStep, setTickerStep] = useState(0);
   const [sortConfig, setSortConfig] = useState({ key: "score", direction: "desc" });
   const [isSidebarHidden, setIsSidebarHidden] = useState(false);
@@ -493,6 +528,31 @@ export default function App() {
   const [presetFormEquipInput, setPresetFormEquipInput] = useState("");
   const [presetFormRejectPattern, setPresetFormRejectPattern] = useState("");
   const [presetFormRejectReason, setPresetFormRejectReason] = useState("");
+  const [equipmentOptions, setEquipmentOptions] = useState([]);
+  const [equipmentFilterText, setEquipmentFilterText] = useState("");
+  const [quickEquipMust, setQuickEquipMust] = useState([]);
+  const [quickEquipExcl, setQuickEquipExcl] = useState([]);
+  const [showQuickEquip, setShowQuickEquip] = useState(false);
+  const [quickBodyFilter, setQuickBodyFilter] = useState([]);
+  const [quickBodyExcl, setQuickBodyExcl] = useState([]);
+  const [showQuickBody, setShowQuickBody] = useState(false);
+  const [quickPriceFrom, setQuickPriceFrom] = useState("");
+  const [quickPriceTo, setQuickPriceTo] = useState("");
+  const [quickYearFrom, setQuickYearFrom] = useState("");
+  const [quickYearTo, setQuickYearTo] = useState("");
+  const [quickKmFrom, setQuickKmFrom] = useState("");
+  const [quickKmTo, setQuickKmTo] = useState("");
+  const [quickPowerFrom, setQuickPowerFrom] = useState("");
+  const [quickPowerTo, setQuickPowerTo] = useState("");
+  const [quickFuel, setQuickFuel] = useState("");
+  const [quickGearbox, setQuickGearbox] = useState("");
+  const [quickDrive, setQuickDrive] = useState("");
+  const [quickBrandSelected, setQuickBrandSelected] = useState([]);
+  const [quickBrandExcluded, setQuickBrandExcluded] = useState([]);
+  const [quickModelSelected, setQuickModelSelected] = useState([]);
+  const [quickModelExcluded, setQuickModelExcluded] = useState([]);
+  const [quickBrandFilterText, setQuickBrandFilterText] = useState("");
+  const [quickModelFilterText, setQuickModelFilterText] = useState("");
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState("");
   const toastTimer = useRef(null);
@@ -570,17 +630,36 @@ export default function App() {
     }
   }
 
+  async function fetchEquipment() {
+    try {
+      const res = await fetch(`${API_BASE}/api/catalog/equipment`, { signal: AbortSignal.timeout(30000) });
+      const data = await res.json();
+      setEquipmentOptions(Array.isArray(data.items) ? data.items : []);
+    } catch {
+      setEquipmentOptions([]);
+    }
+  }
+
   async function fetchScoringPresets() {
     try {
       const res = await fetch(`${API_BASE}/api/scoring/presets`, { signal: AbortSignal.timeout(4000) });
       const data = await res.json();
-      const builtin = data.builtin || data.presets || LOCAL_SCORING_PRESETS;
       const custom = data.custom || {};
-      const merged = { ...Object.keys(builtin).length ? builtin : LOCAL_SCORING_PRESETS, ...custom };
+      const merged = { ...LOCAL_SCORING_PRESETS, ...custom };
       setScoringPresets(merged);
       setCustomPresets(custom);
     } catch {
       setScoringPresets(LOCAL_SCORING_PRESETS);
+    }
+  }
+
+  async function fetchBodies() {
+    try {
+      const res = await fetch(`${API_BASE}/api/catalog/bodies`, { signal: AbortSignal.timeout(12000) });
+      const data = await res.json();
+      setBodyOptions(Array.isArray(data.items) ? data.items : []);
+    } catch {
+      setBodyOptions([]);
     }
   }
 
@@ -664,6 +743,74 @@ export default function App() {
     setSelectedModels(nextModels);
     setExcludedModels(nextExcluded);
     syncFilterParams(selectedBrands, nextModels, excludedBrands, nextExcluded);
+  }
+
+  function toggleBody(body) {
+    const b = String(body || "").trim();
+    if (!b) return;
+    let nextSel = [...selectedBodies];
+    let nextExcl = [...excludedBodies];
+    if (excludedBodies.includes(b)) {
+      nextExcl = excludedBodies.filter((x) => x !== b);
+    } else if (selectedBodies.includes(b)) {
+      nextSel = selectedBodies.filter((x) => x !== b);
+      nextExcl = [...excludedBodies, b];
+    } else {
+      nextSel = [...selectedBodies, b];
+    }
+    setSelectedBodies(nextSel);
+    setExcludedBodies(nextExcl);
+    setParams((prev) => ({
+      ...prev,
+      body_seo: nextSel.join(","),
+      exclude_body_seo: nextExcl.join(","),
+    }));
+  }
+
+  // Quick toggles (side filter without preset)
+  function toggleQuickEquip(val) {
+    setQuickEquipMust((p) => {
+      if (p.includes(val)) {
+        const next = p.filter((x) => x !== val);
+        setQuickEquipExcl((e) => [...e, val]);
+        return next;
+      }
+      setQuickEquipExcl((e) => e.filter((x) => x !== val));
+      return [...p, val];
+    });
+  }
+  function toggleQuickBody(val) {
+    setQuickBodyFilter((p) => {
+      if (p.includes(val)) {
+        const next = p.filter((x) => x !== val);
+        setQuickBodyExcl((e) => [...e, val]);
+        return next;
+      }
+      setQuickBodyExcl((e) => e.filter((x) => x !== val));
+      return [...p, val];
+    });
+  }
+  function toggleQuickBrand(val) {
+    setQuickBrandSelected((p) => {
+      if (p.includes(val)) {
+        const next = p.filter((x) => x !== val);
+        setQuickBrandExcluded((e) => [...e, val]);
+        return next;
+      }
+      setQuickBrandExcluded((e) => e.filter((x) => x !== val));
+      return [...p, val];
+    });
+  }
+  function toggleQuickModel(val) {
+    setQuickModelSelected((p) => {
+      if (p.includes(val)) {
+        const next = p.filter((x) => x !== val);
+        setQuickModelExcluded((e) => [...e, val]);
+        return next;
+      }
+      setQuickModelExcluded((e) => e.filter((x) => x !== val));
+      return [...p, val];
+    });
   }
 
   async function refreshAll() {
@@ -755,6 +902,7 @@ export default function App() {
     return patterns.some((pattern) => pattern.test(text));
   }
 
+  // ── First pass: raw component scores (0‑100 after normalization) ──
   function calculateScoreComponents(item) {
     const equipment = Array.isArray(item.equipment_list) ? item.equipment_list : [];
     const eqText = equipmentText(item);
@@ -764,7 +912,8 @@ export default function App() {
     const drive = String(item.drive_type || "").toLowerCase();
     const brandTier = String(item.brand_tier || "").toLowerCase();
 
-    const components = {
+    // Raw scores (original scale, before normalization)
+    const raw = {
       age: scoreMax(item.age_years, [[2, 78], [5, 62], [8, 43], [12, 24], [16, 6], [20, -18], [999, -35]]),
       mileage: scoreMax(item.tachometer, [[50000, 72], [80000, 58], [140000, 38], [200000, 14], [260000, -12], [9999999, -36]]),
       price: scoreMax(item.price, [[120000, 56], [200000, 40], [350000, 22], [600000, 4], [1000000, -12], [99999999, -30]]),
@@ -780,49 +929,51 @@ export default function App() {
       luxury: 0,
     };
 
-    if (equipment.length >= 45) components.equipment += 18;
-    else if (equipment.length >= 30) components.equipment += 11;
-    else if (equipment.length >= 18) components.equipment += 5;
+    // ── equipment (sub‑score, max ~71 → normalized to 100) ──
+    if (equipment.length >= 45) raw.equipment += 18;
+    else if (equipment.length >= 30) raw.equipment += 11;
+    else if (equipment.length >= 18) raw.equipment += 5;
 
-    if (hasAny(eqText, [/adaptivn[ií]\s*tempomat/, /front assist/, /nouzov[eé]\s*brzd/])) components.equipment += 12;
-    if (hasAny(eqText, [/parkovac[ií]\s*kamera/, /360/, /couvac[ií]\s*kamera/])) components.equipment += 8;
-    if (hasAny(eqText, [/parkovac[ií]\s*senzory/])) components.equipment += 5;
-    if (hasAny(eqText, [/apple\s*car\s*play/, /android\s*auto/, /navigace/])) components.equipment += 8;
-    if (hasAny(eqText, [/vyh[rř]ivan[aá]\s*sedadla/, /vyh[rř]ivan[eé]\s*celn[ií]\s*sklo/])) components.equipment += 6;
-    if (hasAny(eqText, [/led\s*sv[eě]tl/, /xenon/, /matrix/])) components.equipment += 6;
-    if (hasAny(eqText, [/mrtv[eé]ho\s*[uú]hlu/, /j[ií]zdn[ií]ho\s*pruhu/, /lane assist/])) components.equipment += 8;
-    components.equipment = clamp(components.equipment, 0, 70);
+    if (hasAny(eqText, [/adaptivn[ií]\s*tempomat/, /front assist/, /nouzov[eé]\s*brzd/])) raw.equipment += 12;
+    if (hasAny(eqText, [/parkovac[ií]\s*kamera/, /360/, /couvac[ií]\s*kamera/])) raw.equipment += 8;
+    if (hasAny(eqText, [/parkovac[ií]\s*senzory/])) raw.equipment += 5;
+    if (hasAny(eqText, [/apple\s*car\s*play/, /android\s*auto/, /navigace/])) raw.equipment += 8;
+    if (hasAny(eqText, [/vyh[rř]ivan[aá]\s*sedadla/, /vyh[rř]ivan[eé]\s*celn[ií]\s*sklo/])) raw.equipment += 6;
+    if (hasAny(eqText, [/led\s*sv[eě]tl/, /xenon/, /matrix/])) raw.equipment += 6;
+    if (hasAny(eqText, [/mrtv[eé]ho\s*[uú]hlu/, /j[ií]zdn[ií]ho\s*pruhu/, /lane assist/])) raw.equipment += 8;
+    raw.equipment = clamp(raw.equipment, 0, 71);
 
-    if (item.service_book) components.flags += 14;
-    if (item.first_owner) components.flags += 9;
-    if (item.tuning) components.flags -= 28;
+    // ── flags ──
+    if (item.service_book) raw.flags += 14;
+    if (item.first_owner) raw.flags += 9;
+    if (item.tuning) raw.flags -= 28;
 
-    if (power >= 220) components.sport += 36;
-    else if (power >= 170) components.sport += 28;
-    else if (power >= 130) components.sport += 16;
-    else if (power < 75) components.sport -= 12;
-    if (drive === "rwd") components.sport += 12;
-    else if (drive === "awd") components.sport += 9;
-    if (gearbox === "manual") components.sport += 6;
-    if (num(item.price_per_kw, 999999) <= 2200) components.sport += 10;
-    if (item.tuning) components.sport -= 18;
+    // ── sport ──
+    if (power >= 220) raw.sport += 36;
+    else if (power >= 170) raw.sport += 28;
+    else if (power >= 130) raw.sport += 16;
+    else if (power < 75) raw.sport -= 12;
+    if (drive === "rwd") raw.sport += 12;
+    else if (drive === "awd") raw.sport += 9;
+    if (gearbox === "manual") raw.sport += 6;
+    if (num(item.price_per_kw, 999999) <= 2200) raw.sport += 10;
+    if (item.tuning) raw.sport -= 18;
 
-    if (brandTier === "premium") components.luxury += 24;
-    else if (brandTier === "budget") components.luxury -= 6;
-    if (gearbox === "automatic") components.luxury += 10;
-    if (hasAny(eqText, [/ko[zž]en[aá]/, /alcantara/, /mas[aá][zž]/])) components.luxury += 13;
-    if (hasAny(eqText, [/panoramatick[aá]\s*st[rř]echa/, /st[rř]e[sš]n[ií]\s*okno/])) components.luxury += 9;
-    if (equipment.length >= 40) components.luxury += 14;
-    else if (equipment.length >= 25) components.luxury += 8;
-    if (num(item.age_years, 99) <= 5) components.luxury += 12;
-    if (power >= 130) components.luxury += 7;
-    components.luxury = clamp(components.luxury, -20, 75);
+    // ── luxury ──
+    if (brandTier === "premium") raw.luxury += 24;
+    else if (brandTier === "budget") raw.luxury -= 6;
+    if (gearbox === "automatic") raw.luxury += 10;
+    if (hasAny(eqText, [/ko[zž]en[aá]/, /alcantara/, /mas[aá][zž]/])) raw.luxury += 13;
+    if (hasAny(eqText, [/panoramatick[aá]\s*st[rř]echa/, /st[rř]e[sš]n[ií]\s*okno/])) raw.luxury += 9;
+    if (equipment.length >= 40) raw.luxury += 14;
+    else if (equipment.length >= 25) raw.luxury += 8;
+    if (num(item.age_years, 99) <= 5) raw.luxury += 12;
+    if (power >= 130) raw.luxury += 7;
+    raw.luxury = clamp(raw.luxury, -20, 75);
 
-    // --- TEST signals (experimental) — folded into the existing presets ---
+    // ── experimental signals ──
     const listingName = String(item.name || "").toLowerCase();
 
-    // power_weight: power-to-weight ratio in kW per tonne.
-    // (No real curb weight in the data, so weight is estimated from body type.)
     const BODY_WEIGHT_KG = {
       hatchback: 1250, liftback: 1400, sedan: 1480, kombi: 1500,
       coupe: 1450, kabriolet: 1550, mpv: 1700, suv: 1850,
@@ -830,16 +981,14 @@ export default function App() {
     };
     const estWeightKg = BODY_WEIGHT_KG[String(item.body_seo || "").toLowerCase()] || 1500;
     const powerPerTonne = power > 0 ? power / (estWeightKg / 1000) : 0;
-    components.power_weight = scoreMin(powerPerTonne, [[180, 40], [145, 30], [115, 18], [88, 6], [62, -4], [0, -12]]);
+    raw.power_weight = scoreMin(powerPerTonne, [[180, 40], [145, 30], [115, 18], [88, 6], [62, -4], [0, -12]]);
 
-    // sport_badge: performance/sport badge detected in the listing name.
     const STRONG_BADGE = /(\bamg\b|\bm[1-8]\b|\bm\s?performance\b|\brs\s?\d?\b|\bvrs\b|\bgti\b|\bgtd\b|\bgts\b|\btype[\s-]?r\b|\bsti\b|\bnismo\b|\babarth\b|\bpolestar\b|\bcupra\b|\bgr\b)/;
     const MILD_BADGE = /(m[\s-]?paket|m[\s-]?sport|s[\s-]?line|r[\s-]?line|n[\s-]?line|st[\s-]?line|\bsport\b)/;
-    if (STRONG_BADGE.test(listingName)) components.sport_badge = 24;
-    else if (MILD_BADGE.test(listingName) || MILD_BADGE.test(eqText)) components.sport_badge = 8;
-    else components.sport_badge = 0;
+    if (STRONG_BADGE.test(listingName)) raw.sport_badge = 24;
+    else if (MILD_BADGE.test(listingName) || MILD_BADGE.test(eqText)) raw.sport_badge = 8;
+    else raw.sport_badge = 0;
 
-    // premium_equipment: richness of premium comfort/tech features (tiered).
     const PREMIUM_FEATURES = [
       /ko[zž]en|alcantara/,
       /panoramatick|panorama/,
@@ -854,14 +1003,51 @@ export default function App() {
       /ambientn/,
     ];
     const premiumCount = PREMIUM_FEATURES.reduce((c, re) => c + (re.test(eqText) ? 1 : 0), 0);
-    components.premium_equipment =
+    raw.premium_equipment =
       premiumCount >= 6 ? 32 : premiumCount >= 4 ? 22 : premiumCount >= 2 ? 12 : premiumCount >= 1 ? 5 : 0;
 
-    // tco: ~5-year total cost of ownership (purchase + running costs). Lower is better.
     const tco5y = num(item.price, 0) + num(item.annual_total_cost, 0) * 5;
-    components.tco = scoreMax(tco5y, [[250000, 40], [400000, 28], [600000, 14], [900000, 0], [1400000, -14], [99999999, -30]]);
+    raw.tco = scoreMax(tco5y, [[250000, 40], [400000, 28], [600000, 14], [900000, 0], [1400000, -14], [99999999, -30]]);
 
-    return components;
+    // ── Normalize every component to 0‑100 ──
+    // [rawMin, rawMax] known ranges per component
+    const RANGES = {
+      age: [-35, 78],
+      mileage: [-36, 72],
+      price: [-30, 56],
+      price_power: [-36, 72],
+      power: [-28, 72],
+      cost: [-28, 48],
+      consumption: [-24, 34],  // worst-case for combustion engines
+      equipment: [0, 71],
+      flags: [-28, 23],
+      sport: [-30, 73],
+      luxury: [-20, 75],
+      power_weight: [-12, 40],
+      sport_badge: [0, 24],
+      premium_equipment: [0, 32],
+      tco: [-30, 40],
+    };
+
+    const norm = (val, min, max) => clamp(Math.round(((val - min) / (max - min)) * 100), 0, 100);
+
+    return {
+      age: norm(raw.age, ...RANGES.age),
+      mileage: norm(raw.mileage, ...RANGES.mileage),
+      price: norm(raw.price, ...RANGES.price),
+      price_power: norm(raw.price_power, ...RANGES.price_power),
+      power: norm(raw.power, ...RANGES.power),
+      cost: norm(raw.cost, ...RANGES.cost),
+      consumption: norm(raw.consumption, ...RANGES.consumption),
+      equipment: norm(raw.equipment, ...RANGES.equipment),
+      flags: norm(raw.flags, ...RANGES.flags),
+      sport: norm(raw.sport, ...RANGES.sport),
+      luxury: norm(raw.luxury, ...RANGES.luxury),
+      power_weight: norm(raw.power_weight, ...RANGES.power_weight),
+      sport_badge: norm(raw.sport_badge, ...RANGES.sport_badge),
+      premium_equipment: norm(raw.premium_equipment, ...RANGES.premium_equipment),
+      tco: norm(raw.tco, ...RANGES.tco),
+    };
   }
 
   function getPresetWeights(preset) {
@@ -875,7 +1061,20 @@ export default function App() {
       return sum + value * (weights[key] ?? DEFAULT_SCORE_WEIGHTS[key] ?? 1);
     }, 0);
 
-    return Math.round(weightedScore * 0.55);
+    return Math.round(weightedScore);
+  }
+
+  // ── Suspicious mileage detection ──
+  function isSuspiciousMileage(item) {
+    const age = num(item.age_years);
+    const km = num(item.tachometer);
+    if (age === null || km === null || age <= 0) return false;
+    // car older than 10 years with less than 80 000 km
+    if (age >= 10 && km < 80000) return true;
+    // average less than 3 000 km per year
+    const kmPerYear = km / age;
+    if (kmPerYear < 3000 && km > 0) return true;
+    return false;
   }
 
   function sortValue(item, key) {
@@ -1006,6 +1205,7 @@ export default function App() {
 
   useEffect(() => {
     fetchBrands().catch(() => null);
+    fetchBodies().catch(() => null);
   }, []);
 
   useEffect(() => {
@@ -1013,11 +1213,15 @@ export default function App() {
     const parsedModels = uniq(csvToArray(params.model_seo_name));
     const parsedExclBrands = uniq(csvToArray(params.exclude_manufacturer_seo_name));
     const parsedExclModels = uniq(csvToArray(params.exclude_model_seo_name));
+    const parsedBodies = uniq(csvToArray(params.body_seo));
+    const parsedExclBodies = uniq(csvToArray(params.exclude_body_seo));
     setSelectedBrands(parsedBrands);
     setSelectedModels(parsedModels);
     setExcludedBrands(parsedExclBrands);
     setExcludedModels(parsedExclModels);
-  }, [params.manufacturer_seo_name, params.model_seo_name]);
+    setSelectedBodies(parsedBodies);
+    setExcludedBodies(parsedExclBodies);
+  }, [params.manufacturer_seo_name, params.model_seo_name, params.body_seo, params.exclude_body_seo]);
 
   useEffect(() => {
     selectedBrands.forEach((b) => { fetchModelsForBrand(b).catch(() => null); });
@@ -1081,12 +1285,38 @@ export default function App() {
 
   // ── Custom preset CRUD ──
 
+  // ── 3-state equipment toggle (same pattern as toggleBrand) ──
+  function toggleEquipment(equipValue) {
+    const v = String(equipValue || "").trim();
+    if (!v) return;
+    setPresetForm((prev) => {
+      const must = Array.isArray(prev.must_have_equipment) ? prev.must_have_equipment : [];
+      const excl = Array.isArray(prev.excluded_equipment) ? prev.excluded_equipment : [];
+      let nextMust = must;
+      let nextExcl = excl;
+      if (excl.includes(v)) {
+        // 3rd click: remove from excluded → back to neutral
+        nextExcl = excl.filter((x) => x !== v);
+      } else if (must.includes(v)) {
+        // 2nd click: remove from must, add to excluded
+        nextMust = must.filter((x) => x !== v);
+        nextExcl = [...excl, v];
+      } else {
+        // 1st click: add to must
+        nextMust = [...must, v];
+      }
+      return { ...prev, must_have_equipment: nextMust, excluded_equipment: nextExcl };
+    });
+  }
+
   function openNewPreset() {
     setEditingPresetId(null);
-    setPresetForm({ name: "", description: "", weights: { ...DEFAULT_SCORE_WEIGHTS }, hard_rejects: [], must_have_equipment: [] });
+    setPresetForm({ name: "", description: "", weights: { ...DEFAULT_SCORE_WEIGHTS }, hard_rejects: [], must_have_equipment: [], excluded_equipment: [] });
     setPresetFormEquipInput("");
     setPresetFormRejectPattern("");
     setPresetFormRejectReason("");
+    setEquipmentFilterText("");
+    fetchEquipment().catch(() => null);
     setShowPresetModal(true);
   }
 
@@ -1100,10 +1330,13 @@ export default function App() {
       weights: preset.weights ? { ...DEFAULT_SCORE_WEIGHTS, ...preset.weights } : { ...DEFAULT_SCORE_WEIGHTS },
       hard_rejects: Array.isArray(preset.hard_rejects) ? [...preset.hard_rejects] : [],
       must_have_equipment: Array.isArray(preset.must_have_equipment) ? [...preset.must_have_equipment] : [],
+      excluded_equipment: Array.isArray(preset.excluded_equipment) ? [...preset.excluded_equipment] : [],
     });
     setPresetFormEquipInput("");
     setPresetFormRejectPattern("");
     setPresetFormRejectReason("");
+    setEquipmentFilterText("");
+    fetchEquipment().catch(() => null);
     setShowPresetModal(true);
   }
 
@@ -1134,7 +1367,8 @@ export default function App() {
       description: presetForm.description.trim(),
       weights: presetForm.weights,
       hard_rejects: presetForm.hard_rejects.filter((r) => r.pattern),
-      must_have_equipment: presetForm.must_have_equipment.filter(Boolean),
+      must_have_equipment: (presetForm.must_have_equipment || []).filter(Boolean),
+      excluded_equipment: (presetForm.excluded_equipment || []).filter(Boolean),
     };
     try {
       const url = editingPresetId
@@ -1330,6 +1564,7 @@ export default function App() {
       _fmt_ppkm: fmt(item.price_per_km, "ppkm"),
       _fmt_kpy: fmt(item.km_per_year, "kpy"),
       _fmt_atc: fmt(item.annual_total_cost, "atc"),
+      _suspicious: isSuspiciousMileage(item),
     }));
 
     if (!sortConfig.key) return list;
@@ -1368,6 +1603,54 @@ export default function App() {
     }
     return cache;
   }, [visibleItems, selectedPreset, scoringPresets]);
+
+  // Quick-filtered visible items (applied on top of main visibleItems)
+  const quickFilteredItems = useMemo(() => {
+    let list = visibleItems;
+    // numeric range filters
+    const pf = parseFloat(quickPriceFrom);
+    const pt = parseFloat(quickPriceTo);
+    const yf = parseFloat(quickYearFrom);
+    const yt = parseFloat(quickYearTo);
+    const kf = parseFloat(quickKmFrom);
+    const kt = parseFloat(quickKmTo);
+    const pwf = parseFloat(quickPowerFrom);
+    const pwt = parseFloat(quickPowerTo);
+    const hasRange = !isNaN(pf) || !isNaN(pt) || !isNaN(yf) || !isNaN(yt) || !isNaN(kf) || !isNaN(kt) || !isNaN(pwf) || !isNaN(pwt);
+    const hasSelect = quickFuel || quickGearbox || quickDrive;
+    const hasEquip = quickEquipMust.length > 0 || quickEquipExcl.length > 0;
+    const hasBody = quickBodyFilter.length > 0 || quickBodyExcl.length > 0;
+    if (hasRange || hasSelect || hasEquip || hasBody) {
+      list = list.filter((item) => {
+        const price = item.price ?? 0;
+        const year = 2026 - (item.age_years ?? 0);
+        const km = item.tachometer ?? 0;
+        const power = item.power_kw ?? 0;
+        const fuel = String(item.fuel_seo || "").toLowerCase();
+        const gearbox = String(item.gearbox_type || "").toLowerCase();
+        const drive = String(item.drive_type || "").toLowerCase();
+        const eqText = (Array.isArray(item.equipment_list) ? item.equipment_list : []).join(" ").toLowerCase();
+        const body = String(item.body_seo || "").toLowerCase();
+        if (!isNaN(pf) && price < pf) return false;
+        if (!isNaN(pt) && price > pt) return false;
+        if (!isNaN(yf) && year < yf) return false;
+        if (!isNaN(yt) && year > yt) return false;
+        if (!isNaN(kf) && km < kf) return false;
+        if (!isNaN(kt) && km > kt) return false;
+        if (!isNaN(pwf) && power < pwf) return false;
+        if (!isNaN(pwt) && power > pwt) return false;
+        if (quickFuel && fuel !== quickFuel) return false;
+        if (quickGearbox && gearbox !== quickGearbox) return false;
+        if (quickDrive && drive !== quickDrive) return false;
+        for (const t of quickEquipMust) { if (!eqText.includes(t.toLowerCase())) return false; }
+        for (const t of quickEquipExcl) { if (eqText.includes(t.toLowerCase())) return false; }
+        for (const t of quickBodyFilter) { if (body !== t.toLowerCase()) return false; }
+        for (const t of quickBodyExcl) { if (body === t.toLowerCase()) return false; }
+        return true;
+      });
+    }
+    return list;
+  }, [visibleItems, quickEquipMust, quickEquipExcl, quickBodyFilter, quickBodyExcl, quickPriceFrom, quickPriceTo, quickYearFrom, quickYearTo, quickKmFrom, quickKmTo, quickPowerFrom, quickPowerTo, quickFuel, quickGearbox, quickDrive]);
 
   function getCachedScore(item) {
     return scoreCache.get(resultKey(item)) ?? 0;
@@ -1582,11 +1865,45 @@ export default function App() {
                   <div className="catalog-selected-note">
                     {selectedBrands.length > 0 && <>{selectedBrands.length} {selectedBrands.length === 1 ? "značka" : selectedBrands.length >= 2 && selectedBrands.length <= 4 ? "značky" : "značek"}</>}{selectedBrands.length === 0 && "0 značek"}{excludedBrands.length > 0 && ` + ${excludedBrands.length} vyloučeno`}{selectedModels.length > 0 && ` · ${selectedModels.length} ${selectedModels.length === 1 ? "model" : selectedModels.length >= 2 && selectedModels.length <= 4 ? "modely" : "modelů"}`}{excludedModels.length > 0 && ` + ${excludedModels.length} vyloučeno`}
                   </div>
+                  {/* Karoserie grid */}
+                  <div className="catalog-block">
+                    <div className="catalog-title">Karoserie</div>
+                    <input
+                      type="text"
+                      className="catalog-search"
+                      placeholder="Filtrovat karoserie..."
+                      value={bodyFilterText}
+                      onChange={(e) => setBodyFilterText(e.target.value)}
+                    />
+                    <div className="catalog-list">
+                      {bodyOptions.length === 0 && (
+                        <div className="catalog-subhead">Načítám karoserie…</div>
+                      )}
+                      {bodyOptions
+                        .filter((b) => b.label.toLowerCase().includes(bodyFilterText.toLowerCase()) || b.value.toLowerCase().includes(bodyFilterText.toLowerCase()))
+                        .map((b) => {
+                          const selected = selectedBodies.includes(b.value);
+                          const excluded = excludedBodies.includes(b.value);
+                          return (
+                            <div key={b.value} className={`catalog-item${excluded ? " excluded" : ""}`}>
+                              <span
+                                className={`catalog-toggle-btn${selected ? " checked" : excluded ? " excluded" : ""}`}
+                                onClick={(e) => { e.stopPropagation(); toggleBody(b.value); }}
+                                title={selected ? "✓ Zahrnuto — klikni pro vyloučení" : excluded ? "✕ Vyloučeno — klikni pro zrušení" : "Klikni pro zahrnutí"}
+                              >
+                                {selected ? "✓" : excluded ? "✕" : ""}
+                              </span>
+                              <span>{b.label}</span>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
                 </div>
               )}
 
               {group.fields
-                .filter((def) => !["manufacturer_seo_name", "model_seo_name"].includes(def.key))
+                .filter((def) => !["manufacturer_seo_name", "model_seo_name", "body_seo"].includes(def.key))
                 .map((def) => (
                   <Field key={def.key} def={def} value={params[def.key]} onChange={setParam} />
                 ))}
@@ -1694,6 +2011,19 @@ export default function App() {
                     {scoringPresets[selectedPreset]?.description || customPresets[selectedPreset]?.description}
                   </span>
                 )}
+                {/* Single quick filter button */}
+                <span className="quick-filter-inline">
+                  <button className={`quick-filter-btn${showQuickEquip || showQuickBody ? " active" : ""}`} onClick={() => {
+                    const opening = !showQuickEquip && !showQuickBody;
+                    setShowQuickEquip(opening);
+                    setShowQuickBody(opening);
+                    if (opening) { fetchEquipment().catch(() => null); fetchBodies().catch(() => null); }
+                  }}>
+                    Filtr{quickEquipMust.length + quickEquipExcl.length + quickBodyFilter.length + quickBodyExcl.length > 0
+                      ? ` (${quickEquipMust.length + quickEquipExcl.length + quickBodyFilter.length + quickBodyExcl.length})`
+                      : ""}
+                  </button>
+                </span>
               </label>
             </div>
             <div className="results-actions">
@@ -1729,7 +2059,7 @@ export default function App() {
 
           <div className="table-wrap">
             <ResultsTable
-              visibleItems={visibleItems}
+              visibleItems={quickFilteredItems}
               scoreCache={scoreCache}
               selectedIds={selectedIds}
               markedIds={markedIds}
@@ -1795,6 +2125,111 @@ export default function App() {
       </div>
     )}
 
+    {/* Quick Filter Popup */}
+    {(showQuickEquip || showQuickBody) && (
+      <div className="debug-modal-overlay" onClick={() => { setShowQuickEquip(false); setShowQuickBody(false); }}>
+        <div className="preset-modal" style={{ maxWidth: 600 }} onClick={(e) => e.stopPropagation()}>
+          <div className="preset-modal-head">
+            <strong>Rychlý filtr</strong>
+            <button className="debug-modal-close" onClick={() => { setShowQuickEquip(false); setShowQuickBody(false); }}><X className="ui-icon" aria-hidden="true" /></button>
+          </div>
+          <div className="preset-modal-body" style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+            {/* Numeric filters - one row per pair */}
+            <div style={{ flex: "1 1 100%", display: "flex", gap: 6, flexWrap: "wrap", alignItems: "flex-end" }}>
+              <div className="field" style={{ flex: "1 1 200px", minWidth: 160 }}>
+                <label>Cena (Kč) od/do</label>
+                <div style={{ display: "flex", gap: 4 }}>
+                  <input type="number" placeholder="Od" style={{ flex: 1 }} value={quickPriceFrom} onChange={(e) => setQuickPriceFrom(e.target.value)} />
+                  <input type="number" placeholder="Do" style={{ flex: 1 }} value={quickPriceTo} onChange={(e) => setQuickPriceTo(e.target.value)} />
+                </div>
+              </div>
+              <div className="field" style={{ flex: "1 1 200px", minWidth: 160 }}>
+                <label>Rok od/do</label>
+                <div style={{ display: "flex", gap: 4 }}>
+                  <input type="number" placeholder="Od" style={{ flex: 1 }} value={quickYearFrom} onChange={(e) => setQuickYearFrom(e.target.value)} />
+                  <input type="number" placeholder="Do" style={{ flex: 1 }} value={quickYearTo} onChange={(e) => setQuickYearTo(e.target.value)} />
+                </div>
+              </div>
+              <div className="field" style={{ flex: "1 1 200px", minWidth: 160 }}>
+                <label>Km od/do</label>
+                <div style={{ display: "flex", gap: 4 }}>
+                  <input type="number" placeholder="Od" style={{ flex: 1 }} value={quickKmFrom} onChange={(e) => setQuickKmFrom(e.target.value)} />
+                  <input type="number" placeholder="Do" style={{ flex: 1 }} value={quickKmTo} onChange={(e) => setQuickKmTo(e.target.value)} />
+                </div>
+              </div>
+              <div className="field" style={{ flex: "1 1 200px", minWidth: 160 }}>
+                <label>kW od/do</label>
+                <div style={{ display: "flex", gap: 4 }}>
+                  <input type="number" placeholder="Od" style={{ flex: 1 }} value={quickPowerFrom} onChange={(e) => setQuickPowerFrom(e.target.value)} />
+                  <input type="number" placeholder="Do" style={{ flex: 1 }} value={quickPowerTo} onChange={(e) => setQuickPowerTo(e.target.value)} />
+                </div>
+              </div>
+            </div>
+            {/* Select filters */}
+            <div style={{ flex: "1 1 100%", display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <div className="field" style={{ flex: "1 1 160px" }}>
+                <label>Palivo</label>
+                <select value={quickFuel} onChange={(e) => setQuickFuel(e.target.value)}>
+                  <option value="">— jakékoliv —</option>
+                  <option value="benzin">Benzín</option>
+                  <option value="nafta">Nafta</option>
+                  <option value="lpg-benzin">LPG</option>
+                  <option value="hybrid">Hybrid</option>
+                  <option value="elektro">Elektro</option>
+                </select>
+              </div>
+              <div className="field" style={{ flex: "1 1 160px" }}>
+                <label>Převodovka</label>
+                <select value={quickGearbox} onChange={(e) => setQuickGearbox(e.target.value)}>
+                  <option value="">— jakákoliv —</option>
+                  <option value="manual">Manuál</option>
+                  <option value="automatic">Automat</option>
+                </select>
+              </div>
+              <div className="field" style={{ flex: "1 1 160px" }}>
+                <label>Pohon</label>
+                <select value={quickDrive} onChange={(e) => setQuickDrive(e.target.value)}>
+                  <option value="">— jakýkoliv —</option>
+                  <option value="fwd">Přední (FWD)</option>
+                  <option value="rwd">Zadní (RWD)</option>
+                  <option value="awd">4×4 (AWD)</option>
+                </select>
+              </div>
+            </div>
+            {/* Equipment + Body */}
+            <div style={{ flex: "1 1 260px" }}>
+              <div className="preset-section-title">Výbava</div>
+              <input className="catalog-search" placeholder="Hledat..." value={equipmentFilterText} onChange={(e) => setEquipmentFilterText(e.target.value)} />
+              <div className="catalog-list" style={{ maxHeight: 200 }}>
+                {equipmentOptions.filter(e => e.label.toLowerCase().includes(equipmentFilterText.toLowerCase())).map(e => {
+                  const m = quickEquipMust.includes(e.value);
+                  const x = quickEquipExcl.includes(e.value);
+                  return <div key={e.value} className={`catalog-item${x ? " excluded" : ""}`} onClick={() => toggleQuickEquip(e.value)}>
+                    <span className={`catalog-toggle-btn${m ? " checked" : x ? " excluded" : ""}`}>{m ? "✓" : x ? "✕" : ""}</span>
+                    <span>{e.label}</span>
+                  </div>;
+                })}
+              </div>
+            </div>
+            <div style={{ flex: "1 1 260px" }}>
+              <div className="preset-section-title">Karoserie</div>
+              <input className="catalog-search" placeholder="Hledat..." value={bodyFilterText} onChange={(e) => setBodyFilterText(e.target.value)} />
+              <div className="catalog-list" style={{ maxHeight: 200 }}>
+                {bodyOptions.filter(b => b.label.toLowerCase().includes(bodyFilterText.toLowerCase())).map(b => {
+                  const s = quickBodyFilter.includes(b.value);
+                  const x = quickBodyExcl.includes(b.value);
+                  return <div key={b.value} className={`catalog-item${x ? " excluded" : ""}`} onClick={() => toggleQuickBody(b.value)}>
+                    <span className={`catalog-toggle-btn${s ? " checked" : x ? " excluded" : ""}`}>{s ? "✓" : x ? "✕" : ""}</span>
+                    <span>{b.label}</span>
+                  </div>;
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
     {/* Custom Preset Modal */}
     {showPresetModal && (
       <div className="debug-modal-overlay" onClick={() => setShowPresetModal(false)}>
@@ -1843,13 +2278,41 @@ export default function App() {
               <div className="preset-section-title">Deal breakery (vyloučit)</div>
               <div className="preset-quick-rejects">
                 {[
+                  // ══ Převodovka ══
                   { label: "Automat", pattern: "automat", reason: "Jen manuál" },
+                  { label: "Manuál", pattern: "\\b(manu[aá]l|ru[cč]n[ií]\\s*p[rř]evodovka)\\b", reason: "Jen automat" },
+                  // ══ Palivo ══
                   { label: "Nafta", pattern: "\\b(diesel|nafta|tdi|tdci|cdti|dci|hdi|d4d|d5)\\b", reason: "Jen benzín" },
-                  { label: "Bouraný / totálka", pattern: "(bouran|havar|totaln[ií]\\s*[sš]kod)", reason: "Žádný bouraný" },
-                  { label: "Tuning / chip", pattern: "(tuning|chip|na[cč]ipov|upraven[eo])", reason: "Žádný tuning" },
-                  { label: "Koroze / rez", pattern: "(koroze|rez)", reason: "Žádná koroze" },
-                  { label: "Nefunkční díly", pattern: "(nefunk[cč]n[ií]|nefunguje)", reason: "Vše funkční" },
+                  { label: "Benzín", pattern: "\\b(benz[ií]n|z[aá][zž]ehový|benzinový|lpg|cng|hybrid|elektro)\\b", reason: "Jen nafta" },
+                  { label: "Elektro/Hybrid", pattern: "\\b(elektro|hybrid|plug[\s-]?in|elektrick[ýe])\\b", reason: "Jen spalovací" },
+                  { label: "LPG/CNG", pattern: "\\b(lpg|cng|plyn|zemn[ií]\\s*plyn)\\b", reason: "Žádný plyn" },
+                  // ══ Pohon ══
+                  { label: "FWD (přední)", pattern: "\\b(fwd|p[rř]edn[ií]\\s*n[aá]hon|4x2)\\b", reason: "Jen zadní/4×4" },
+                  { label: "RWD (zadní)", pattern: "\\b(rwd|zadn[ií]\\s*n[aá]hon|zadokolka)\\b", reason: "Jen přední/4×4" },
+                  { label: "AWD / 4×4", pattern: "\\b(awd|4x4|4\\s*x\\s*4|v[sš]echny\\s*kola|[cč]ty[rř]kolka|quattro|4matic|xdrive|4motion)\\b", reason: "Jen 2WD" },
+                  // ══ Původ / dovoz ══
+                  { label: "Dovoz", pattern: "\\b(dovoz|import|itali[ei]|n[ěe]mecko|usa|amerik[ay]|[sš]v[aý]carsko|rakousko|francie|japonsko|angli[ei]|belgie|holandsko|polsko)\\b", reason: "Jen tuzemské" },
+                  { label: "Zahraniční původ", pattern: "\\b(dovoz|import|zahrani[cč][ií]|prvn[ií]\\s*majitel\\s*v\\s*[cč]r)\\b", reason: "Jen český původ" },
+                  // ══ Historie ══
+                  { label: "Bouraný / totálka", pattern: "(bouran|havar|totaln[ií]\\s*[sš]kod|oprava\\s*po\\s*nehod)", reason: "Žádný bouraný" },
+                  { label: "Tuning / chip", pattern: "(tuning|chip|na[cč]ipov|upraven[eo]|stage\\s*[1-3]|remap)", reason: "Žádný tuning" },
+                  { label: "Koroze / rez", pattern: "(koroze|rez|prorezl|prorezav|zkorodov)", reason: "Žádná koroze" },
+                  { label: "Povodeň", pattern: "(povod[eě][nň]|zatopen|zaplaven|z[aá]plava)", reason: "Žádná povodeň" },
+                  { label: "Nefunkční díly", pattern: "(nefunk[cč]n[ií]|nefunguje|porouch|porucha)", reason: "Vše funkční" },
                   { label: "Díly / na náhradní", pattern: "na\\s*n[aá]hradn[ií]\\s*d[ií]ly", reason: "Pojízdný" },
+                  { label: "Taxi", pattern: "\\b(taxi|taxik[aá][rř]|z\\s*taxislu[zž]by|slu[zž]ebn[ií]\\s*v[ůu]z)\\b", reason: "Nebylo taxi" },
+                  { label: "Veterán", pattern: "\\b(veter[aá]n|oldtimer|historick[ée]\\s*vozidlo|30\\s*let\\s*star[ée])\\b", reason: "Žádné veterány" },
+                  // ══ Servis / STK ══
+                  { label: "Bez servisky", pattern: "\\b(bez\\s*servisn[ií]\\s*kn[ií][zž]ky|servisn[ií]\\s*kniha\\s*chyb[ií]|serviska\\s*nen[ií]|servisn[ií]\\s*kniha\\s*nevedena|bez\\s*servisky)\\b", reason: "Musí mít servisku" },
+                  { label: "STK propadlá", pattern: "\\b(stk\\s*propadl|bez\\s*stk|neplatn[aá]\\s*stk|stk\\s*chyb[ií]|bez\\s*technick[ée]|technick[aá]\\s*pro[sš]la|technick[aá]\\s*propadla|bez\\s*platn[ée]\\s*technick[ée])\\b", reason: "Platná STK" },
+                  // ══ Vlastnictví ══
+                  { label: "Víc majitelů (3+)", pattern: "\\b(3\\.\\s*majitel|t[rř]et[ií]\\s*majitel|4\\.\\s*majitel|[cč]tvrt[ýy]\\s*majitel|5\\.\\s*majitel|p[aá]t[ýy]\\s*majitel|v[ií]ce\\s*majitel)\\b", reason: "Max 2 majitelé" },
+                  { label: "Leasing / úvěr", pattern: "\\b(leasing|[uú]v[ěe]r|spl[aá]tky|financov[aá]n|na\\s*[uú]v[ěe]r|na\\s*spl[aá]tky)\\b", reason: "Jen za hotové" },
+                  // ══ Stáří ══
+                  { label: "Mladší 3 let (zánovní)", pattern: "\\b(st[aá]r[ée]\\s*auto|star[sš][ií]\\s*ne[zž]\\s*3|v[ií]ce\\s*ne[zž]\\s*3\\s*roky|p[rř]es\\s*3\\s*roky\\s*star[ée])\\b", reason: "Jen do 3 let" },
+                  // ══ Další ══
+                  { label: "Fleetové auto", pattern: "\\b(fleet|flotil|firemn[ií]\\s*v[ůu]z|slu[zž]ebn[ií]\\s*auto|poolov[ée])\\b", reason: "Žádné fleetové" },
+                  { label: "Bez DPH", pattern: "\\b(bez\\s*dph|nepl[aá]tce\\s*dph|dph\\s*nen[ií]\\s*v\\s*cen[ěe]|cena\\s*bez\\s*dph)\\b", reason: "Cena s DPH" },
                 ].map((quick) => {
                   const alreadyAdded = presetForm.hard_rejects.some((r) => r.pattern === quick.pattern);
                   return (
@@ -1888,23 +2351,44 @@ export default function App() {
               )}
             </div>
 
-            {/* Must‑have equipment */}
+            {/* Equipment picker with 3‑state toggle (✓ must → ✕ excluded → neutral) */}
             <div className="preset-section">
-              <div className="preset-section-title">Musí mít výbavu</div>
-              <div className="preset-equip-input-row">
-                <input type="text" placeholder="Napiš klíčové slovo a Enter" value={presetFormEquipInput} onChange={(e) => setPresetFormEquipInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addPresetEquipTag(); } }} />
-                <button className="link-btn" onClick={addPresetEquipTag}>Přidat</button>
+              <div className="preset-section-title">Výbava (Sauto seznam)</div>
+              <input
+                type="text"
+                className="catalog-search"
+                placeholder="Filtrovat výbavu..."
+                value={equipmentFilterText}
+                onChange={(e) => setEquipmentFilterText(e.target.value)}
+              />
+              <div className="catalog-list" style={{ maxHeight: 360 }}>
+                {equipmentOptions.length === 0 && (
+                  <div className="catalog-subhead">Načítám seznam výbavy…</div>
+                )}
+                {equipmentOptions
+                  .filter((e) => e.label.toLowerCase().includes(equipmentFilterText.toLowerCase()) || e.value.toLowerCase().includes(equipmentFilterText.toLowerCase()))
+                  .map((e) => {
+                    const must = (presetForm.must_have_equipment || []).includes(e.value);
+                    const excl = (presetForm.excluded_equipment || []).includes(e.value);
+                    return (
+                      <div key={e.value} className={`catalog-item${excl ? " excluded" : ""}`}>
+                        <span
+                          className={`catalog-toggle-btn${must ? " checked" : excl ? " excluded" : ""}`}
+                          onClick={() => toggleEquipment(e.value)}
+                          title={must ? "✓ Vyžadováno — klikni pro vyloučení" : excl ? "✕ Vyloučeno — klikni pro zrušení" : "Klikni pro vyžadování"}
+                        >
+                          {must ? "✓" : excl ? "✕" : ""}
+                        </span>
+                        <span>{e.label}</span>
+                      </div>
+                    );
+                  })}
               </div>
-              {presetForm.must_have_equipment.length > 0 && (
-                <div className="preset-tags">
-                  {presetForm.must_have_equipment.map((tag, i) => (
-                    <span key={i} className="preset-tag equip">
-                      ✓ {tag}
-                      <button onClick={() => removePresetEquipTag(i)}>×</button>
-                    </span>
-                  ))}
-                </div>
-              )}
+              <div className="catalog-selected-note">
+                {(presetForm.must_have_equipment || []).length > 0 && <>{presetForm.must_have_equipment.length} vyžadováno</>}
+                {(presetForm.must_have_equipment || []).length === 0 && "0 vyžadováno"}
+                {(presetForm.excluded_equipment || []).length > 0 && ` · ${presetForm.excluded_equipment.length} vyloučeno`}
+              </div>
             </div>
           </div>
           <div className="preset-modal-foot">

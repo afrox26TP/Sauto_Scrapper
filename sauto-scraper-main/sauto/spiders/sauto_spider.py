@@ -548,6 +548,7 @@ class CarEvaluator:
         target_annual_km=15000,
         custom_hard_rejects=None,
         custom_must_have_equipment=None,
+        custom_excluded_equipment=None,
     ):
         """
         Extract and normalize raw car metrics. NO SCORING.
@@ -601,16 +602,21 @@ class CarEvaluator:
                     return None
 
         # Custom must-have equipment check
-        if custom_must_have_equipment:
+        if custom_must_have_equipment or custom_excluded_equipment:
             equipment_list = [
                 eq.get("name", "").lower()
                 for eq in (result.get("equipment_cb") or [])
                 if eq.get("name")
             ]
             equipment_text = " ".join(equipment_list)
-            for term in custom_must_have_equipment:
-                if term.lower() not in equipment_text:
-                    return None
+            if custom_must_have_equipment:
+                for term in custom_must_have_equipment:
+                    if term.lower() not in equipment_text:
+                        return None
+            if custom_excluded_equipment:
+                for term in custom_excluded_equipment:
+                    if term.lower() in equipment_text:
+                        return None
 
         price = cls._safe_int(result.get("price") or item.get("price"), 0)
         if price < min_price:
@@ -780,6 +786,7 @@ class SautoSpider(scrapy.Spider):
         self.filter_power_to = None
         self.filter_fuel_set = set()
         self.filter_body_set = set()
+        self.exclude_body_set = set()
         self.filter_gearbox = None
         self.filter_drive = None
         self.required_equipment_terms = []
@@ -965,6 +972,7 @@ class SautoSpider(scrapy.Spider):
         self.filter_power_to = self._to_optional_int(params.pop("power_to", None))
         self.filter_fuel_set = {x.lower() for x in self._split_csv(params.pop("fuel_seo", ""))}
         self.filter_body_set = {x.lower() for x in self._split_csv(params.pop("body_seo", ""))}
+        self.exclude_body_set = {x.lower() for x in self._split_csv(params.pop("exclude_body_seo", ""))}
         self.filter_gearbox = self._to_choice(
             params.pop("gearbox_filter", None),
             {"manual", "automatic"},
@@ -1084,6 +1092,8 @@ class SautoSpider(scrapy.Spider):
         if self.filter_fuel_set and offer.get("fuel_seo") not in self.filter_fuel_set:
             return False
         if self.filter_body_set and offer.get("body_seo") not in self.filter_body_set:
+            return False
+        if self.exclude_body_set and offer.get("body_seo") in self.exclude_body_set:
             return False
         if self.filter_gearbox and offer.get("gearbox_type") != self.filter_gearbox:
             return False
@@ -1349,7 +1359,38 @@ class SautoSpider(scrapy.Spider):
         params = self.read_params_from_json("params.json")
         self._load_runtime_options(params)
         self._load_strict_filters(params)
+        self._load_custom_preset_filters(params)
         yield self._make_search_request(self._build_search_params(params))
+
+    def _load_custom_preset_filters(self, params: dict):
+        """Merge hard_rejects, must_have_equipment and excluded_equipment
+        from all custom presets so they act as global hard filters."""
+        custom_presets = params.get("custom_presets", {})
+        if not isinstance(custom_presets, dict):
+            custom_presets = {}
+        self.custom_hard_rejects = []
+        self.custom_must_have_equipment = []
+        self.custom_excluded_equipment = []
+        seen_reject_patterns = set()
+        seen_must = set()
+        seen_excl = set()
+        for preset in custom_presets.values():
+            if isinstance(preset, dict):
+                for r in preset.get("hard_rejects", []) or []:
+                    pat = r.get("pattern", "") if isinstance(r, dict) else ""
+                    if pat and pat not in seen_reject_patterns:
+                        seen_reject_patterns.add(pat)
+                        self.custom_hard_rejects.append(r if isinstance(r, dict) else {"pattern": str(r)})
+                for eq in preset.get("must_have_equipment", []) or []:
+                    eq_str = str(eq).strip().lower()
+                    if eq_str and eq_str not in seen_must:
+                        seen_must.add(eq_str)
+                        self.custom_must_have_equipment.append(eq_str)
+                for eq in preset.get("excluded_equipment", []) or []:
+                    eq_str = str(eq).strip().lower()
+                    if eq_str and eq_str not in seen_excl:
+                        seen_excl.add(eq_str)
+                        self.custom_excluded_equipment.append(eq_str)
 
     def parse_search(self, response):
         try:

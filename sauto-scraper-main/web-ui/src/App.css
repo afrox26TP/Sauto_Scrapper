@@ -1274,3 +1274,13 @@ tr.row-selected.row-score-lo td { background: rgba(220, 38, 38, 0.07); border-bo
   padding: 2px 6px;
   font-size: 0.9rem;
 }
+
+/* ── Suspicious mileage badge ── */
+.suspicious-badge {
+  display: inline;
+  margin-left: 5px;
+  font-size: 0.85rem;
+  cursor: help;
+  vertical-align: middle;
+  opacity: 0.85;
+}

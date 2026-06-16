@@ -61,6 +61,7 @@ class CustomPresetPayload(BaseModel):
     weights: dict[str, float] = Field(default_factory=dict)
     hard_rejects: list[dict[str, str]] = Field(default_factory=list)
     must_have_equipment: list[str] = Field(default_factory=list)
+    excluded_equipment: list[str] = Field(default_factory=list)
 
 
 class ResultMarkPayload(BaseModel):
@@ -319,6 +320,59 @@ def _collect_models_for_brand(brand: str, max_pages: int = 8, page_size: int = 1
     return [{"value": key, "label": models[key]} for key in sorted(models.keys())]
 
 
+def _collect_equipment(max_pages: int = 20, page_size: int = 200) -> list[dict[str, str]]:
+    equipment: dict[str, str] = {}
+    # Primary: raw scraped data (equipment_cb in detail_raw.result)
+    for data_path in [RAW_OUTPUT_PATH, DEFAULT_RESULTS_PATH]:
+        if data_path.exists():
+            try:
+                data = load_json(data_path, [])
+                if isinstance(data, list):
+                    for item in data:
+                        if isinstance(item, dict):
+                            # sauto_interesting.json: offer_metrics.equipment_list
+                            om = item.get("offer_metrics") or {}
+                            el = om.get("equipment_list") or []
+                            if isinstance(el, list):
+                                for name in el:
+                                    n = str(name).strip()
+                                    if n and len(n) > 2:
+                                        equipment[n.lower()] = n
+                            # sauto_raw.json: detail_raw.result.equipment_cb
+                            dr = item.get("detail_raw") or {}
+                            res = dr.get("result") or {}
+                            ecb = res.get("equipment_cb") or []
+                            if isinstance(ecb, list):
+                                for eq in ecb:
+                                    n = str(eq.get("name", "") if isinstance(eq, dict) else eq).strip()
+                                    if n and len(n) > 2:
+                                        equipment[n.lower()] = n
+                            # top-level equipment_list fallback
+                            el_top = item.get("equipment_list") or []
+                            if isinstance(el_top, list):
+                                for name in el_top:
+                                    n = str(name).strip()
+                                    if n and len(n) > 2:
+                                        equipment[n.lower()] = n
+            except Exception:
+                pass
+    # Fallback: try Sauto search API
+    if len(equipment) < 10:
+        for page in range(max_pages):
+            offset = page * page_size
+            batch = _fetch_sauto_results({"category_id": 838, "limit": page_size, "offset": offset})
+            if not batch:
+                break
+            for item in batch:
+                equip_list = item.get("equipment_list") or item.get("equipment") or item.get("equipment_cb") or []
+                if isinstance(equip_list, list):
+                    for eq in equip_list:
+                        name = str(eq).strip()
+                        if name and len(name) > 2:
+                            equipment[name.lower()] = name
+    return [{"value": key, "label": equipment[key]} for key in sorted(equipment.keys())]
+
+
 app = FastAPI(title="Sauto Scraper API", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
@@ -492,6 +546,100 @@ def get_catalog_models(brand: str, force_refresh: bool = False) -> dict[str, Any
     return {"brand": selected_brand, "items": items, "cached": False, "updated_at": now}
 
 
+@app.get("/api/catalog/equipment")
+def get_catalog_equipment(force_refresh: bool = False) -> dict[str, Any]:
+    cache = _load_catalog_cache()
+    equip_cache = cache.get("equipment", {}) if isinstance(cache, dict) else {}
+    cached_items = equip_cache.get("items", []) if isinstance(equip_cache, dict) else []
+    cached_ts = equip_cache.get("updated_at") if isinstance(equip_cache, dict) else None
+
+    if not force_refresh and _is_fresh(cached_ts) and isinstance(cached_items, list) and cached_items:
+        return {"items": cached_items, "cached": True, "updated_at": cached_ts}
+
+    try:
+        items = _collect_equipment()
+    except Exception as exc:
+        if isinstance(cached_items, list) and cached_items:
+            return {"items": cached_items, "cached": True, "updated_at": cached_ts, "warning": f"Using cache: {exc}"}
+        raise HTTPException(status_code=502, detail=f"Unable to fetch Sauto equipment: {exc}") from exc
+
+    if not items:
+        # Try supplementing from local data
+        equipment: dict[str, str] = {}
+        for data_path in [RAW_OUTPUT_PATH, DEFAULT_RESULTS_PATH]:
+            if data_path.exists():
+                try:
+                    data = load_json(data_path, [])
+                    if isinstance(data, list):
+                        for item_dict in data:
+                            if isinstance(item_dict, dict):
+                                el = item_dict.get("equipment_list") or []
+                                if isinstance(el, list):
+                                    for name in el:
+                                        n = str(name).strip()
+                                        if n and len(n) > 2:
+                                            equipment[n.lower()] = n
+                except Exception:
+                    pass
+        items = [{"value": key, "label": equipment[key]} for key in sorted(equipment.keys())]
+
+    now = int(time.time())
+    if not isinstance(cache, dict):
+        cache = {}
+    cache["equipment"] = {"updated_at": now, "items": items}
+    _save_catalog_cache(cache)
+    return {"items": items, "cached": False, "updated_at": now}
+
+
+@app.get("/api/catalog/bodies")
+def get_catalog_bodies(force_refresh: bool = False) -> dict[str, Any]:
+    cache = _load_catalog_cache()
+    body_cache = cache.get("bodies", {}) if isinstance(cache, dict) else {}
+    cached_items = body_cache.get("items", []) if isinstance(body_cache, dict) else []
+    cached_ts = body_cache.get("updated_at") if isinstance(body_cache, dict) else None
+
+    if not force_refresh and _is_fresh(cached_ts) and isinstance(cached_items, list) and cached_items:
+        return {"items": cached_items, "cached": True, "updated_at": cached_ts}
+
+    # Collect unique body types from locally scraped data and search API
+    bodies: dict[str, str] = {}
+    # From local data
+    for data_path in [RAW_OUTPUT_PATH, DEFAULT_RESULTS_PATH]:
+        if data_path.exists():
+            try:
+                data = load_json(data_path, [])
+                if isinstance(data, list):
+                    for item in data:
+                        if isinstance(item, dict):
+                            body = str(item.get("body_seo") or "").strip()
+                            if body and len(body) > 1:
+                                label = body[0].upper() + body[1:]
+                                bodies[body] = label
+            except Exception:
+                pass
+    # From Sauto search API
+    if len(bodies) < 3:
+        try:
+            batch = _fetch_sauto_results({"category_id": 838, "limit": 200, "offset": 0})
+            for item in batch:
+                body_cb = item.get("vehicle_body_cb") or {}
+                seo = str(body_cb.get("seo_name") or "").strip()
+                name = str(body_cb.get("name") or seo).strip()
+                if seo:
+                    bodies[seo] = name
+        except Exception:
+            pass
+
+    items = [{"value": key, "label": bodies[key]} for key in sorted(bodies.keys())]
+
+    now = int(time.time())
+    if not isinstance(cache, dict):
+        cache = {}
+    cache["bodies"] = {"updated_at": now, "items": items}
+    _save_catalog_cache(cache)
+    return {"items": items, "cached": False, "updated_at": now}
+
+
 @app.get("/api/scoring/presets")
 def get_scoring_presets() -> dict[str, Any]:
     """Return all available scoring presets (built-in + custom) for frontend use."""
@@ -566,6 +714,7 @@ def create_custom_preset(payload: CustomPresetPayload) -> dict[str, Any]:
         "weights": weights,
         "hard_rejects": payload.hard_rejects or [],
         "must_have_equipment": payload.must_have_equipment or [],
+        "excluded_equipment": payload.excluded_equipment or [],
         "created_at": time.time(),
     }
     _save_custom_presets(custom_presets)
@@ -585,6 +734,7 @@ def update_custom_preset(preset_id: str, payload: CustomPresetPayload) -> dict[s
     existing["weights"] = {str(k): float(v) for k, v in (payload.weights or existing.get("weights", {})).items()}
     existing["hard_rejects"] = payload.hard_rejects if payload.hard_rejects is not None else existing.get("hard_rejects", [])
     existing["must_have_equipment"] = payload.must_have_equipment if payload.must_have_equipment is not None else existing.get("must_have_equipment", [])
+    existing["excluded_equipment"] = payload.excluded_equipment if payload.excluded_equipment is not None else existing.get("excluded_equipment", [])
     existing["updated_at"] = time.time()
 
     _save_custom_presets(custom_presets)

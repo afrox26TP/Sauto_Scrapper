@@ -1567,8 +1567,21 @@
       "collector_version": 2
     },
     "ferrari": {
-      "updated_at": 1781364463,
-      "items": [],
+      "updated_at": 1781650287,
+      "items": [
+        {
+          "value": "488",
+          "label": "488"
+        },
+        {
+          "value": "california",
+          "label": "California"
+        },
+        {
+          "value": "f8",
+          "label": "F8"
+        }
+      ],
       "collector_version": 2
     },
     "ds": {
@@ -1585,7 +1598,799 @@
       "updated_at": 1781365153,
       "items": [],
       "collector_version": 2
+    },
+    "chevrolet": {
+      "updated_at": 1781653021,
+      "items": [
+        {
+          "value": "camaro",
+          "label": "Camaro"
+        },
+        {
+          "value": "corvette",
+          "label": "Corvette"
+        }
+      ],
+      "collector_version": 2
     }
   },
-  "catalog_version": 2
+  "catalog_version": 2,
+  "equipment": {
+    "updated_at": 1781650157,
+    "items": [
+      {
+        "value": "2 monitory",
+        "label": "2 monitory"
+      },
+      {
+        "value": "360° monitorovací systém (avm)",
+        "label": "360° monitorovací systém (AVM)"
+      },
+      {
+        "value": "abs",
+        "label": "ABS"
+      },
+      {
+        "value": "adaptivní regulace podvozku",
+        "label": "Adaptivní regulace podvozku"
+      },
+      {
+        "value": "adaptivní tempomat",
+        "label": "Adaptivní tempomat"
+      },
+      {
+        "value": "aktivní asistent řízení",
+        "label": "Aktivní asistent řízení"
+      },
+      {
+        "value": "aktivní kapota",
+        "label": "Aktivní kapota"
+      },
+      {
+        "value": "akustická skla",
+        "label": "Akustická skla"
+      },
+      {
+        "value": "alarm",
+        "label": "Alarm"
+      },
+      {
+        "value": "ambientní led osvětlení interiéru",
+        "label": "Ambientní LED osvětlení interiéru"
+      },
+      {
+        "value": "android auto",
+        "label": "Android Auto"
+      },
+      {
+        "value": "apple car play",
+        "label": "Apple Car Play"
+      },
+      {
+        "value": "asistent pro jízdu v koloně",
+        "label": "Asistent pro jízdu v koloně"
+      },
+      {
+        "value": "asistent pro vedení vozu v jízdních pruzích",
+        "label": "Asistent pro vedení vozu v jízdních pruzích"
+      },
+      {
+        "value": "asistent při jízdě ze svahu",
+        "label": "Asistent při jízdě ze svahu"
+      },
+      {
+        "value": "asistent rozjezdu do kopce",
+        "label": "Asistent rozjezdu do kopce"
+      },
+      {
+        "value": "asistent stability přívěsu (tsa)",
+        "label": "Asistent stability přívěsu (TSA)"
+      },
+      {
+        "value": "asistent změny jízdního pruhu",
+        "label": "Asistent změny jízdního pruhu"
+      },
+      {
+        "value": "automatická uzávěrka diferenciálu",
+        "label": "Automatická uzávěrka diferenciálu"
+      },
+      {
+        "value": "automatické přepínání dálkových světel",
+        "label": "Automatické přepínání dálkových světel"
+      },
+      {
+        "value": "automatické svícení",
+        "label": "Automatické svícení"
+      },
+      {
+        "value": "autorádio",
+        "label": "Autorádio"
+      },
+      {
+        "value": "aux",
+        "label": "AUX"
+      },
+      {
+        "value": "bezdrátová nabíječka mobilních telefonů (qi)",
+        "label": "Bezdrátová nabíječka mobilních telefonů (Qi)"
+      },
+      {
+        "value": "bezklíčkové ovládání",
+        "label": "Bezklíčkové ovládání"
+      },
+      {
+        "value": "bezpečnostní pískování oken",
+        "label": "Bezpečnostní pískování oken"
+      },
+      {
+        "value": "bi-xenony",
+        "label": "Bi-xenony"
+      },
+      {
+        "value": "bluetooth",
+        "label": "Bluetooth"
+      },
+      {
+        "value": "boční nášlapy",
+        "label": "Boční nášlapy"
+      },
+      {
+        "value": "cd měnič",
+        "label": "CD měnič"
+      },
+      {
+        "value": "cd přehrávač",
+        "label": "CD přehrávač"
+      },
+      {
+        "value": "centrální zamykání",
+        "label": "Centrální zamykání"
+      },
+      {
+        "value": "chladnička",
+        "label": "Chladnička"
+      },
+      {
+        "value": "deaktivace airbagu spolujezdce",
+        "label": "Deaktivace airbagu spolujezdce"
+      },
+      {
+        "value": "denní svícení",
+        "label": "Denní svícení"
+      },
+      {
+        "value": "digitální příjem rádia (dab)",
+        "label": "Digitální příjem rádia (DAB)"
+      },
+      {
+        "value": "digitální přístrojová deska",
+        "label": "Digitální přístrojová deska"
+      },
+      {
+        "value": "digitální přístrojový štít",
+        "label": "Digitální přístrojový štít"
+      },
+      {
+        "value": "dojezdové rezervní kolo",
+        "label": "Dojezdové rezervní kolo"
+      },
+      {
+        "value": "dotykové ovládání palubního počítače",
+        "label": "Dotykové ovládání palubního počítače"
+      },
+      {
+        "value": "dvd přehrávač",
+        "label": "DVD přehrávač"
+      },
+      {
+        "value": "dálkové centrální zamykání",
+        "label": "Dálkové centrální zamykání"
+      },
+      {
+        "value": "dělená zadní sedadla",
+        "label": "Dělená zadní sedadla"
+      },
+      {
+        "value": "dřevěné obložení",
+        "label": "Dřevěné obložení"
+      },
+      {
+        "value": "el. nastavitelná zadní sedadla",
+        "label": "El. nastavitelná zadní sedadla"
+      },
+      {
+        "value": "el. ovládaný kufr",
+        "label": "El. ovládaný kufr"
+      },
+      {
+        "value": "el. ovládání oken",
+        "label": "El. ovládání oken"
+      },
+      {
+        "value": "el. ovládání zrcátek",
+        "label": "El. ovládání zrcátek"
+      },
+      {
+        "value": "el. parkovací brzda",
+        "label": "El. parkovací brzda"
+      },
+      {
+        "value": "el. seřiditelná sedadla",
+        "label": "El. seřiditelná sedadla"
+      },
+      {
+        "value": "el. seřiditelné sedadlo řidiče",
+        "label": "El. seřiditelné sedadlo řidiče"
+      },
+      {
+        "value": "el. sklopná zrcátka",
+        "label": "El. sklopná zrcátka"
+      },
+      {
+        "value": "el. startér",
+        "label": "El. startér"
+      },
+      {
+        "value": "elektrické dovírání dveří",
+        "label": "Elektrické dovírání dveří"
+      },
+      {
+        "value": "elektrické dovírání zavazadlového prostoru",
+        "label": "Elektrické dovírání zavazadlového prostoru"
+      },
+      {
+        "value": "elektrické tažné zařízení",
+        "label": "Elektrické tažné zařízení"
+      },
+      {
+        "value": "elektrochromatické vnitřní zpětné zrcátko",
+        "label": "Elektrochromatické vnitřní zpětné zrcátko"
+      },
+      {
+        "value": "elektronická uzávěrka diferenciálu (eds)",
+        "label": "Elektronická uzávěrka diferenciálu (EDS)"
+      },
+      {
+        "value": "esp",
+        "label": "ESP"
+      },
+      {
+        "value": "front assist",
+        "label": "Front Assist"
+      },
+      {
+        "value": "funkce plynulého dovírání dveří",
+        "label": "Funkce plynulého dovírání dveří"
+      },
+      {
+        "value": "head-up display",
+        "label": "Head-up display"
+      },
+      {
+        "value": "hlasové ovládání palubního počítače",
+        "label": "Hlasové ovládání palubního počítače"
+      },
+      {
+        "value": "hlídání mrtvého úhlu",
+        "label": "Hlídání mrtvého úhlu"
+      },
+      {
+        "value": "imobilizér",
+        "label": "Imobilizér"
+      },
+      {
+        "value": "isofix",
+        "label": "Isofix"
+      },
+      {
+        "value": "klimatizovaná přihrádka",
+        "label": "Klimatizovaná přihrádka"
+      },
+      {
+        "value": "kožená sedadla",
+        "label": "Kožená sedadla"
+      },
+      {
+        "value": "kožené potahy",
+        "label": "Kožené potahy"
+      },
+      {
+        "value": "kožené čalounění",
+        "label": "Kožené čalounění"
+      },
+      {
+        "value": "laděný výfuk",
+        "label": "Laděný výfuk"
+      },
+      {
+        "value": "lane assist",
+        "label": "Lane Assist"
+      },
+      {
+        "value": "laserová světla",
+        "label": "Laserová světla"
+      },
+      {
+        "value": "led adaptivní světlomety",
+        "label": "LED adaptivní světlomety"
+      },
+      {
+        "value": "led denní svícení",
+        "label": "LED denní svícení"
+      },
+      {
+        "value": "led matrixové světlomety",
+        "label": "LED matrixové světlomety"
+      },
+      {
+        "value": "led světlomety plnohodnotné",
+        "label": "LED světlomety plnohodnotné"
+      },
+      {
+        "value": "litá kola",
+        "label": "Litá kola"
+      },
+      {
+        "value": "lpg v tp",
+        "label": "LPG v TP"
+      },
+      {
+        "value": "malý kožený paket",
+        "label": "Malý kožený paket"
+      },
+      {
+        "value": "masážní sedadla",
+        "label": "Masážní sedadla"
+      },
+      {
+        "value": "mlhovky",
+        "label": "Mlhovky"
+      },
+      {
+        "value": "mobilní připojení",
+        "label": "Mobilní připojení"
+      },
+      {
+        "value": "multifunkční volant",
+        "label": "Multifunkční volant"
+      },
+      {
+        "value": "multimediální systém bez navigace",
+        "label": "Multimediální systém bez navigace"
+      },
+      {
+        "value": "nastavitelná sedadla",
+        "label": "Nastavitelná sedadla"
+      },
+      {
+        "value": "nastavitelný volant",
+        "label": "Nastavitelný volant"
+      },
+      {
+        "value": "natáčecí světlomety",
+        "label": "Natáčecí světlomety"
+      },
+      {
+        "value": "naviják",
+        "label": "Naviják"
+      },
+      {
+        "value": "nezávislé topení",
+        "label": "Nezávislé topení"
+      },
+      {
+        "value": "nezávislé topení s čas. předehřívačem",
+        "label": "Nezávislé topení s čas. předehřívačem"
+      },
+      {
+        "value": "nouzové brždění",
+        "label": "Nouzové brždění"
+      },
+      {
+        "value": "ochranné rámy",
+        "label": "Ochranné rámy"
+      },
+      {
+        "value": "odvětrávání sedadel",
+        "label": "Odvětrávání sedadel"
+      },
+      {
+        "value": "originální autorádio",
+        "label": "Originální autorádio"
+      },
+      {
+        "value": "ostřikovače světlometů",
+        "label": "Ostřikovače světlometů"
+      },
+      {
+        "value": "otevíratelná střecha",
+        "label": "Otevíratelná střecha"
+      },
+      {
+        "value": "otáčkoměr",
+        "label": "Otáčkoměr"
+      },
+      {
+        "value": "ovládání vybraných funkcí vozu gesty",
+        "label": "Ovládání vybraných funkcí vozu gesty"
+      },
+      {
+        "value": "palubní počítač",
+        "label": "Palubní počítač"
+      },
+      {
+        "value": "paměť nastavení sedadla řidiče",
+        "label": "Paměť nastavení sedadla řidiče"
+      },
+      {
+        "value": "panoramatická střecha",
+        "label": "Panoramatická střecha"
+      },
+      {
+        "value": "parkovací asistent",
+        "label": "Parkovací asistent"
+      },
+      {
+        "value": "parkovací kamera",
+        "label": "Parkovací kamera"
+      },
+      {
+        "value": "parkovací senzory",
+        "label": "Parkovací senzory"
+      },
+      {
+        "value": "parkovací senzory přední",
+        "label": "Parkovací senzory přední"
+      },
+      {
+        "value": "parkovací senzory zadní",
+        "label": "Parkovací senzory zadní"
+      },
+      {
+        "value": "plnohodnotné rezervní kolo",
+        "label": "Plnohodnotné rezervní kolo"
+      },
+      {
+        "value": "podélný posuv sedadel",
+        "label": "Podélný posuv sedadel"
+      },
+      {
+        "value": "posilovač řízení",
+        "label": "Posilovač řízení"
+      },
+      {
+        "value": "premiový audiosystém",
+        "label": "Premiový audiosystém"
+      },
+      {
+        "value": "protiprokluzový systém kol (asr)",
+        "label": "Protiprokluzový systém kol (ASR)"
+      },
+      {
+        "value": "pádla řazení na volantu",
+        "label": "Pádla řazení na volantu"
+      },
+      {
+        "value": "přídavná světla",
+        "label": "Přídavná světla"
+      },
+      {
+        "value": "příplatkový audiosystém",
+        "label": "Příplatkový audiosystém"
+      },
+      {
+        "value": "příprava pro isofix",
+        "label": "Příprava pro isofix"
+      },
+      {
+        "value": "příprava pro telefon",
+        "label": "Příprava pro telefon"
+      },
+      {
+        "value": "přístrojová deska s barevným displejem",
+        "label": "Přístrojová deska s barevným displejem"
+      },
+      {
+        "value": "regulace tuhosti podvozku",
+        "label": "Regulace tuhosti podvozku"
+      },
+      {
+        "value": "regulace výšky podvozku",
+        "label": "Regulace výšky podvozku"
+      },
+      {
+        "value": "rezervní kolo",
+        "label": "Rezervní kolo"
+      },
+      {
+        "value": "roletky na zadní okna",
+        "label": "Roletky na zadní okna"
+      },
+      {
+        "value": "rozpoznávání dopravních značek",
+        "label": "Rozpoznávání dopravních značek"
+      },
+      {
+        "value": "satelitní navigace",
+        "label": "Satelitní navigace"
+      },
+      {
+        "value": "sedadla alcantara",
+        "label": "Sedadla Alcantara"
+      },
+      {
+        "value": "senzor opotřebení brzd. destiček",
+        "label": "Senzor opotřebení brzd. destiček"
+      },
+      {
+        "value": "senzor stěračů",
+        "label": "Senzor stěračů"
+      },
+      {
+        "value": "senzor tlaku v pneumatikách",
+        "label": "Senzor tlaku v pneumatikách"
+      },
+      {
+        "value": "ski box",
+        "label": "Ski box"
+      },
+      {
+        "value": "sledování jízdního pruhu",
+        "label": "Sledování jízdního pruhu"
+      },
+      {
+        "value": "sledování únavy řidiče",
+        "label": "Sledování únavy řidiče"
+      },
+      {
+        "value": "sportovní paket",
+        "label": "Sportovní paket"
+      },
+      {
+        "value": "sportovní podvozek",
+        "label": "Sportovní podvozek"
+      },
+      {
+        "value": "sportovní sedadla",
+        "label": "Sportovní sedadla"
+      },
+      {
+        "value": "start/stop systém",
+        "label": "Start/Stop systém"
+      },
+      {
+        "value": "střešní nosič",
+        "label": "Střešní nosič"
+      },
+      {
+        "value": "střešní okno",
+        "label": "Střešní okno"
+      },
+      {
+        "value": "střešní spoiler",
+        "label": "Střešní spoiler"
+      },
+      {
+        "value": "systém nouzového zastavení",
+        "label": "Systém nouzového zastavení"
+      },
+      {
+        "value": "síťka mezistěny zavazadlového prostoru",
+        "label": "Síťka mezistěny zavazadlového prostoru"
+      },
+      {
+        "value": "tažné zařízení",
+        "label": "Tažné zařízení"
+      },
+      {
+        "value": "telefon",
+        "label": "Telefon"
+      },
+      {
+        "value": "televize",
+        "label": "Televize"
+      },
+      {
+        "value": "tempomat",
+        "label": "Tempomat"
+      },
+      {
+        "value": "tepelné čerpadlo",
+        "label": "Tepelné čerpadlo"
+      },
+      {
+        "value": "tónovaná skla",
+        "label": "Tónovaná skla"
+      },
+      {
+        "value": "třetí řada sedadel",
+        "label": "Třetí řada sedadel"
+      },
+      {
+        "value": "upozornění na přijíždějící vozidla při couvání (rcta)",
+        "label": "Upozornění na přijíždějící vozidla při couvání (RCTA)"
+      },
+      {
+        "value": "usb",
+        "label": "USB"
+      },
+      {
+        "value": "uzávěrka mezinápravového diferenciálu",
+        "label": "Uzávěrka mezinápravového diferenciálu"
+      },
+      {
+        "value": "uzávěrka předního diferenciálu",
+        "label": "Uzávěrka předního diferenciálu"
+      },
+      {
+        "value": "uzávěrka zadního diferenciálu",
+        "label": "Uzávěrka zadního diferenciálu"
+      },
+      {
+        "value": "venkovní teploměr",
+        "label": "Venkovní teploměr"
+      },
+      {
+        "value": "ventilovaná zadní sedadla",
+        "label": "Ventilovaná zadní sedadla"
+      },
+      {
+        "value": "vnitřní teploměr",
+        "label": "Vnitřní teploměr"
+      },
+      {
+        "value": "volba jízdního režimu",
+        "label": "Volba jízdního režimu"
+      },
+      {
+        "value": "vstup paměťové karty",
+        "label": "Vstup paměťové karty"
+      },
+      {
+        "value": "vyhřívaná sedadla",
+        "label": "Vyhřívaná sedadla"
+      },
+      {
+        "value": "vyhřívaná zadní sedadla",
+        "label": "Vyhřívaná zadní sedadla"
+      },
+      {
+        "value": "vyhřívaná zrcátka",
+        "label": "Vyhřívaná zrcátka"
+      },
+      {
+        "value": "vyhřívané trysky ostřikovačů skla",
+        "label": "Vyhřívané trysky ostřikovačů skla"
+      },
+      {
+        "value": "vyhřívané čelní sklo",
+        "label": "Vyhřívané čelní sklo"
+      },
+      {
+        "value": "vyhřívaný volant",
+        "label": "Vyhřívaný volant"
+      },
+      {
+        "value": "vyjímatelná zadní sedadla",
+        "label": "Vyjímatelná zadní sedadla"
+      },
+      {
+        "value": "vzduchové odpružení",
+        "label": "Vzduchové odpružení"
+      },
+      {
+        "value": "výsuvné opěrky hlav",
+        "label": "Výsuvné opěrky hlav"
+      },
+      {
+        "value": "výškově nastavitelná sedadla",
+        "label": "Výškově nastavitelná sedadla"
+      },
+      {
+        "value": "výškově nastavitelné sedadlo řidiče",
+        "label": "Výškově nastavitelné sedadlo řidiče"
+      },
+      {
+        "value": "wifi hotspot",
+        "label": "Wifi hotspot"
+      },
+      {
+        "value": "xenony",
+        "label": "Xenony"
+      },
+      {
+        "value": "zadní loketní opěrka",
+        "label": "Zadní loketní opěrka"
+      },
+      {
+        "value": "zadní stěrač",
+        "label": "Zadní stěrač"
+      },
+      {
+        "value": "zaslepení zámků",
+        "label": "Zaslepení zámků"
+      },
+      {
+        "value": "zatmavená zadní skla",
+        "label": "Zatmavená zadní skla"
+      },
+      {
+        "value": "zámek řadící páky",
+        "label": "Zámek řadící páky"
+      },
+      {
+        "value": "záruka",
+        "label": "Záruka"
+      },
+      {
+        "value": "zásuvka na 220 v",
+        "label": "Zásuvka na 220 V"
+      },
+      {
+        "value": "závěsné zařízení v tp",
+        "label": "Závěsné zařízení v TP"
+      },
+      {
+        "value": "šnorchl",
+        "label": "Šnorchl"
+      }
+    ]
+  },
+  "bodies": {
+    "updated_at": 1781650159,
+    "items": [
+      {
+        "value": "cuv",
+        "label": "Cuv"
+      },
+      {
+        "value": "hatchback",
+        "label": "Hatchback"
+      },
+      {
+        "value": "kabriolet",
+        "label": "Kabriolet"
+      },
+      {
+        "value": "kombi",
+        "label": "Kombi"
+      },
+      {
+        "value": "kupe",
+        "label": "Kupe"
+      },
+      {
+        "value": "liftback",
+        "label": "Liftback"
+      },
+      {
+        "value": "mpv",
+        "label": "Mpv"
+      },
+      {
+        "value": "pick-up",
+        "label": "Pick-up"
+      },
+      {
+        "value": "roadster",
+        "label": "Roadster"
+      },
+      {
+        "value": "sedanlimuzina",
+        "label": "Sedanlimuzina"
+      },
+      {
+        "value": "suv",
+        "label": "Suv"
+      },
+      {
+        "value": "terenni",
+        "label": "Terenni"
+      },
+      {
+        "value": "van",
+        "label": "Van"
+      }
+    ]
+  }
 }
