@@ -1,9 +1,12 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 /**
  * Custom range slider with animated track fill, value tooltip and pip support.
  * Uses local state during drag to avoid parent re-renders on every mousemove.
  * Commits the final value via onChange only on mouseup / touchend.
+ *
+ * Uses refs for onChange/formatValue callbacks so input handlers stay stable
+ * even when parent creates new function identities on every render.
  *
  * @param {number} value - controlled value (from parent)
  * @param {(val: number) => void} onChange - called with final numeric value
@@ -32,6 +35,14 @@ export default function CustomSlider({
 }) {
   const inputRef = useRef(null);
   const isDragging = useRef(false);
+  const onChangeRef = useRef(onChange);
+  const formatValueRef = useRef(formatValue);
+
+  // Always keep refs in sync with latest props (no re-render needed)
+  useEffect(() => {
+    onChangeRef.current = onChange;
+    formatValueRef.current = formatValue;
+  });
 
   // local value that updates instantly during drag
   const [localValue, setLocalValue] = useState(() => {
@@ -54,16 +65,16 @@ export default function CustomSlider({
       ? ((localValue - safeMin) / (safeMax - safeMin)) * 100
       : 0;
 
-  const displayText = formatValue
-    ? formatValue(localValue)
-    : localValue.toLocaleString("cs-CZ");
+  // Memoize display text so it doesn't recreate formatValue call on every render
+  const displayText = useMemo(() => {
+    const fmt = formatValueRef.current;
+    return fmt ? fmt(localValue) : localValue.toLocaleString("cs-CZ");
+  }, [localValue]);
 
-  const commit = useCallback(
-    (val) => {
-      onChange(Number(val));
-    },
-    [onChange],
-  );
+  // commit reads latest onChange from ref – stable identity forever
+  const commit = useCallback((val) => {
+    onChangeRef.current(Number(val));
+  }, []);
 
   const handleInput = useCallback((e) => {
     setLocalValue(Number(e.target.value));

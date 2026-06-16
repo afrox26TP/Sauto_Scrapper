@@ -1,11 +1,7 @@
 {
   "brands": {
-    "updated_at": 1781465403,
+    "updated_at": 1781637308,
     "items": [
-      {
-        "value": "abarth",
-        "label": "Abarth"
-      },
       {
         "value": "alfa-romeo",
         "label": "Alfa Romeo"
@@ -29,6 +25,14 @@
       {
         "value": "byd",
         "label": "BYD"
+      },
+      {
+        "value": "cadillac",
+        "label": "Cadillac"
+      },
+      {
+        "value": "chery",
+        "label": "Chery"
       },
       {
         "value": "chevrolet",
@@ -55,6 +59,18 @@
         "label": "Dodge"
       },
       {
+        "value": "dr",
+        "label": "DR"
+      },
+      {
+        "value": "ds",
+        "label": "DS"
+      },
+      {
+        "value": "ferrari",
+        "label": "Ferrari"
+      },
+      {
         "value": "fiat",
         "label": "Fiat"
       },
@@ -63,16 +79,20 @@
         "label": "Ford"
       },
       {
+        "value": "gmc",
+        "label": "GMC"
+      },
+      {
         "value": "honda",
         "label": "Honda"
       },
       {
-        "value": "hyundai",
-        "label": "Hyundai"
+        "value": "hummer",
+        "label": "Hummer"
       },
       {
-        "value": "infiniti",
-        "label": "Infiniti"
+        "value": "hyundai",
+        "label": "Hyundai"
       },
       {
         "value": "jaecoo",
@@ -87,32 +107,40 @@
         "label": "Jeep"
       },
       {
+        "value": "kgm",
+        "label": "KGM"
+      },
+      {
         "value": "kia",
         "label": "Kia"
       },
       {
-        "value": "lada",
-        "label": "Lada"
+        "value": "lancia",
+        "label": "Lancia"
       },
       {
         "value": "land-rover",
         "label": "Land Rover"
       },
       {
+        "value": "leapmotor",
+        "label": "Leapmotor"
+      },
+      {
         "value": "lexus",
         "label": "Lexus"
       },
       {
-        "value": "maserati",
-        "label": "Maserati"
+        "value": "lincoln",
+        "label": "Lincoln"
+      },
+      {
+        "value": "lynk-co",
+        "label": "Lynk & Co"
       },
       {
         "value": "mazda",
         "label": "Mazda"
-      },
-      {
-        "value": "mclaren",
-        "label": "McLaren"
       },
       {
         "value": "mercedes-benz",
@@ -163,6 +191,10 @@
         "label": "Renault"
       },
       {
+        "value": "saab",
+        "label": "Saab"
+      },
+      {
         "value": "seat",
         "label": "Seat"
       },
@@ -189,10 +221,6 @@
       {
         "value": "swm",
         "label": "SWM"
-      },
-      {
-        "value": "tatra",
-        "label": "Tatra"
       },
       {
         "value": "tesla",

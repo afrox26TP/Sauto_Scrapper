@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import {
   ArrowLeft,
   ChevronDown,
@@ -290,9 +290,104 @@ function uniq(arr) {
   return Array.from(new Set(arr));
 }
 
-function Field({ def, value, onChange }) {
+// ── Memoized results table – renders only when its data props change ──
+const ResultsTable = memo(function ResultsTable({
+  visibleItems,
+  scoreCache,
+  selectedIds,
+  markedIds,
+  toggleSelected,
+  markSelected,
+  toggleSelectVisible,
+  allVisibleSelected,
+  getCachedScore,
+  toggleSort,
+  sortIndicator,
+  resultKey,
+}) {
+  if (visibleItems.length === 0) {
+    return <p className="empty">Žádné výsledky — spusť scraper a obnov.</p>;
+  }
+
+  return (
+    <table>
+      <thead>
+        <tr>
+          <th className="cell-check"><CustomCheckbox checked={allVisibleSelected} onChange={toggleSelectVisible} size="sm" /></th>
+          <th className="cell-mark"></th>
+          <th className="sortable-th" onClick={() => toggleSort("score")}>Skóre <span>{sortIndicator("score")}</span></th>
+          <th className="sortable-th" onClick={() => toggleSort("name")}>Název <span>{sortIndicator("name")}</span></th>
+          <th className="sortable-th" onClick={() => toggleSort("price")}>Cena (Kč) <span>{sortIndicator("price")}</span></th>
+          <th className="sortable-th" onClick={() => toggleSort("power_kw")}>kW <span>{sortIndicator("power_kw")}</span></th>
+          <th className="sortable-th" onClick={() => toggleSort("tachometer")}>Km <span>{sortIndicator("tachometer")}</span></th>
+          <th className="sortable-th" onClick={() => toggleSort("drive_type")}>Pohon <span>{sortIndicator("drive_type")}</span></th>
+          <th className="sortable-th" onClick={() => toggleSort("gearbox_type")}>Převod. <span>{sortIndicator("gearbox_type")}</span></th>
+          <th className="sortable-th" onClick={() => toggleSort("price_per_kw")}>Kč/kW <span>{sortIndicator("price_per_kw")}</span></th>
+          <th className="sortable-th" onClick={() => toggleSort("price_per_km")}>Kč/km <span>{sortIndicator("price_per_km")}</span></th>
+          <th className="sortable-th" onClick={() => toggleSort("km_per_year")}>Km/rok <span>{sortIndicator("km_per_year")}</span></th>
+          <th className="sortable-th" onClick={() => toggleSort("annual_total_cost")}>Náklady/rok <span>{sortIndicator("annual_total_cost")}</span></th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {visibleItems.map((item, i) => {
+          const key = resultKey(item);
+          const selected = selectedIds.includes(key);
+          const marked = markedIds.includes(String(item.ad_id));
+          const cachedScore = getCachedScore(item);
+          const scoreClass = cachedScore >= 80 ? "score-hi" : cachedScore >= 50 ? "score-mid" : "score-lo";
+          const rowClass = `${selected ? "row-selected" : ""}${marked ? " row-marked" : ""} ${cachedScore >= 80 ? "row-score-hi" : cachedScore >= 50 ? "row-score-mid" : "row-score-lo"}`;
+          return (
+          <tr key={item.ad_id || i} className={rowClass}>
+            <td className="cell-check">
+              <CustomCheckbox checked={selected} onChange={() => toggleSelected(key)} size="sm" />
+            </td>
+            <td className="cell-mark">
+              <button className={`mark-chip${marked ? " marked" : ""}`} onClick={() => markSelected(marked ? false : true)} disabled={!selected && !marked} title={marked ? "Odznačit" : "Označit"}>
+                <Star className="ui-icon" aria-hidden="true" />
+              </button>
+            </td>
+            <td>
+              <span className={`score ${scoreClass}`}>
+                {cachedScore}
+              </span>
+            </td>
+            <td className="name-cell">{item.name || "—"}</td>
+            <td>{item._fmt_price ?? "—"}</td>
+            <td>{item.power_kw ?? "—"}</td>
+            <td>{item._fmt_tacho ?? "—"}</td>
+            <td>{item.drive_type || "—"}</td>
+            <td>{item.gearbox_type || "—"}</td>
+            <td>{item._fmt_ppkw ?? "—"}</td>
+            <td>{item._fmt_ppkm ?? "—"}</td>
+            <td>{item._fmt_kpy ?? "—"}</td>
+            <td>{item._fmt_atc ?? "—"}</td>
+            <td>
+              {item.url
+                ? <a href={item.url} target="_blank" rel="noreferrer" className="link">↗</a>
+                : "—"}
+            </td>
+          </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+});
+
+const Field = memo(function Field({ def, value, onChange }) {
   const { key, type, label, min, max, step, options, fmt } = def;
   const raw = value ?? "";
+
+  const formatValue = useMemo(() => {
+    if (!fmt) return undefined;
+    return (v) => fmtVal(v, fmt);
+  }, [fmt]);
+
+  const handleSliderChange = useCallback(
+    (val) => onChange(key, String(val)),
+    [onChange, key],
+  );
 
   if (type === "slider") {
     const num = parseFloat(raw);
@@ -304,8 +399,8 @@ function Field({ def, value, onChange }) {
         min={min}
         max={max}
         step={step}
-        formatValue={(v) => fmtVal(v, fmt)}
-        onChange={(val) => onChange(key, String(val))}
+        formatValue={formatValue}
+        onChange={handleSliderChange}
       />
     );
   }
@@ -352,7 +447,7 @@ function Field({ def, value, onChange }) {
       <input type="text" value={raw} onChange={(e) => onChange(key, e.target.value)} />
     </div>
   );
-}
+});
 
 export default function App() {
   const [params, setParams] = useState({});
@@ -962,9 +1057,9 @@ export default function App() {
     toastTimer.current = setTimeout(() => { setToastMsg(""); setToastType(""); }, 3000);
   }
 
-  function setParam(key, val) {
+  const setParam = useCallback((key, val) => {
     setParams((prev) => ({ ...prev, [key]: val }));
-  }
+  }, []);
 
   async function save() {
     setLoading(true);
@@ -1215,7 +1310,28 @@ export default function App() {
   // Extra params from params.json that aren't in PARAM_GROUPS (e.g. discord webhook)
   const extraKeys = Object.keys(params).filter((k) => !IGNORED_KEYS.has(k));
   const visibleItems = useMemo(() => {
-    const list = [...items];
+    // Format numbers once for all items (avoids .toLocaleString() in every cell)
+    const fmt = (v, style) => {
+      if (v == null || !Number.isFinite(v)) return null;
+      if (style === "price") return v.toLocaleString("cs-CZ");
+      if (style === "tacho") return v.toLocaleString("cs-CZ");
+      if (style === "ppkw") return v.toLocaleString("cs-CZ", { maximumFractionDigits: 2 });
+      if (style === "ppkm") return v.toLocaleString("cs-CZ", { maximumFractionDigits: 4 });
+      if (style === "kpy") return v.toLocaleString("cs-CZ");
+      if (style === "atc") return v.toLocaleString("cs-CZ");
+      return v;
+    };
+
+    const list = items.map((item) => ({
+      ...item,
+      _fmt_price: fmt(item.price, "price"),
+      _fmt_tacho: fmt(item.tachometer, "tacho"),
+      _fmt_ppkw: fmt(item.price_per_kw, "ppkw"),
+      _fmt_ppkm: fmt(item.price_per_km, "ppkm"),
+      _fmt_kpy: fmt(item.km_per_year, "kpy"),
+      _fmt_atc: fmt(item.annual_total_cost, "atc"),
+    }));
+
     if (!sortConfig.key) return list;
 
     list.sort((a, b) => {
@@ -1240,6 +1356,23 @@ export default function App() {
 
     return list;
   }, [items, sortConfig, selectedPreset, scoringPresets]);
+
+  // Precompute scores for all visible items once (avoids 2× calculation per row)
+  const scoreCache = useMemo(() => {
+    const cache = new Map();
+    const preset = scoringPresets[selectedPreset];
+    if (!preset) return cache;
+    for (const item of visibleItems) {
+      const key = resultKey(item);
+      cache.set(key, getItemScore(item, preset));
+    }
+    return cache;
+  }, [visibleItems, selectedPreset, scoringPresets]);
+
+  function getCachedScore(item) {
+    return scoreCache.get(resultKey(item)) ?? 0;
+  }
+
   const allVisibleSelected = visibleItems.length > 0 && visibleItems.every((item) => selectedIds.includes(resultKey(item)));
 
   return (
@@ -1595,76 +1728,20 @@ export default function App() {
           </div>}
 
           <div className="table-wrap">
-            {items.length === 0 ? (
-              <p className="empty">Žádné výsledky — spusť scraper a obnov.</p>
-            ) : (
-              <table>
-                <thead>
-                  <tr>
-                    <th className="cell-check"><CustomCheckbox checked={allVisibleSelected} onChange={toggleSelectVisible} size="sm" /></th>
-                    <th className="cell-mark"></th>
-                    <th className="sortable-th" onClick={() => toggleSort("score")}>Skóre <span>{sortIndicator("score")}</span></th>
-                    <th className="sortable-th" onClick={() => toggleSort("name")}>Název <span>{sortIndicator("name")}</span></th>
-                    <th className="sortable-th" onClick={() => toggleSort("price")}>Cena (Kč) <span>{sortIndicator("price")}</span></th>
-                    <th className="sortable-th" onClick={() => toggleSort("power_kw")}>kW <span>{sortIndicator("power_kw")}</span></th>
-                    <th className="sortable-th" onClick={() => toggleSort("tachometer")}>Km <span>{sortIndicator("tachometer")}</span></th>
-                    <th className="sortable-th" onClick={() => toggleSort("drive_type")}>Pohon <span>{sortIndicator("drive_type")}</span></th>
-                    <th className="sortable-th" onClick={() => toggleSort("gearbox_type")}>Převod. <span>{sortIndicator("gearbox_type")}</span></th>
-                    <th className="sortable-th" onClick={() => toggleSort("price_per_kw")}>Kč/kW <span>{sortIndicator("price_per_kw")}</span></th>
-                    <th className="sortable-th" onClick={() => toggleSort("price_per_km")}>Kč/km <span>{sortIndicator("price_per_km")}</span></th>
-                    <th className="sortable-th" onClick={() => toggleSort("km_per_year")}>Km/rok <span>{sortIndicator("km_per_year")}</span></th>
-                    <th className="sortable-th" onClick={() => toggleSort("annual_total_cost")}>Náklady/rok <span>{sortIndicator("annual_total_cost")}</span></th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visibleItems.map((item, i) => {
-                    const key = resultKey(item);
-                    const selected = selectedIds.includes(key);
-                    const marked = markedIds.includes(String(item.ad_id));
-                    return (
-                    <tr key={item.ad_id || i} className={`${selected ? "row-selected" : ""}${marked ? " row-marked" : ""} ${(() => { const s = getItemScore(item, scoringPresets[selectedPreset]); return s >= 80 ? "row-score-hi" : s >= 50 ? "row-score-mid" : "row-score-lo"; })()}`}>
-                      <td className="cell-check">
-                        <CustomCheckbox checked={selected} onChange={() => toggleSelected(key)} size="sm" />
-                      </td>
-                      <td className="cell-mark">
-                        <button className={`mark-chip${marked ? " marked" : ""}`} onClick={() => markSelected(marked ? false : true)} disabled={!selected && !marked} title={marked ? "Odznačit" : "Označit"}>
-                          <Star className="ui-icon" aria-hidden="true" />
-                        </button>
-                      </td>
-                      <td>
-                        {(() => {
-                          const preset = scoringPresets[selectedPreset];
-                          const calculatedScore = getItemScore(item, preset);
-                          const scoreClass = calculatedScore >= 80 ? "score-hi" : calculatedScore >= 50 ? "score-mid" : "score-lo";
-                          return (
-                            <span className={`score ${scoreClass}`}>
-                              {calculatedScore}
-                            </span>
-                          );
-                        })()}
-                      </td>
-                      <td className="name-cell">{item.name || "—"}</td>
-                      <td>{item.price ? item.price.toLocaleString("cs-CZ") : "—"}</td>
-                      <td>{item.power_kw ?? "—"}</td>
-                      <td>{item.tachometer ? item.tachometer.toLocaleString("cs-CZ") : "—"}</td>
-                      <td>{item.drive_type || "—"}</td>
-                      <td>{item.gearbox_type || "—"}</td>
-                      <td>{Number.isFinite(item.price_per_kw) ? item.price_per_kw.toLocaleString("cs-CZ", { maximumFractionDigits: 2 }) : "—"}</td>
-                      <td>{Number.isFinite(item.price_per_km) ? item.price_per_km.toLocaleString("cs-CZ", { maximumFractionDigits: 4 }) : "—"}</td>
-                      <td>{Number.isFinite(item.km_per_year) ? item.km_per_year.toLocaleString("cs-CZ") : "—"}</td>
-                      <td>{item.annual_total_cost ? item.annual_total_cost.toLocaleString("cs-CZ") : "—"}</td>
-                      <td>
-                        {item.url
-                          ? <a href={item.url} target="_blank" rel="noreferrer" className="link">↗</a>
-                          : "—"}
-                      </td>
-                    </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
+            <ResultsTable
+              visibleItems={visibleItems}
+              scoreCache={scoreCache}
+              selectedIds={selectedIds}
+              markedIds={markedIds}
+              toggleSelected={toggleSelected}
+              markSelected={markSelected}
+              toggleSelectVisible={toggleSelectVisible}
+              allVisibleSelected={allVisibleSelected}
+              getCachedScore={getCachedScore}
+              toggleSort={toggleSort}
+              sortIndicator={sortIndicator}
+              resultKey={resultKey}
+            />
           </div>
         </div>
       </div>
@@ -1747,15 +1824,15 @@ export default function App() {
                 {ALL_WEIGHT_KEYS.map(({ key, label }) => (
                   <div key={key} className="preset-weight-row">
                     <label>{label}</label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="2.5"
-                      step="0.05"
+                    <CustomSlider
                       value={presetForm.weights[key] ?? 1}
-                      onChange={(e) => setPresetWeight(key, e.target.value)}
+                      min={0}
+                      max={2.5}
+                      step={0.05}
+                      size="sm"
+                      formatValue={(v) => v.toFixed(2)}
+                      onChange={(val) => setPresetWeight(key, val)}
                     />
-                    <span className="preset-weight-val">{(presetForm.weights[key] ?? 1).toFixed(2)}</span>
                   </div>
                 ))}
               </div>
