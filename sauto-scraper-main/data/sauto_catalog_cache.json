@@ -1,10 +1,14 @@
 {
   "brands": {
-    "updated_at": 1781637308,
+    "updated_at": 1781724054,
     "items": [
       {
         "value": "alfa-romeo",
         "label": "Alfa Romeo"
+      },
+      {
+        "value": "alpina",
+        "label": "Alpina"
       },
       {
         "value": "audi",
@@ -55,20 +59,20 @@
         "label": "Dacia"
       },
       {
+        "value": "daewoo",
+        "label": "Daewoo"
+      },
+      {
+        "value": "daihatsu",
+        "label": "Daihatsu"
+      },
+      {
         "value": "dodge",
         "label": "Dodge"
       },
       {
-        "value": "dr",
-        "label": "DR"
-      },
-      {
-        "value": "ds",
-        "label": "DS"
-      },
-      {
-        "value": "ferrari",
-        "label": "Ferrari"
+        "value": "dongfeng",
+        "label": "Dongfeng"
       },
       {
         "value": "fiat",
@@ -79,16 +83,12 @@
         "label": "Ford"
       },
       {
-        "value": "gmc",
-        "label": "GMC"
+        "value": "genesis",
+        "label": "Genesis"
       },
       {
         "value": "honda",
         "label": "Honda"
-      },
-      {
-        "value": "hummer",
-        "label": "Hummer"
       },
       {
         "value": "hyundai",
@@ -115,8 +115,12 @@
         "label": "Kia"
       },
       {
-        "value": "lancia",
-        "label": "Lancia"
+        "value": "lada",
+        "label": "Lada"
+      },
+      {
+        "value": "lamborghini",
+        "label": "Lamborghini"
       },
       {
         "value": "land-rover",
@@ -133,10 +137,6 @@
       {
         "value": "lincoln",
         "label": "Lincoln"
-      },
-      {
-        "value": "lynk-co",
-        "label": "Lynk & Co"
       },
       {
         "value": "mazda",
@@ -237,30 +237,21 @@
       {
         "value": "volvo",
         "label": "Volvo"
+      },
+      {
+        "value": "xpeng",
+        "label": "XPENG"
+      },
+      {
+        "value": "zeekr",
+        "label": "Zeekr"
       }
     ]
   },
   "models": {
     "alfa-romeo": {
-      "updated_at": 1781363323,
-      "items": [
-        {
-          "value": "159",
-          "label": "159"
-        },
-        {
-          "value": "giulia",
-          "label": "Giulia"
-        },
-        {
-          "value": "spider",
-          "label": "Spider"
-        },
-        {
-          "value": "stelvio",
-          "label": "Stelvio"
-        }
-      ],
+      "updated_at": 1781731065,
+      "items": [],
       "collector_version": 2
     },
     "bentley": {
@@ -1127,12 +1118,8 @@
       "collector_version": 2
     },
     "audi": {
-      "updated_at": 1781365066,
+      "updated_at": 1781731070,
       "items": [
-        {
-          "value": "a1",
-          "label": "A1"
-        },
         {
           "value": "a3",
           "label": "A3"
@@ -1142,44 +1129,60 @@
           "label": "A4"
         },
         {
-          "value": "a5",
-          "label": "A5"
-        },
-        {
           "value": "a6",
           "label": "A6"
         },
         {
-          "value": "a6-allroad",
-          "label": "A6 allroad"
+          "value": "a6-avant",
+          "label": "A6 Avant"
         },
         {
           "value": "a7",
           "label": "A7"
         },
         {
+          "value": "a8",
+          "label": "A8"
+        },
+        {
+          "value": "e-tron",
+          "label": "e-tron"
+        },
+        {
+          "value": "ostatni",
+          "label": "Ostatní"
+        },
+        {
+          "value": "q2",
+          "label": "Q2"
+        },
+        {
           "value": "q3",
           "label": "Q3"
         },
         {
-          "value": "q5",
-          "label": "Q5"
+          "value": "q4-e-tron",
+          "label": "Q4 e-tron"
         },
         {
           "value": "q7",
           "label": "Q7"
         },
         {
-          "value": "s3",
-          "label": "S3"
+          "value": "q8",
+          "label": "Q8"
+        },
+        {
+          "value": "q8-e-tron",
+          "label": "Q8 e-tron"
+        },
+        {
+          "value": "rs3",
+          "label": "RS3"
         },
         {
           "value": "s4",
           "label": "S4"
-        },
-        {
-          "value": "s5",
-          "label": "S5"
         },
         {
           "value": "s6",
@@ -1190,8 +1193,8 @@
           "label": "S7"
         },
         {
-          "value": "tt",
-          "label": "TT"
+          "value": "sq8",
+          "label": "SQ8"
         }
       ],
       "collector_version": 2
@@ -1490,8 +1493,28 @@
       "collector_version": 2
     },
     "bmw": {
-      "updated_at": 1781365164,
+      "updated_at": 1781731398,
       "items": [
+        {
+          "value": "i3",
+          "label": "i3"
+        },
+        {
+          "value": "m2",
+          "label": "M2"
+        },
+        {
+          "value": "m3",
+          "label": "M3"
+        },
+        {
+          "value": "m4",
+          "label": "M4"
+        },
+        {
+          "value": "m5",
+          "label": "M5"
+        },
         {
           "value": "rada-1",
           "label": "Řada 1"
@@ -1503,6 +1526,10 @@
         {
           "value": "rada-3",
           "label": "Řada 3"
+        },
+        {
+          "value": "rada-4",
+          "label": "Řada 4"
         },
         {
           "value": "rada-5",
@@ -1519,10 +1546,6 @@
         {
           "value": "x1",
           "label": "X1"
-        },
-        {
-          "value": "x2",
-          "label": "X2"
         },
         {
           "value": "x3",
@@ -1562,7 +1585,7 @@
       "collector_version": 2
     },
     "cadillac": {
-      "updated_at": 1781214977,
+      "updated_at": 1781732019,
       "items": [],
       "collector_version": 2
     },
@@ -1590,12 +1613,12 @@
       "collector_version": 2
     },
     "baic": {
-      "updated_at": 1781365063,
+      "updated_at": 1781731257,
       "items": [],
       "collector_version": 2
     },
     "alpina": {
-      "updated_at": 1781365153,
+      "updated_at": 1781731393,
       "items": [],
       "collector_version": 2
     },
@@ -1609,6 +1632,52 @@
         {
           "value": "corvette",
           "label": "Corvette"
+        }
+      ],
+      "collector_version": 2
+    },
+    "citroen": {
+      "updated_at": 1781732452,
+      "items": [
+        {
+          "value": "berlingo",
+          "label": "Berlingo"
+        },
+        {
+          "value": "c-elysee",
+          "label": "C-Elysée"
+        },
+        {
+          "value": "c3-picasso",
+          "label": "C3 Picasso"
+        },
+        {
+          "value": "c4",
+          "label": "C4"
+        },
+        {
+          "value": "c4-picasso",
+          "label": "C4 Picasso"
+        },
+        {
+          "value": "c4-spacetourer",
+          "label": "C4 SpaceTourer"
+        },
+        {
+          "value": "c5-aircross",
+          "label": "C5 Aircross"
+        },
+        {
+          "value": "c8",
+          "label": "C8"
+        },
+        {
+          "value": "ds3",
+          "label": "DS3"
+        },
+        {
+          "value": "grand-c4-picasso",
+          "label": "Grand C4 Picasso"
         }
       ],
       "collector_version": 2
