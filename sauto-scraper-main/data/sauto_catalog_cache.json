@@ -1,7 +1,15 @@
 {
   "brands": {
-    "updated_at": 1781724054,
+    "updated_at": 1781810657,
     "items": [
+      {
+        "value": "abarth",
+        "label": "Abarth"
+      },
+      {
+        "value": "aixam",
+        "label": "Aixam"
+      },
       {
         "value": "alfa-romeo",
         "label": "Alfa Romeo"
@@ -13,14 +21,6 @@
       {
         "value": "audi",
         "label": "Audi"
-      },
-      {
-        "value": "baic",
-        "label": "BAIC"
-      },
-      {
-        "value": "bentley",
-        "label": "Bentley"
       },
       {
         "value": "bmw",
@@ -59,24 +59,24 @@
         "label": "Dacia"
       },
       {
-        "value": "daewoo",
-        "label": "Daewoo"
-      },
-      {
-        "value": "daihatsu",
-        "label": "Daihatsu"
-      },
-      {
         "value": "dodge",
         "label": "Dodge"
       },
       {
-        "value": "dongfeng",
-        "label": "Dongfeng"
+        "value": "ds",
+        "label": "DS"
+      },
+      {
+        "value": "ferrari",
+        "label": "Ferrari"
       },
       {
         "value": "fiat",
         "label": "Fiat"
+      },
+      {
+        "value": "fisker",
+        "label": "Fisker"
       },
       {
         "value": "ford",
@@ -87,12 +87,32 @@
         "label": "Genesis"
       },
       {
+        "value": "gmc",
+        "label": "GMC"
+      },
+      {
         "value": "honda",
         "label": "Honda"
       },
       {
+        "value": "hummer",
+        "label": "Hummer"
+      },
+      {
         "value": "hyundai",
         "label": "Hyundai"
+      },
+      {
+        "value": "ineos",
+        "label": "Ineos"
+      },
+      {
+        "value": "infiniti",
+        "label": "Infiniti"
+      },
+      {
+        "value": "isuzu",
+        "label": "Isuzu"
       },
       {
         "value": "jaecoo",
@@ -107,10 +127,6 @@
         "label": "Jeep"
       },
       {
-        "value": "kgm",
-        "label": "KGM"
-      },
-      {
         "value": "kia",
         "label": "Kia"
       },
@@ -119,8 +135,8 @@
         "label": "Lada"
       },
       {
-        "value": "lamborghini",
-        "label": "Lamborghini"
+        "value": "lancia",
+        "label": "Lancia"
       },
       {
         "value": "land-rover",
@@ -135,8 +151,16 @@
         "label": "Lexus"
       },
       {
+        "value": "ligier",
+        "label": "Ligier"
+      },
+      {
         "value": "lincoln",
         "label": "Lincoln"
+      },
+      {
+        "value": "maserati",
+        "label": "Maserati"
       },
       {
         "value": "mazda",
@@ -163,20 +187,12 @@
         "label": "Nissan"
       },
       {
-        "value": "omoda",
-        "label": "Omoda"
-      },
-      {
         "value": "opel",
         "label": "Opel"
       },
       {
         "value": "peugeot",
         "label": "Peugeot"
-      },
-      {
-        "value": "polestar",
-        "label": "Polestar"
       },
       {
         "value": "porsche",
@@ -189,10 +205,6 @@
       {
         "value": "renault",
         "label": "Renault"
-      },
-      {
-        "value": "saab",
-        "label": "Saab"
       },
       {
         "value": "seat",
@@ -219,16 +231,16 @@
         "label": "Suzuki"
       },
       {
-        "value": "swm",
-        "label": "SWM"
-      },
-      {
         "value": "tesla",
         "label": "Tesla"
       },
       {
         "value": "toyota",
         "label": "Toyota"
+      },
+      {
+        "value": "uaz",
+        "label": "UAZ"
       },
       {
         "value": "volkswagen",
@@ -241,10 +253,6 @@
       {
         "value": "xpeng",
         "label": "XPENG"
-      },
-      {
-        "value": "zeekr",
-        "label": "Zeekr"
       }
     ]
   },
@@ -1685,7 +1693,7 @@
   },
   "catalog_version": 2,
   "equipment": {
-    "updated_at": 1781650157,
+    "updated_at": 1781799641,
     "items": [
       {
         "value": "2 monitory",
@@ -2406,7 +2414,7 @@
     ]
   },
   "bodies": {
-    "updated_at": 1781650159,
+    "updated_at": 1781799642,
     "items": [
       {
         "value": "cuv",

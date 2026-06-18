@@ -2,18 +2,34 @@
 
 const STORAGE_KEY = "sauto_projects";
 
+export const DEFAULT_PROJECT_CONFIG = {
+  category_id: "838",
+  limit: "100",
+  offset: "0",
+};
+
 function generateId() {
   return "proj_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
 }
 
+export function normalizeProjectConfig(config = {}) {
+  return {
+    ...(config || {}),
+    // Interně zamčené hodnoty pro stabilní stránkování Sauto API.
+    // Zatím je z UI nejde měnit.
+    ...DEFAULT_PROJECT_CONFIG,
+  };
+}
+
 export function createProject(name = "", config = {}) {
+  const normalizedConfig = normalizeProjectConfig(config);
   return {
     id: generateId(),
     name: name || "Nový projekt",
     customName: !!name,
     phase: "config", // config | running | queued | done | error
     queuePosition: 0,
-    config: { ...config },
+    config: normalizedConfig,
     results: [],
     markedIds: [],
     logs: [],
@@ -30,12 +46,18 @@ export function loadProjects() {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    // Reset running/queued projects to config if they were interrupted
+    // Preserve running projects across reloads. The API status poll will decide
+    // whether they are still running or should transition to results. Reset only
+    // queued jobs because the in-memory queue cannot be safely reconstructed.
     return parsed.map((p) => {
-      if (p.phase === "running" || p.phase === "queued") {
-        return { ...p, phase: "config", queuePosition: 0, logs: [...(p.logs || []), "[systém] Stav resetován po obnovení stránky."] };
+      const normalized = { ...p, config: normalizeProjectConfig(p.config) };
+      if (p.phase === "running") {
+        return { ...normalized, queuePosition: 0, logs: [...(p.logs || []), "[systém] Stav běžícího scraperu obnoven po načtení stránky."] };
       }
-      return p;
+      if (p.phase === "queued") {
+        return { ...normalized, phase: "config", queuePosition: 0, logs: [...(p.logs || []), "[systém] Stav resetován po obnovení stránky."] };
+      }
+      return normalized;
     });
   } catch {
     return [];

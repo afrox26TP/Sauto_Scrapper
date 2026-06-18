@@ -1,312 +1,650 @@
 # CODEBUDDY.md — Sauto Scraper AI Context
 
-> **Purpose**: This file gives AI coding assistants a complete mental model of the project so they can start contributing immediately without re-reading every file.
+> **Purpose**: Current, high-signal project context for AI coding assistants. Use this as the starting mental model before changing code.
+>
+> **Last updated**: 2026-06-18
 
 ---
 
 ## Project Overview
 
-**Sauto Scraper** is a full-stack used-car deal finder for the Czech marketplace Sauto.cz. It scrapes listings via the Sauto.cz JSON API, scores each car with a sophisticated evaluation engine, performs market-cohort analysis to flag undervalued cars, and sends Discord notifications for deals.
+**Sauto Scraper** is a full-stack used-car deal finder for the Czech marketplace [Sauto.cz](https://www.sauto.cz). The project combines:
 
-- **Original author**: karlosmatos (GitHub)
-- **This fork**: Extended with web dashboard, scoring engine, market analysis, Discord notifications
-- **Language**: Python 3 (scraper + API) + JavaScript/React (UI)
+- a **Scrapy spider** that reads `params.json`, calls Sauto.cz JSON APIs, fetches listing details, computes raw car metrics, and writes JSON output,
+- a **FastAPI backend** that wraps the spider as a subprocess and exposes REST endpoints for params, results, catalog data, scoring presets, logs, and result management,
+- a **React + Vite frontend** that provides a multi-project dashboard, catalog selectors, quick filters, queued scraper runs, live logs, result management, and client-side scoring.
+
+Project facts:
+
+- **Original author**: `karlosmatos` on GitHub
+- **This fork**: extended with web dashboard, multi-project workflow, frontend scoring, catalog browser, market-metric scaffolding, Discord notifications, and result management
+- **Languages**: Python 3 for scraper/API; JavaScript/React for UI
 - **License**: MIT
 
 ---
 
-## Architecture — 3 Layers
+## Current Architecture — 3 Layers
 
-```
-┌─────────────────────────────────────────────────┐
-│  web-ui/  (React + Vite, port 5173)              │
-│  App.jsx — params panel, scoring, results, logs  │
-└──────────────┬──────────────────────────────────┘
-               │ FETCH (CORS open)
-               ▼
-┌─────────────────────────────────────────────────┐
-│  web-api/app.py  (FastAPI, port 8000)            │
-│  Wraps spider as subprocess, serves REST API     │
-│  Imports CarEvaluator from sauto_spider.py       │
-└──────────────┬──────────────────────────────────┘
-               │ subprocess.Popen
-               ▼
-┌─────────────────────────────────────────────────┐
-│  sauto/  (Scrapy spider)                         │
-│  sauto_spider.py — SautoSpider + CarEvaluator    │
-│  settings.py, middlewares.py, items.py           │
-└─────────────────────────────────────────────────┘
+```text
+┌────────────────────────────────────────────────────────────┐
+│ web-ui/ (React 18 + Vite, dev port 5173)                  │
+│ - App.jsx: shell/layout                                    │
+│ - hooks/useProjects.js: multi-project orchestration         │
+│ - utils/scoring.js: frontend scoring engine                 │
+│ - components/: setup/results/selectors/table/terminal       │
+└──────────────────────────────┬─────────────────────────────┘
+                               │ HTTP fetch, CORS open
+                               ▼
+┌────────────────────────────────────────────────────────────┐
+│ web-api/app.py (FastAPI, port 8000)                       │
+│ - ScraperRunner starts Scrapy as subprocess                 │
+│ - REST API for params/results/catalog/scoring/logs          │
+│ - imports CarEvaluator for built-in preset definitions      │
+└──────────────────────────────┬─────────────────────────────┘
+                               │ subprocess.Popen
+                               ▼
+┌────────────────────────────────────────────────────────────┐
+│ sauto/ (Scrapy project)                                    │
+│ - spiders/sauto_spider.py: SautoSpider + CarEvaluator       │
+│ - settings/middleware/items/pipelines                       │
+└────────────────────────────────────────────────────────────┘
 ```
 
-### Data Flow
+### Runtime Data Flow
 
+```text
+Frontend project config
+  → PUT /api/params writes sauto-scraper-main/params.json
+  → POST /api/run starts Scrapy subprocess
+  → ScraperRunner uses: python -m scrapy crawl sauto -O data/sauto_raw.json
+  → SautoSpider.start_requests() reads params.json
+  → Sauto search API pages: /api/v1/items/search
+  → parse_search(): strict brand/model/seller filters + detail requests
+  → detail API: /api/v1/items/{ad_id}
+  → parse_detail(): CarEvaluator.evaluate() builds raw offer metrics
+  → closed(): sorting, Discord notification, output persistence
+  → spider writes fixed data/sauto_interesting.json
+  → frontend fetches /api/results and applies display score in utils/scoring.js
 ```
-params.json
-  → SautoSpider.start_requests() reads params, builds search URL
-  → parse_search() — iterates search API pages, yields detail requests
-  → parse_detail() — CarEvaluator.evaluate() scores each car
-  → closed() — market context, sort, save, Discord notify
-  → data/sauto_interesting.json (scored results)
-  → data/sauto_raw.json (raw feed export)
-  → notified_ids.json (prevent duplicate Discord pings)
-  → marked_ids.json (user bookmarks from web UI)
-```
+
+Important output caveat: `POST /api/run` accepts and clears an `output_file` for project-specific result paths, but the Scrapy command exports raw feed data to `data/sauto_raw.json` and the spider's `closed()` method writes final sorted offers to fixed `data/sauto_interesting.json`. Unless code is changed to copy/write per-project outputs, `data/*_results.json` project files may only be cleared/tracked, not populated by the spider.
+
+### Important Persisted Files
+
+- `sauto-scraper-main/params.json` — last scraper configuration written by API/frontend. Regular params are strings; `custom_presets` may be a dict.
+- `sauto-scraper-main/data/sauto_raw.json` — Scrapy feed export from `-O`; raw/detail-oriented data.
+- `sauto-scraper-main/data/sauto_interesting.json` — spider-owned sorted offer output.
+- `sauto-scraper-main/data/*_results.json` — frontend project-specific result paths generated by `utils/storage.js`; see output caveat above.
+- `sauto-scraper-main/notified_ids.json` — IDs already announced to Discord.
+- `sauto-scraper-main/marked_ids.json` — globally marked ad IDs used by result UI.
+- `sauto-scraper-main/data/sauto_catalog_cache.json` — cached brands/models/equipment/bodies.
+- Browser `localStorage.sauto_projects` — frontend project list, configs, selected presets, and trimmed cached results/logs.
 
 ---
 
-## Key Files — What Each Does
+## Key Files — Current Responsibilities
 
-### Core Scraper
+### Scraper / Python Core
 
-| File | Lines | Purpose |
-|---|---|---|
-| `sauto/spiders/sauto_spider.py` | 1511 | Main spider + `CarEvaluator` class. All scraping logic and scoring engine. |
-| `sauto/settings.py` | 107 | Scrapy config: 4 concurrent requests, 2s delay, AutoThrottle, retry 3x |
-| `sauto/middlewares.py` | 117 | `RandomUserAgentMiddleware` — rotates UA via `fake-useragent` |
-| `sauto/items.py` | 12 | Placeholder Scrapy Item (unused — spider yields dicts) |
-| `sauto/pipelines.py` | 13 | Placeholder pipeline (unused) |
+| File | Current size | Purpose |
+|---|---:|---|
+| `sauto-scraper-main/sauto/spiders/sauto_spider.py` | 1607 lines | Main Scrapy spider plus `CarEvaluator`. Handles search/detail API calls, strict filtering, metric extraction, cost estimates, sorting, output saving, Discord notifications. |
+| `sauto-scraper-main/sauto/settings.py` | ~107 lines | Scrapy settings: concurrency, delay, AutoThrottle, retry, headers. |
+| `sauto-scraper-main/sauto/middlewares.py` | ~117 lines | `RandomUserAgentMiddleware`; rotates user agents through `fake-useragent`. |
+| `sauto-scraper-main/sauto/items.py` | small | Placeholder Scrapy item definition. Spider yields dictionaries. |
+| `sauto-scraper-main/sauto/pipelines.py` | small | Placeholder pipeline; not central to current behavior. |
+| `sauto-scraper-main/scrapy.cfg` | small | Points Scrapy to `sauto.settings`. |
 
 ### Backend API
 
-| File | Lines | Purpose |
-|---|---|---|
-| `web-api/app.py` | 569 | FastAPI app. `ScraperRunner` class manages spider subprocess. All CRUD for params/results/catalog/scoring. |
+| File | Current size | Purpose |
+|---|---:|---|
+| `sauto-scraper-main/web-api/app.py` | 815 lines | FastAPI backend. Provides REST endpoints, path-safe JSON helpers, catalog cache collection, custom preset CRUD, and `ScraperRunner` subprocess management. |
 
 ### Frontend
 
-| File | Lines | Purpose |
-|---|---|---|
-| `web-ui/src/App.jsx` | 1247 | Single-page React app. Params editor, scoring (client-side), results table, logs modal. |
-| `web-ui/src/App.css` | ~large | All styles (dark/light theme via CSS variables) |
-| `web-ui/src/main.jsx` | ~few | React entry point |
-| `web-ui/vite.config.js` | — | Vite proxy config (if any) |
+| File | Current size | Purpose |
+|---|---:|---|
+| `sauto-scraper-main/web-ui/src/App.jsx` | 321 lines | React shell: theme, top bar, tab bar, active project routing, global terminal/log modal, initial catalog fetches. |
+| `sauto-scraper-main/web-ui/src/hooks/useProjects.js` | 399 lines | Multi-project state machine: localStorage migration/persistence, status/log polling, queueing, start/run/done/error transitions. |
+| `sauto-scraper-main/web-ui/src/utils/api.js` | 116 lines | HTTP wrapper for FastAPI endpoints. `API_BASE = http://localhost:8000`. |
+| `sauto-scraper-main/web-ui/src/utils/scoring.js` | 379 lines | Client-side scoring constants, preset weights, score component calculation, formatting helpers, parameter group definitions. |
+| `sauto-scraper-main/web-ui/src/utils/storage.js` | 126 lines | Project creation, localStorage persistence, auto-name generation. |
+| `sauto-scraper-main/web-ui/src/components/ProjectSetup.jsx` | 288 lines | Project configuration screen: project name, selectors, quick filters, advanced params, run button. |
+| `sauto-scraper-main/web-ui/src/components/ProjectResults.jsx` | 389 lines | Results screen: preset selector, score sorting, export/import, refresh, mark/delete/clear, logs modal. |
+| `sauto-scraper-main/web-ui/src/components/ResultsTable.jsx` | component | Result table rows, cached score rendering, selection/marking UI. |
+| `sauto-scraper-main/web-ui/src/components/BrandSelector.jsx` | component | Brand selector with logos/fallback badges and include/exclude tri-state behavior. |
+| `sauto-scraper-main/web-ui/src/components/ModelSelector.jsx` | component | Model selector scoped by selected brands, with include/exclude behavior. |
+| `sauto-scraper-main/web-ui/src/components/BodySelector.jsx` | component | Body-type selector using cached/local/API body options. |
+| `sauto-scraper-main/web-ui/src/components/EquipmentSelector.jsx` | component | Equipment include/exclude selector. |
+| `sauto-scraper-main/web-ui/src/components/QuickFilterPanel.jsx` | component | Price/year/km/power paired sliders and fuel/gearbox/drive controls. |
+| `sauto-scraper-main/web-ui/src/components/TerminalBar.jsx` | component | Bottom live log ticker/status bar. |
+| `sauto-scraper-main/web-ui/src/components/TabBar.jsx` | component | Multi-project tab UI with phase icons and queue position. |
+| `sauto-scraper-main/web-ui/src/App.css` | 1249 lines | Main styling for app shell, selectors, cards, tables, logs, themes. |
+| `sauto-scraper-main/web-ui/src/components/CustomComponents.css` | CSS | Styling for custom controls. |
+| `sauto-scraper-main/web-ui/package.json` | 20 lines | React 18, Vite 5, lucide-react scripts/deps. |
 
-### Config / Data
+### Other Top-Level / Support Files
 
 | File | Purpose |
 |---|---|
-| `params.json` | Search parameters (all values stored as strings) |
-| `requirements.txt` | scrapy, Twisted, fake-useragent, requests, fastapi, uvicorn |
-| `scrapy.cfg` | Points to `sauto.settings` module |
-| `notified_ids.json` | JSON array of ad IDs already sent to Discord |
-| `data/sauto_catalog_cache.json` | Cached brand/model list from Sauto (24h TTL) |
+| `README.md` | Root quick links and quick start. |
+| `sauto-scraper-main/README.md` | User-facing documentation; may lag behind current code. |
+| `sauto-scraper-main/requirements.txt` | Python deps: Scrapy, Twisted, fake-useragent, requests, FastAPI, Uvicorn. |
+| `vin_decoder/` | Separate VIN decoder helpers (`decoder.py`, `wmi_db.py`), not currently integrated into the examined main scrape flow. |
+| `test_api.py` | API-related test/helper script at repo root. |
 
 ---
 
-## CarEvaluator Class — Scoring Engine Deep Dive
+## Scraper: `SautoSpider` and `CarEvaluator`
 
-Located in `sauto_spider.py` lines 32–1291. This is the heart of the project.
+### `CarEvaluator` Responsibilities
 
-### Class Attributes
+`CarEvaluator` lives inside `sauto_spider.py` and is called by `SautoSpider.parse_detail()`.
+
+It extracts/estimates raw offer data such as:
+
+- price, tachometer, age, power, fuel, body, gearbox, drive,
+- `price_per_kw`, `price_per_km`, `km_per_year`,
+- estimated consumption, annual fuel cost, insurance, maintenance, total annual cost,
+- first-owner/service-book/tuning flags,
+- equipment list and equipment depth,
+- brand tier (`premium`, `budget`, `mainstream`),
+- model keys/cohort keys used for market grouping,
+- listing age, STK timing, Euro emission value, image count.
+
+Regex rule groups still exist:
+
+- `HARD_REJECT_PATTERNS` — parts-only, invalid STK, engine issue, legal issue, total loss.
+- `BONUS_PATTERNS` — service history, garaged, timing service, recent maintenance, clean history, first owner.
+- `PENALTY_PATTERNS` — rust, needed investment, non-functional parts, tuning/chip, suspicious sounds.
+- `EQUIPMENT_BONUS` — cruise, parking assist, connectivity/nav, heated seats, lights.
+
+### Built-In Presets in Python
+
+`CarEvaluator.SCORING_PRESETS` exposes built-in preset metadata to the API route `GET /api/scoring/presets`.
+
+Current built-ins:
+
+- `value` — Cena / výkon
+- `balanced`
+- `sport`
+- `luxury`
+
+Current weight keys include both older and newer scoring dimensions:
+
+```text
+age, mileage, price, consumption, cost, price_power, power,
+equipment, flags, sport, luxury,
+power_weight, sport_badge, premium_equipment, tco
+```
+
+Important: Python stores the preset definitions, but final displayed scoring is currently computed in the frontend.
+
+### `SautoSpider` Flow
+
+#### `__init__`
+
+Initializes:
+
+- notification state from `notified_ids.json`,
+- dedup sets (`seen_ad_ids`),
+- strict include/exclude filters for manufacturers/models/bodies,
+- runtime numeric filters (`year_from/to`, `tachometer_from/to`, `power_from/to`, etc.),
+- runtime options (`top_n`, `min_price`, Discord config, annual km, market thresholds),
+- defaults for market analysis and preferences.
+
+#### `start_requests()`
+
+1. Reads `params.json`.
+2. Calls `_load_runtime_options(params)`.
+3. Calls `_load_strict_filters(params)`.
+4. Calls `_load_custom_preset_filters(params)`.
+5. Builds Sauto-compatible search params through `_build_search_params()`.
+6. Yields first request to `https://www.sauto.cz/api/v1/items/search?...`.
+
+#### Brand/Model Translation
+
+The UI stores:
+
+```text
+manufacturer_seo_name=audi,bmw
+model_seo_name=a3,3
+```
+
+The upstream Sauto search endpoint expects `manufacturer_model_seo` pairs, e.g.:
+
+```text
+audi:a3|bmw:3
+```
+
+`_build_manufacturer_model_seo()` uses cached model maps from `data/sauto_catalog_cache.json` where available. If cache is missing, it falls back to broad pair generation and relies on strict local filtering.
+
+#### `parse_search(response)`
+
+- Parses JSON.
+- Iterates `results`.
+- Applies `_passes_strict_filter()` for include/exclude brand/model and seller type.
+- Deduplicates by ad ID.
+- Adds friendly fields (`manufacturer_name`, `model_name`, `seller_type`, `url`).
+- Yields detail requests for ad IDs.
+- Handles pagination via `limit`, `offset`, and extracted total count.
+
+#### `parse_detail(response)`
+
+- Parses detail JSON.
+- Attaches detail payload to base item.
+- Calls `CarEvaluator.evaluate(base_item, allow_automatic, min_price, target_annual_km)`.
+- Applies `_passes_detail_filters()` for year, tachometer, power, fuel, body, gearbox, drive, required equipment.
+- Appends accepted raw offer metrics to `self.scored_cars`.
+- Adds `offer_metrics` summary to raw feed item.
+- Yields the base item for Scrapy feed export.
+
+#### `closed(reason)`
+
+- Calls `_apply_advanced_sorting(self.scored_cars)`.
+- Takes top `self.top_n` offers for notification marking.
+- Marks `is_new` using `notified_ids.json`.
+- Writes sorted offers with `_save_sorted_offers()` to fixed `data/sauto_interesting.json`.
+- Updates `notified_ids.json` when relevant.
+- Formats and sends Discord notification if webhook is configured.
+
+### Market Context Caveat
+
+`_build_market_context()` still computes medians and model references, but `_market_adjustment_for_offer()` currently returns a disabled stub:
 
 ```python
-HARD_REJECT_PATTERNS  # Regex + reason: engine issues, parts-only, legal, total loss
-BONUS_PATTERNS        # Regex + score + label: service history, garaged, timing belt, etc.
-PENALTY_PATTERNS      # Regex + score + label: rust, needs investment, tuning, sounds
-EQUIPMENT_BONUS       # Regex + score + label: cruise, parking, CarPlay, heated seats, LED
-SCORING_PRESETS       # Dict of 4 presets: value, balanced, sport, luxury
-PREMIUM_BRANDS        # Set: audi, bmw, mercedes-benz, porsche, volvo, etc.
-BUDGET_BRANDS         # Set: dacia, skoda, kia, hyundai, etc.
+return 0, [], {
+    "valuation_label": "disabled",
+    "used_cohort_reference": False,
+    "cohort_size": 0,
+    ...
+}
 ```
 
-### Key Static Methods
+Therefore, current `market_adjustment`, `is_undervalued`, and valuation labels should not be treated as active deal-quality logic unless this method is reimplemented.
 
-| Method | What It Does |
+---
+
+## Backend API: `web-api/app.py`
+
+### Core Constants
+
+- `ROOT_DIR` — `sauto-scraper-main/`
+- `PARAMS_PATH` — `params.json`
+- `DEFAULT_RESULTS_PATH` — `data/sauto_interesting.json`
+- `RAW_OUTPUT_PATH` — `data/sauto_raw.json`
+- `MARKED_IDS_PATH` — `marked_ids.json`
+- `CATALOG_CACHE_PATH` — `data/sauto_catalog_cache.json`
+- `SAUTO_SEARCH_API` — `https://www.sauto.cz/api/v1/items/search`
+
+### `ScraperRunner`
+
+`ScraperRunner` manages one Scrapy subprocess at a time.
+
+Key behavior:
+
+- `start(output_file)` refuses to start if a scraper is already running.
+- It runs `python -m scrapy crawl sauto -O data/sauto_raw.json` with `cwd=ROOT_DIR`.
+- It captures stdout/stderr into `deque(maxlen=250)`.
+- It has a watcher thread and a log-reader thread.
+- `status()` returns running state, PID, last exit code, timestamps, command, output file, log count.
+
+Important: `output_file` is tracked for UI/result management and cleared before run, but the Scrapy feed export itself is always `data/sauto_raw.json`; the spider final interesting output is fixed at `data/sauto_interesting.json`.
+
+### Important Helpers
+
+| Helper | Purpose |
 |---|---|
-| `evaluate(item, ...)` | Entry point. Parses raw search+detail data into scored offer dict. Returns None if hard-rejected. |
-| `_estimate_consumption_per_100km(...)` | Smart estimation: uses reported value if plausible, else fallback formula based on fuel+power+drive |
-| `_estimate_annual_fuel_cost(...)` | Fuel price × consumption × annual km |
-| `_estimate_insurance(...)` | Power + age based insurance cost model (Czech market) |
-| `_estimate_maintenance(...)` | Age + mileage based maintenance cost model |
-| `_build_market_context(offers)` | Groups offers into cohorts, computes medians for price/kW, price/km, annual costs |
-| `_market_adjustment_for_offer(...)` | Compares offer vs cohort → undervalue/deep_undervalue/overprice labels |
-| `_apply_advanced_sorting(...)` | Sorts offers by price/kW, annual cost, price |
+| `load_json(path, fallback)` | Safe JSON loading. |
+| `dump_json(path, data)` | Safe JSON writing with parent directory creation. |
+| `normalize_relative_path(path, fallback)` | Rejects absolute/path-traversal paths and keeps paths under `ROOT_DIR`. |
+| `load_result_items(result_path)` | Robustly reads result JSON and trims trailing garbage from partial writes. |
+| `_collect_brands()` | Paginates Sauto search API and extracts manufacturer options. |
+| `_collect_models_for_brand()` | Paginates by brand and extracts model options; cache uses `collector_version = 2`. |
+| `_collect_equipment()` | Builds equipment list primarily from local scraped data, with Sauto API fallback. |
 
-### Scoring Components (per car)
+### API Routes
 
-Each car gets 10 component scores:
-- `age` — scored by age bands (younger = better)
-- `mileage` — scored by km bands
-- `price` — scored by CZK bands
-- `price_power` — price per kW (lower = better)
-- `power` — kW (higher = better)
-- `cost` — annual total cost (lower = better)
-- `consumption` — L/100km or kWh/100km
-- `equipment` — count + key features (adaptive cruise, cameras, CarPlay, etc.)
-- `flags` — service book +14, first owner +9, tuning -28
-- `sport` — power, RWD/AWD, manual gearbox, low price/kW
-- `luxury` — premium brand, auto gearbox, leather, pano roof, young car
+| Method | Route | Behavior |
+|---|---|---|
+| `GET` | `/api/health` | Health, API version, uptime, Python version. |
+| `GET` | `/api/params` | Loads `params.json`. |
+| `PUT` | `/api/params` | Saves params. Regular values normalized to strings. |
+| `POST` | `/api/run` | Clears requested target result file to `[]`, then starts scraper subprocess. Returns 409 if already running. |
+| `GET` | `/api/status` | Returns current/last scraper state. |
+| `GET` | `/api/logs?limit=...` | Returns recent captured scraper logs. |
+| `GET` | `/api/results?path=...` | Loads result file, annotates `is_marked`, sorts by stored `score` descending. Frontend may override display sort by computed score. |
+| `GET` | `/api/catalog/brands` | Brand catalog with 24h cache. |
+| `GET` | `/api/catalog/models?brand=...` | Model catalog per brand with 24h cache and collector versioning. |
+| `GET` | `/api/catalog/equipment` | Equipment catalog from local data/API fallback with cache. |
+| `GET` | `/api/catalog/bodies` | Body type catalog from local data/API fallback with cache. |
+| `GET` | `/api/scoring/presets` | Returns built-in presets from Python plus custom presets from `params.json`. |
+| `POST` | `/api/scoring/presets/custom` | Creates custom preset. |
+| `PUT` | `/api/scoring/presets/custom/{preset_id}` | Updates custom preset. |
+| `DELETE` | `/api/scoring/presets/custom/{preset_id}` | Deletes custom preset. |
+| `GET` | `/api/results/export` | Alias around `get_results()`. |
+| `POST` | `/api/results/delete` | Deletes selected IDs from a result file and removes marks. Empty ID list clears file. |
+| `POST` | `/api/results/clear` | Writes `[]` to selected result path. |
+| `POST` | `/api/results/import` | Writes imported item list to selected result path. |
+| `POST` | `/api/results/mark` | Adds/removes IDs in global `marked_ids.json`. |
 
-### Preset Weights
+### Custom Presets
 
-The 4 presets (`SCORING_PRESETS`) multiply each component to produce a weighted total:
+Backend payload model:
 
-| Component | Value | Balanced | Sport | Luxury |
-|---|---|---|---|---|
-| age | 0.75 | 1.00 | 1.05 | 1.35 |
-| mileage | 1.10 | 1.00 | 0.75 | 0.90 |
-| price | 1.40 | 1.00 | 0.55 | 0.25 |
-| consumption | 1.15 | 1.00 | 0.35 | 0.25 |
-| cost | 1.45 | 1.00 | 0.55 | 0.35 |
-| price_power | 1.85 | 1.00 | 1.30 | 0.45 |
-| power | 0.85 | 0.75 | 2.10 | 0.80 |
-| equipment | 0.45 | 0.85 | 0.45 | 2.10 |
-| flags | 1.15 | 1.00 | 0.80 | 0.90 |
-| sport | 0.25 | 0.35 | 1.45 | 0.25 |
-| luxury | 0.15 | 0.35 | 0.20 | 1.90 |
+```python
+class CustomPresetPayload(BaseModel):
+    name: str = ""
+    description: str = ""
+    weights: dict[str, float] = Field(default_factory=dict)
+    hard_rejects: list[dict[str, str]] = Field(default_factory=list)
+    must_have_equipment: list[str] = Field(default_factory=list)
+    excluded_equipment: list[str] = Field(default_factory=list)
+```
 
-**Final score** = sum(component × weight) × 0.55 (rounded to int). Applied client-side in App.jsx `calculateScoreComponents()` and `getItemScore()`.
+Custom presets are stored under `custom_presets` inside `params.json`. `_save_custom_presets()` intentionally preserves this key as a dict while stringifying regular params.
 
----
-
-## SautoSpider — Spider Flow
-
-### Initialization (`__init__`)
-- Reads params, sets up runtime options
-- Loads `notified_ids.json` to track already-pinged cars
-- Initializes `searched_manufacturer_model_seos` (dedup)
-- Sets `seen_ad_ids` set
-
-### `start_requests()`
-1. Reads `params.json`
-2. Translates `manufacturer_seo_name` + `model_seo_name` → Sauto's `manufacturer_model_seo` format
-3. Builds search params dict
-4. Yields first search page request to `https://www.sauto.cz/api/v1/items/search?{query}`
-
-### `parse_search(response)`
-1. Parses JSON response
-2. Iterates `results`, applies strict brand/model/seller post-filters
-3. For each passing result → yields detail API request `https://www.sauto.cz/api/v1/items/{ad_id}`
-4. Handles pagination (checks total count, increments offset)
-
-### `parse_detail(response)`
-1. Parses detail JSON from API
-2. Calls `CarEvaluator.evaluate(base_item, ...)` to score the car
-3. Applies detail-level filters (min price, gearbox preference, etc.)
-4. Appends to `self.scored_cars` list
-5. Yields the enriched item (for feed export)
-
-### `closed(reason)`
-1. Runs `_apply_advanced_sorting(scored_cars)` — market context + sorting
-2. Takes top N, checks which are "new" (not in `notified_ids.json`)
-3. Saves `data/sauto_interesting.json`
-4. Formats and sends Discord message (if webhook configured)
-5. Updates `notified_ids.json`
+`SautoSpider._load_custom_preset_filters()` merges custom preset hard rejects and equipment include/exclude rules globally for spider filtering.
 
 ---
 
-## Web API — app.py Structure
+## Frontend Architecture
 
-### ScraperRunner Class
-- Manages spider as `subprocess.Popen` with stdout capture
-- `start(output_file)` — launches `python -m scrapy crawl sauto -O data/sauto_raw.json`
-- `_read_output()` — thread reads stdout line by line into `deque(maxlen=250)`
-- `_watch_process()` — thread waits for process exit, records exit code + finish time
-- `status()` — returns running, PID, exit_code, start/finish times
-- `logs(limit)` — returns last N log lines
-- Thread-safe via `threading.Lock`
+The current frontend is no longer a single monolithic `App.jsx`; it is split into app shell, hook, utility modules, and components.
 
-### Key API Routes
+### `App.jsx`
 
-| Route | Key Behavior |
-|---|---|
-| `GET /api/params` | Loads `params.json` → `{"params": {...}}` |
-| `PUT /api/params` | Validates + normalizes (all values → strings), saves `params.json` |
-| `POST /api/run` | Clears target result file, then starts scraper via `ScraperRunner.start()` |
-| `GET /api/results?path=...` | Loads JSON file, annotates with `is_marked`, sorts by score desc |
-| `GET /api/catalog/brands` | Fetches from Sauto API (with 24h JSON cache) |
-| `GET /api/catalog/models?brand=...` | Fetches models for brand (24h cache, collector v2) |
-| `GET /api/scoring/presets` | Returns `CarEvaluator.SCORING_PRESETS` as JSON |
-| `POST /api/results/delete` | Removes items by ID, updates `marked_ids.json` |
-| `POST /api/results/mark` | Toggles IDs in `marked_ids.json` |
+Responsibilities:
 
-### Helper Functions
-- `load_json(path, fallback)` — safe JSON loader
-- `dump_json(path, data)` — safe JSON writer (creates dirs)
-- `load_result_items(path)` — robust parser with trailing-garbage trimming
-- `normalize_relative_path(path, fallback)` — path traversal protection
-- `_fetch_sauto_results(params)` — direct Sauto API call via `urllib`
-- `_collect_brands(max_pages=25)` — paginates through Sauto search to gather all brands
-- `_collect_models_for_brand(brand, ...)` — paginates through Sauto search for a brand's models
+- theme state stored in `localStorage.sauto_theme`,
+- top bar rendering,
+- `TabBar` rendering,
+- active-project content routing based on project phase,
+- initial catalog fetches (`brands`, `bodies`, `equipment`),
+- model fetching for selected brands,
+- global log terminal and modal.
+
+It calls `useProjects(brandOptions, modelsByBrand)` to receive project state/actions.
+
+### `hooks/useProjects.js`
+
+This is the main frontend state machine.
+
+Project phases:
+
+```text
+config | running | queued | done | error
+```
+
+Responsibilities:
+
+- load/create projects from `localStorage`,
+- migrate old API data (`params.json` + `data/sauto_interesting.json`) into first project if no local projects exist,
+- persist projects back to `localStorage`, trimming stored results/logs to avoid quota issues,
+- poll `/api/status` every 2 seconds,
+- poll `/api/logs` every 1.5 seconds,
+- while scraper runs, poll project result files every 3 seconds,
+- transition `running → done` when backend reports scraper stopped,
+- queue project runs when backend returns 409 conflict,
+- start the next queued project after the current one completes,
+- save project config to `params.json` before each scraper run.
+
+### `utils/storage.js`
+
+`createProject()` returns a project object with:
+
+```text
+id, name, customName, phase, queuePosition, config,
+results, markedIds, logs, resultsPath, selectedPreset,
+createdAt, errorMessage
+```
+
+Defaults include `phase: "config"`, generated `resultsPath: data/<id>_results.json`, and `selectedPreset: "balanced"`.
+
+`saveProjects()` stores up to 500 results and 500 logs per project, falling back to fewer logs/no results on quota errors.
+
+`generateAutoName()` builds project names from brand, price/year/fuel/power filters.
+
+### `utils/api.js`
+
+HTTP wrapper around `http://localhost:8000`.
+
+Exports include:
+
+- params/status/logs/results/run helpers,
+- result deletion/clear/import/mark helpers,
+- catalog helpers: `fetchBrands`, `fetchModels`, `fetchEquipment`, `fetchBodies`,
+- scoring preset helpers: `fetchScoringPresets`, `saveCustomPreset`, `deleteCustomPreset`.
+
+Caveat: `markResultItems(ids, marked, path)` accepts `path` in the JS signature but sends only `{ ids, marked }`, because backend marks are global in `marked_ids.json`.
+
+### `ProjectSetup.jsx`
+
+Configuration UI for a single project:
+
+- project name control,
+- run button,
+- brand/model/body/equipment selectors with include/exclude tri-state behavior,
+- quick filters: price, year, tachometer, power, fuel, gearbox, drive,
+- basic `Hledání` group,
+- expandable advanced sections generated from `ADVANCED_GROUPS`,
+- extra unknown config keys shown in an `Ostatní` section.
+
+Selector config keys:
+
+- include: `manufacturer_seo_name`, `model_seo_name`, `body_seo`, `equipment_include`
+- exclude: `exclude_manufacturer_seo_name`, `exclude_model_seo_name`, `exclude_body_seo`, `equipment_exclude`
+
+### `ProjectResults.jsx`
+
+Results UI for one project:
+
+- selected scoring preset state (`project.selectedPreset`, default `balanced`),
+- merges `LOCAL_SCORING_PRESETS` with `project.customPresets`,
+- formats numeric fields,
+- sorts by computed frontend score or selected table column,
+- computes and caches score per visible item,
+- supports selection, mark/unmark, delete, clear, export selected/all, import JSON, refresh,
+- contains project log modal.
+
+Custom preset UI note: selecting `__new__` is currently a placeholder (`// Custom preset creation would go here`), so backend custom preset CRUD exists but creation UI is not fully wired in this component.
 
 ---
 
-## Web UI — App.jsx Structure
+## Frontend Scoring: `utils/scoring.js`
 
-### State Variables
+### Important Concept
+
+Final displayed score is calculated in the **frontend**, not by the spider.
+
+The spider outputs raw metrics. The frontend applies:
+
 ```javascript
-params, theme, status, items, logs, markedIds, selectedIds, resultsPath
-showAdvanced, message, loading, initialLoading, runPhase, showLogsModal
-brandOptions, selectedBrands, selectedModels, modelsByBrand
-sortConfig, isSidebarHidden, scoringPresets, selectedPreset
+calculateScoreComponents(item)
+getItemScore(item, preset)
 ```
 
-### Key Functions
+Current `getItemScore()`:
 
-| Function | Purpose |
+```javascript
+const components = calculateScoreComponents(item);
+const weights = getPresetWeights(preset);
+const weightedScore = Object.entries(components).reduce((sum, [key, value]) => {
+  return sum + value * (weights[key] ?? DEFAULT_SCORE_WEIGHTS[key] ?? 1);
+}, 0);
+return Math.round(weightedScore);
+```
+
+There is currently no final `× 0.55` scaling in the JS score function. Older documentation that mentions that multiplier is stale.
+
+### Score Components
+
+`calculateScoreComponents()` normalizes raw component scores to `0–100` for these keys:
+
+| Component | Based on |
 |---|---|
-| `calculateScoreComponents(item)` | Client-side scoring (mirrors CarEvaluator but simplified) |
-| `getItemScore(item, preset)` | Applies preset weights to components → final score |
-| `sortValue(item, key)` | Extracts sortable value (handles score specially) |
-| `fetchParams/Save/Run/Status/Results/Logs` | API call wrappers |
-| `syncFilterParams(brands, models)` | Updates params when brand/model checkboxes change |
-| `deleteSelected()`, `clearAllResults()`, `markSelected()` | Batch result actions |
-| `exportResults(scope)`, `importResultsFile(file)` | JSON export/import |
+| `age` | `age_years` bands. |
+| `mileage` | `tachometer` bands. |
+| `price` | `price` bands. |
+| `price_power` | `price_per_kw` bands. |
+| `power` | `power_kw` bands. |
+| `cost` | `annual_total_cost` bands. |
+| `consumption` | `estimated_consumption_per_100km`, different bands for EV vs ICE. |
+| `equipment` | Equipment count and key features. |
+| `flags` | `service_book`, `first_owner`, `tuning`. |
+| `sport` | Power, RWD/AWD, manual gearbox, low price/kW, tuning penalty. |
+| `luxury` | Brand tier, automatic, leather/alcantara/massage, pano roof, equipment breadth, young age, power. |
+| `power_weight` | Estimated kW per tonne based on body type. |
+| `sport_badge` | Listing/equipment text patterns such as AMG, M, RS, vRS, GTI, Type R, Cupra, GR, S-line/R-line/N-line. |
+| `premium_equipment` | Count of premium features like leather, panorama, matrix, adaptive cruise, air suspension, HUD, 360, keyless, memory seats, ambient lighting. |
+| `tco` | Approximate 5-year total cost: `price + annual_total_cost * 5`. |
 
-### UI Structure
-```
-App
-├── Topbar (status, theme toggle, sidebar toggle, API health)
-├── Layout
-│   ├── Sidebar (params editor, brand/model browser)
-│   │   ├── Search params (BASIC_GROUPS)
-│   │   ├── Advanced params (ADVANCED_GROUPS) — collapsible
-│   │   └── Extra params (anything not in PARAM_GROUPS)
-│   └── Main Content
-│       ├── Results toolbar (sort, select, export, import, delete, mark)
-│       └── Results table (sortable columns, checkboxes)
-└── Logs Modal (streaming log viewer)
-```
+### Local Frontend Presets
 
-### Client-Side Scoring vs Server-Side
+`LOCAL_SCORING_PRESETS` currently contains more presets than Python built-ins:
 
-**Important distinction**: The spider (`sauto_spider.py`) does NOT compute final scores anymore (as noted in Discord message: *"Scoring and preset selection moved to frontend (Varianta A)"*). The spider only:
-1. Evaluates raw metrics (price/kW, price/km, annual costs, flags, etc.)
-2. Computes market context (cohort medians, valuation labels)
-3. Saves everything to `sauto_interesting.json`
+| Preset | Intent |
+|---|---|
+| `value` | Price/performance and low running costs. |
+| `balanced` | General-purpose score. |
+| `sport` | Power, dynamics, price/kW, sport badges. |
+| `luxury` | Premium brand, comfort and equipment. |
+| `daily` | Daily driver: reliability, low cost, reasonable mileage. |
+| `weekend` | Weekend toy: fun, power, dynamics. |
+| `family` | Family car: safety, space/equipment, reasonable costs. |
+| `budget` | Maximum utility/value for minimum money. |
+| `tech` | Tech & comfort: modern features and assistants. |
 
-The **frontend** (`App.jsx`) then reads these raw metrics and applies scoring component bands + preset weights client-side. This means:
-- `sauto_spider.py` ~lines 1005-1140: `_evaluate_single()` assigns raw component values but the weighted total is 0
-- `App.jsx` `calculateScoreComponents()` and `getItemScore()` compute the actual display score
-- Both use the same scoring bands and preset weights (duplicated between Python and JS)
+### Param Group Definitions
+
+`utils/scoring.js` also defines UI parameter metadata:
+
+- `PARAM_GROUPS`
+- `BASIC_GROUPS`
+- `ADVANCED_GROUPS`
+- `IGNORED_KEYS`
+- `ALL_WEIGHT_KEYS`
+- formatting helpers like `fmtVal`, `fmtDate`
+
+Changes to config UI fields often belong in `utils/scoring.js` plus `ProjectSetup.jsx`, not in `App.jsx`.
 
 ---
 
-## Common Patterns & Conventions
+## Parameter Handling and Filtering
 
-### Param Handling
-- All param values in `params.json` are **strings** (even booleans: `"true"`/`"false"`)
-- The API normalizes to `str` on save: `{str(key): "" if value is None else str(value)}`
-- The spider converts strings to appropriate types when reading
+### Storage Format
 
-### File Paths
-- API uses `ROOT_DIR` (parent of `web-api/`) as base
-- All paths validated with `normalize_relative_path()` — blocked if absolute or outside project
-- Spider uses relative paths from working directory
+- API `PUT /api/params` converts normal param values to strings.
+- `custom_presets` is special: custom preset saving preserves it as a dict.
+- The spider parses strings into ints/floats/bools/choices when loading runtime options.
 
-### Error Handling
-- Spider: `handle_detail_error()` catches failed detail requests, still yields base item
-- API: HTTPException with detail messages, try/except with cached fallbacks for catalog
-- UI: try/catch on all fetch calls, `message` state for user feedback
+### Key Search / Filter Params
 
-### Threading
-- `ScraperRunner` uses `threading.Lock` for process state
-- Two daemon threads: stdout reader + process watcher
-- Frontend polls status every 2s, logs every 1.5s, results every 3s when running
+Common include/exclude params:
+
+```text
+manufacturer_seo_name
+model_seo_name
+exclude_manufacturer_seo_name
+exclude_model_seo_name
+body_seo
+exclude_body_seo
+condition_seo
+exclude_condition_seo
+seller_type
+```
+
+Quick filters:
+
+```text
+price_from, price_to
+year_from, year_to
+tachometer_from, tachometer_to
+power_from, power_to
+fuel_seo
+gearbox_filter
+drive_filter
+```
+
+Evaluation/runtime params:
+
+```text
+interesting_min_score
+interesting_top_n
+interesting_min_price
+allow_automatic
+prefer_gearbox
+prefer_drive
+target_annual_km
+```
+
+Market-related params still exist, but active market scoring is currently disabled by `_market_adjustment_for_offer()`:
+
+```text
+market_min_cohort_size
+market_expected_km_per_year
+model_price_min_samples
+undervalue_ratio_threshold
+deep_undervalue_ratio_threshold
+overprice_ratio_threshold
+```
+
+Notification params:
+
+```text
+discord_webhook_url
+discord_notify_only_new
+```
+
+Equipment params:
+
+```text
+equipment_include
+equipment_exclude
+required_equipment  # older/backend-compatible required text terms
+```
+
+---
+
+## Important Conventions for Future Changes
+
+### Backend / Paths
+
+- All user-supplied result paths must remain relative and inside `ROOT_DIR`; use `normalize_relative_path()`.
+- `load_result_items()` is intentionally tolerant of partial/trailing JSON corruption from interrupted writes.
+- `marked_ids.json` is global across projects.
+
+### Scraper
+
+- `params.json` is read from the `sauto-scraper-main/` working directory.
+- Sauto upstream filtering requires `manufacturer_model_seo`; do not assume `manufacturer_seo_name` + `model_seo_name` alone are accepted by Sauto search.
+- Keep local strict filters even when upstream search params look correct; Sauto may return broader results.
+- Be careful with feed output vs interesting output:
+  - Scrapy `-O` feed export: `data/sauto_raw.json`
+  - spider final sorted offers: `data/sauto_interesting.json`
+
+### Frontend
+
+- Avoid putting new large logic back into `App.jsx`; prefer:
+  - API calls in `utils/api.js`,
+  - scoring/param metadata in `utils/scoring.js`,
+  - project state in `hooks/useProjects.js`,
+  - UI in focused components under `components/`.
+- Project state is persisted in localStorage and mirrored to backend only at run time via `saveParams(project.config)`.
+- Running/queued projects are reset to `config` on page reload by `loadProjects()`.
+- Score sorting in `ProjectResults.jsx` uses frontend-computed score, not backend `score`.
+
+### Styling
+
+- Main app styling lives in `App.css` and component control styling in `components/CustomComponents.css`.
+- The app supports light/dark theme through `document.documentElement.classList.toggle("theme-dark", ...)`.
 
 ---
 
 ## Dependencies
+
+Python (`sauto-scraper-main/requirements.txt`):
 
 ```txt
 scrapy==2.13.3
@@ -317,7 +655,55 @@ fastapi>=0.115.0
 uvicorn>=0.30.0
 ```
 
-Frontend: React 18, Vite, lucide-react (icons)
+Frontend (`sauto-scraper-main/web-ui/package.json`):
+
+```json
+{
+  "dependencies": {
+    "lucide-react": "^1.17.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.4.1",
+    "vite": "^5.4.12"
+  }
+}
+```
+
+Runtime requirements:
+
+- Python 3.9+
+- Node.js 18+
+
+---
+
+## Start / Development Commands
+
+From repo root:
+
+```bash
+cd sauto-scraper-main
+pip install -r requirements.txt
+uvicorn web-api.app:app --reload --port 8000
+```
+
+Frontend in another terminal:
+
+```bash
+cd sauto-scraper-main/web-ui
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173`.
+
+Direct Scrapy run:
+
+```bash
+cd sauto-scraper-main
+python -m scrapy crawl sauto -O data/sauto_raw.json
+```
 
 ---
 
@@ -325,16 +711,33 @@ Frontend: React 18, Vite, lucide-react (icons)
 
 | Issue | Check |
 |---|---|
-| "API není dostupné" in UI | Is backend running on port 8000? |
-| Scraper won't start | Is another scraper already running? (409 Conflict) |
-| No Discord notifications | Is `discord_webhook_url` set in params? |
-| Stale catalog | Force refresh: `?force_refresh=true` on catalog endpoints |
-| Result file can't be read | Check `load_result_items()` — trims trailing garbage from partial writes |
-| "Use a relative path" error | All paths must be relative to project root |
+| UI says API is unavailable | Backend must run on `http://localhost:8000`; check `/api/health`. |
+| Run returns 409 | Another Scrapy subprocess is already running; frontend should queue projects automatically. |
+| No results | Check `params.json`, strict include/exclude filters, `condition_seo`, and detail filters. |
+| Project-specific result path stays empty | Expected with current code unless output syncing is added; spider writes `data/sauto_interesting.json`. |
+| Brand/model filter too broad | Ensure `data/sauto_catalog_cache.json` has model cache or rely on strict local filtering. |
+| Stale brand/model/equipment/body options | Use catalog endpoints with `force_refresh=true` manually or delete cache. |
+| Results file fails to parse | Backend `load_result_items()` trims trailing garbage; if still empty, inspect the JSON file. |
+| Discord silent | Check `discord_webhook_url` param or `SAUTO_DISCORD_WEBHOOK_URL` env var. |
+| Marking seems shared between projects | Expected: marks are global in `marked_ids.json`. |
+| Scores differ from old docs | Expected: scoring moved to frontend and currently has 15 normalized components with no `× 0.55` multiplier. |
+| Market undervalue labels disabled | Expected until `_market_adjustment_for_offer()` is reimplemented. |
 
 ---
 
-## Git Info
+## Known Gaps / Caveats
 
-- Remote: `https://github.com/afrox26TP/Sauto_Scrapper.git`
+- `_market_adjustment_for_offer()` is currently a disabled stub; do not document market valuation as active scoring unless changed.
+- API `output_file` / frontend `resultsPath` is not currently the same as the spider's fixed `data/sauto_interesting.json` write path.
+- Custom preset backend CRUD exists, but frontend creation/edit UI is not fully implemented in `ProjectResults.jsx`.
+- `ProjectResults.jsx` imports `DEFAULT_SCORE_WEIGHTS`, `ALL_WEIGHT_KEYS`, `CustomCheckbox`, and `CustomSlider`; check whether future UI work needs them or whether they are leftover imports.
+- `interesting_min_score` exists in params/runtime defaults, but final score filtering should be reviewed because scoring is frontend-side.
+- `params.json` in the working tree may be minimal; do not assume it contains all supported keys.
+
+---
+
+## Git / Repository Info
+
+- Current remote: `https://github.com/afrox26TP/Sauto_Scrapper.git`
 - Original upstream: `https://github.com/karlosmatos/sauto-scraper.git`
+- User rule: **never use `git force push` / force operations**.

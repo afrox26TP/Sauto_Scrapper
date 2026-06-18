@@ -22,6 +22,7 @@ export function useProjects(brandOptions, modelsByBrand) {
   });
   const [globalLogs, setGlobalLogs] = useState([]);
   const [scraperRunning, setScraperRunning] = useState(false);
+  const [statusReady, setStatusReady] = useState(false);
   const [migrated, setMigrated] = useState(false);
 
   const projectsRef = useRef(projects);
@@ -86,6 +87,8 @@ export function useProjects(brandOptions, modelsByBrand) {
         setScraperRunning(status.running || false);
       } catch {
         setScraperRunning(false);
+      } finally {
+        setStatusReady(true);
       }
     };
     poll();
@@ -141,6 +144,7 @@ export function useProjects(brandOptions, modelsByBrand) {
 
   // ── Auto-transition running → done when scraper stops ──
   useEffect(() => {
+    if (!statusReady) return;
     if (scraperRunning) return;
     // Scraper stopped – check if any project was running
     setProjects((prev) => {
@@ -201,7 +205,7 @@ export function useProjects(brandOptions, modelsByBrand) {
         return p;
       });
     });
-  }, [scraperRunning]);
+  }, [scraperRunning, statusReady]);
 
   // ── Start queued scrape helper (no deps on closures) ──
   function startQueuedScrape(projectId) {
@@ -219,6 +223,7 @@ export function useProjects(brandOptions, modelsByBrand) {
     saveParams(project.config)
       .then(() => runScraper(project.resultsPath))
       .then(() => {
+        setScraperRunning(true);
         setProjects((prev) =>
           prev.map((p) =>
             p.id === projectId
@@ -272,6 +277,7 @@ export function useProjects(brandOptions, modelsByBrand) {
 
       await saveParams(project.config);
       await runScraper(project.resultsPath);
+      setScraperRunning(true);
 
       setProjects((prev) =>
         prev.map((p) =>

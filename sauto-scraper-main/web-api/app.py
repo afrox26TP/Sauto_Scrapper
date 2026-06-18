@@ -31,6 +31,11 @@ MARKED_IDS_PATH = ROOT_DIR / "marked_ids.json"
 CATALOG_CACHE_PATH = ROOT_DIR / "data" / "sauto_catalog_cache.json"
 CATALOG_CACHE_TTL_S = 24 * 60 * 60
 SAUTO_SEARCH_API = "https://www.sauto.cz/api/v1/items/search"
+LOCKED_SEARCH_DEFAULTS = {
+    "category_id": "838",
+    "limit": "100",
+    "offset": "0",
+}
 
 
 class ParamsPayload(BaseModel):
@@ -125,7 +130,17 @@ class ScraperRunner:
 
             # Use a dedicated raw file for scrapy feed export to avoid
             # conflicting with the spider's own sauto_interesting.json output
-            command = [sys.executable, "-m", "scrapy", "crawl", "sauto", "-O", str(RAW_OUTPUT_PATH.relative_to(ROOT_DIR))]
+            command = [
+                sys.executable,
+                "-m",
+                "scrapy",
+                "crawl",
+                "sauto",
+                "-a",
+                f"output_file={output_file}",
+                "-O",
+                str(RAW_OUTPUT_PATH.relative_to(ROOT_DIR)),
+            ]
             self.log_lines.clear()
             self.log_lines.append(f"[web-api] Spouštím: {' '.join(command)}")
             self.process = subprocess.Popen(
@@ -408,6 +423,9 @@ def update_params(payload: ParamsPayload) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail="Invalid params payload.")
 
     normalized = {str(key): "" if value is None else str(value) for key, value in payload.params.items()}
+    # Keep core paging/category settings stable for now. The frontend hides these
+    # fields and the backend enforces them for all UI-saved runs.
+    normalized.update(LOCKED_SEARCH_DEFAULTS)
     dump_json(PARAMS_PATH, normalized)
     return {"saved": True, "params": normalized}
 

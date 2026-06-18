@@ -757,6 +757,14 @@ class SautoSpider(scrapy.Spider):
     def __init__(self, *args, **kwargs):
         super(SautoSpider, self).__init__(*args, **kwargs)
 
+        requested_output_file = self._norm_str(getattr(self, "output_file", None))
+        if requested_output_file:
+            self.INTERESTING_OFFERS_FILE = self._safe_relative_output_path(
+                requested_output_file,
+                self.INTERESTING_OFFERS_FILE,
+            )
+            self.logger.info(f"Project result output: {self.INTERESTING_OFFERS_FILE}")
+
         self.notified_ids = set()
         if os.path.exists(self.NOTIFIED_FILE):
             try:
@@ -795,7 +803,10 @@ class SautoSpider(scrapy.Spider):
         self.min_interesting_score = 90
         self.top_n = 10
         self.min_price = 0
-        self.allow_automatic = False
+        # Keep all gearbox types by default. Manual/automatic filtering is handled
+        # explicitly via `gearbox_filter` so broad searches do not silently drop
+        # a large part of the market.
+        self.allow_automatic = True
         self.discord_notify_only_new = True
 
         self.market_min_cohort_size = 6
@@ -843,6 +854,25 @@ class SautoSpider(scrapy.Spider):
     def read_params_from_json(file_path: str) -> dict:
         with open(file_path, "r", encoding="utf-8") as file:
             return json.load(file)
+
+    @staticmethod
+    def _safe_relative_output_path(path: str, fallback: str) -> str:
+        raw = str(path or "").strip()
+        if not raw:
+            return fallback
+
+        normalized = os.path.normpath(raw)
+        if os.path.isabs(normalized):
+            return fallback
+
+        root = os.path.abspath(os.getcwd())
+        resolved = os.path.abspath(os.path.join(root, normalized))
+        if resolved == root or not resolved.startswith(root + os.sep):
+            return fallback
+        if not normalized.lower().endswith(".json"):
+            return fallback
+
+        return normalized.replace(os.sep, "/")
 
     @staticmethod
     def _norm_str(x):
@@ -1175,6 +1205,14 @@ class SautoSpider(scrapy.Spider):
         search_params = params.copy()
         manufacturer_model_seo = self._build_manufacturer_model_seo(search_params)
 
+        # The Sauto search API only applies vehicle-specific filters such as
+        # `manufacturer_model_seo` reliably when a category is present. The UI
+        # usually works with personal cars, but older/saved projects may not
+        # contain category_id, which makes Sauto return a broad cross-category
+        # feed and leaves us with only a handful of locally matched ads.
+        if self._norm_str(search_params.get("category_id")) is None:
+            search_params["category_id"] = "838"
+
         # These keys are local/UI compatibility filters. Sauto ignores them on
         # /items/search, so sending them makes the request look filtered while it
         # is actually broad. The real Sauto filter is manufacturer_model_seo.
@@ -1196,7 +1234,11 @@ class SautoSpider(scrapy.Spider):
         if price_from <= 0:
             search_params.pop("price_from", None)
 
+        limit = self._to_int(search_params.get("limit"), 100)
+        search_params["limit"] = str(max(1, min(1000, limit)))
         search_params["offset"] = str(search_params.get("offset", "0"))
+        offset = self._to_int(search_params.get("offset"), 0)
+        search_params["offset"] = str(max(0, offset))
         return search_params
 
     def _make_search_request(self, params: dict):
@@ -1440,14 +1482,22 @@ class SautoSpider(scrapy.Spider):
         limit = max(1, self._to_int(params.get("limit", 35), 35))
         offset = max(0, self._to_int(params.get("offset", 0), 0))
         total = self._extract_total(data)
+        result_count = len(results)
 
-        if total == -1:
-            if len(results) == limit and limit > 0:
-                params["offset"] = str(offset + limit)
-                yield self._make_search_request(params)
+        if result_count == 0:
             return
 
-        next_offset = offset + limit
+        if total == -1:
+            params["offset"] = str(offset + result_count)
+            yield self._make_search_request(params)
+            return
+
+        # Sauto can cap returned page size below the requested `limit` (for
+        # example returning 25 items even when the UI asked for a much higher
+        # limit). Advancing by requested limit skips pages and can turn 274
+        # available ads into only the first returned page. Advance by the actual
+        # number of items received instead.
+        next_offset = offset + result_count
         if next_offset < total:
             params["offset"] = str(next_offset)
             yield self._make_search_request(params)

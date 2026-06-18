@@ -321,8 +321,8 @@ export const PARAM_GROUPS = [
   {
     label: "Stránkování",
     fields: [
-      { key: "category_id", type: "text", label: "Kategorie ID" },
-      { key: "limit", type: "slider", label: "Limit výsledků", min: 1, max: 1000, step: 1 },
+      { key: "category_id", type: "text", label: "Kategorie ID (838 = osobní)" },
+      { key: "limit", type: "slider", label: "Limit na stránku", min: 1, max: 1000, step: 1 },
       { key: "offset", type: "number", label: "Offset" },
     ],
   },
@@ -364,7 +364,9 @@ export const PARAM_GROUPS = [
 ];
 
 export const BASIC_GROUPS = [PARAM_GROUPS[0]];
-export const ADVANCED_GROUPS = [PARAM_GROUPS[1], ...PARAM_GROUPS.slice(2)];
+// Stránkování/kategorie jsou zatím interně zamčené defaulty
+// (category_id=838, limit=100, offset=0), takže je v UI nezobrazujeme.
+export const ADVANCED_GROUPS = PARAM_GROUPS.slice(2);
 export const IGNORED_KEYS = new Set([
   ...PARAM_GROUPS.flatMap((g) => g.fields.map((f) => f.key)),
   "exclude_manufacturer_seo_name",
