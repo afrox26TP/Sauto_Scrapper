@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Play, LoaderCircle, ChevronDown, ChevronUp } from "lucide-react";
 import ProjectNameInput from "./ProjectNameInput";
 import BrandSelector from "./BrandSelector";
@@ -100,6 +100,7 @@ export default function ProjectSetup({
   const config = project.config || {};
   const busy = isRunning || project.phase === "running" || project.phase === "queued";
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const [brandFilterText, setBrandFilterText] = useState("");
   const [modelFilterText, setModelFilterText] = useState("");
   const [bodyFilterText, setBodyFilterText] = useState("");
@@ -162,21 +163,33 @@ export default function ProjectSetup({
     onUpdateConfig({ equipment_include: nextSel.join(","), equipment_exclude: nextExcl.join(",") });
   }, [selectedEquipment, excludedEquipment, onUpdateConfig]);
 
+  const scrollContainerRef = useRef(null);
+
+  useEffect(() => {
+    const el = scrollContainerRef.current?.closest('.main-content') || document.querySelector('.main-content');
+    if (!el) return;
+    const handleScroll = () => {
+      setIsScrolled(el.scrollTop > 100);
+    };
+    el.addEventListener('scroll', handleScroll);
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const setConfigParam = useCallback((key, val) => { onUpdateConfig({ [key]: val }); }, [onUpdateConfig]);
   const extraKeys = Object.keys(config).filter((k) => !IGNORED_KEYS.has(k));
 
   return (
-    <div className="project-setup">
-      <ProjectNameInput
-        name={project.name}
-        customName={project.customName}
-        onNameChange={(val) => onUpdateProject({ name: val, customName: true })}
-        onToggleCustom={() => onUpdateProject({ customName: !project.customName })}
-      />
-      <div className="setup-actions-top">
+<div className="project-setup">
+      <div className={`project-header-sticky ${isScrolled ? 'scrolled' : ''}`}>
         <button className="btn-primary btn-run" onClick={() => onRun(project.id)} disabled={busy}>
           {busy ? <><LoaderCircle className="ui-icon icon-spin" /> Pracuji…</> : <><Play className="ui-icon" /> Spustit scraper</>}
         </button>
+        <ProjectNameInput
+          name={project.name}
+          customName={project.customName}
+          onNameChange={(val) => onUpdateProject({ name: val, customName: true })}
+          onToggleCustom={() => onUpdateProject({ customName: !project.customName })}
+        />
       </div>
 
       {/* Brand / Model / Body / Equipment – první řádek vedle sebe */}

@@ -258,8 +258,21 @@
   },
   "models": {
     "alfa-romeo": {
-      "updated_at": 1781731065,
-      "items": [],
+      "updated_at": 1781825441,
+      "items": [
+        {
+          "value": "159",
+          "label": "159"
+        },
+        {
+          "value": "giulia",
+          "label": "Giulia"
+        },
+        {
+          "value": "stelvio",
+          "label": "Stelvio"
+        }
+      ],
       "collector_version": 2
     },
     "bentley": {
@@ -1501,11 +1514,11 @@
       "collector_version": 2
     },
     "bmw": {
-      "updated_at": 1781731398,
+      "updated_at": 1781824740,
       "items": [
         {
-          "value": "i3",
-          "label": "i3"
+          "value": "i5",
+          "label": "i5"
         },
         {
           "value": "m2",
@@ -1522,6 +1535,10 @@
         {
           "value": "m5",
           "label": "M5"
+        },
+        {
+          "value": "ostatni",
+          "label": "Ostatní"
         },
         {
           "value": "rada-1",
@@ -1548,12 +1565,20 @@
           "label": "Řada 6"
         },
         {
+          "value": "rada-7",
+          "label": "Řada 7"
+        },
+        {
           "value": "rada-8",
           "label": "Řada 8"
         },
         {
           "value": "x1",
           "label": "X1"
+        },
+        {
+          "value": "x2",
+          "label": "X2"
         },
         {
           "value": "x3",

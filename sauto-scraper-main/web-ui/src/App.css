@@ -375,6 +375,46 @@ button:disabled {
   gap: 10px;
 }
 
+.project-header-sticky {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.3s ease;
+  z-index: 100;
+}
+
+.project-header-sticky .project-name-input {
+  margin-bottom: 0;
+  flex: 1;
+}
+
+.project-header-sticky .project-name-field {
+  flex: 1;
+}
+
+.project-header-sticky.scrolled {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: var(--surface);
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
 .setup-actions-top {
   display: flex;
   gap: 10px;

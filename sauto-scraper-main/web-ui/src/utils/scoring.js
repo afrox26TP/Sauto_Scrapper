@@ -335,15 +335,6 @@ export const PARAM_GROUPS = [
     ],
   },
   {
-    label: "Preference",
-    fields: [
-      { key: "allow_automatic", type: "boolean", label: "Povolit automat" },
-      { key: "prefer_gearbox", type: "select", label: "Převodovka", options: ["any", "manual", "automatic"] },
-      { key: "prefer_drive", type: "select", label: "Pohon", options: ["any", "fwd", "rwd", "awd"] },
-      { key: "target_annual_km", type: "slider", label: "Cílových km/rok", min: 5000, max: 40000, step: 1000, fmt: "km" },
-    ],
-  },
-  {
     label: "Tržní analýza",
     fields: [
       { key: "market_min_cohort_size", type: "slider", label: "Min. kohorta", min: 2, max: 50, step: 1 },
