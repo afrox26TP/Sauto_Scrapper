@@ -754,8 +754,15 @@ class SautoSpider(scrapy.Spider):
     INTERESTING_OFFERS_FILE = "data/sauto_interesting.json"
     CATALOG_CACHE_FILE = "data/sauto_catalog_cache.json"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, params_file=None, interesting_file=None, *args, **kwargs):
         super(SautoSpider, self).__init__(*args, **kwargs)
+
+        # Project isolation: use per-project files when provided
+        self.params_file = params_file or "params.json"
+        self.interesting_file = (
+            interesting_file if interesting_file and interesting_file.strip()
+            else self.INTERESTING_OFFERS_FILE
+        )
 
         self.notified_ids = set()
         if os.path.exists(self.NOTIFIED_FILE):
@@ -815,10 +822,11 @@ class SautoSpider(scrapy.Spider):
             json.dump(sorted(self.notified_ids), f, ensure_ascii=False, indent=2)
 
     def _save_sorted_offers(self, sorted_offers):
-        output_dir = os.path.dirname(self.INTERESTING_OFFERS_FILE)
+        output_path = self.interesting_file
+        output_dir = os.path.dirname(output_path)
         if output_dir:
             os.makedirs(output_dir, exist_ok=True)
-        with open(self.INTERESTING_OFFERS_FILE, "w", encoding="utf-8") as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             json.dump(sorted_offers, f, ensure_ascii=False, indent=2)
 
     def _send_discord(self, msg):
@@ -1356,10 +1364,15 @@ class SautoSpider(scrapy.Spider):
         )
 
     def start_requests(self):
-        params = self.read_params_from_json("params.json")
+        params = self.read_params_from_json(self.params_file)
+        self.logger.info(f"[sauto] Loading params from: {self.params_file}")
+        self.logger.info(f"[sauto] Manufacturer filter: {params.get('manufacturer_seo_name', 'NOT SET')}")
+        self.logger.info(f"[sauto] Model filter: {params.get('model_seo_name', 'NOT SET')}")
         self._load_runtime_options(params)
         self._load_strict_filters(params)
         self._load_custom_preset_filters(params)
+        self.logger.info(f"[sauto] Strict manufacturer set: {self.strict_manufacturer_set}")
+        self.logger.info(f"[sauto] Strict model set: {self.strict_model_set}")
         yield self._make_search_request(self._build_search_params(params))
 
     def _load_custom_preset_filters(self, params: dict):
@@ -1473,6 +1486,20 @@ class SautoSpider(scrapy.Spider):
         )
         if raw_offer and self._passes_detail_filters(raw_offer):
             self.scored_cars.append(raw_offer)
+            # Copy scoring-relevant fields to top-level for frontend access
+            for key in (
+                "price", "power_kw", "tachometer", "age_years",
+                "price_per_kw", "price_per_km", "km_per_year",
+                "annual_total_cost", "annual_fuel_cost", "annual_insurance",
+                "annual_maintenance", "estimated_consumption_per_100km",
+                "fuel_seo", "body_seo", "gearbox_type", "drive_type",
+                "brand_tier", "manufacturer_seo", "model_seo",
+                "first_owner", "service_book", "tuning",
+                "equipment_list", "listing_age_days", "months_to_stk",
+                "name", "images_count", "euro_value", "model_family_key",
+            ):
+                if key in raw_offer:
+                    base_item[key] = raw_offer[key]
             base_item["offer_metrics"] = {
                 "price_per_kw": raw_offer["price_per_kw"],
                 "price_per_km": raw_offer["price_per_km"],
@@ -1526,7 +1553,7 @@ class SautoSpider(scrapy.Spider):
             f"Filters: brand={brand} | model={model} | seller={seller_type}",
             f"Checked ads: {self.items_scraped}",
             f"Raw matched ads: {len(self.scored_cars)}",
-            f"Output: {self.INTERESTING_OFFERS_FILE}",
+            f"Output: {self.interesting_file}",
             (
                 f"Market tuning: cohort>={self.market_min_cohort_size}, "
                 f"expected km/year={self.market_expected_km_per_year}"

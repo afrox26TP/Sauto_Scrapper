@@ -4,15 +4,16 @@ import { CustomSlider } from "./index";
 function PairSlider({ label, enabled, onToggleEnabled, valueA, valueB, onChangeA, onChangeB, min, max, step, fmt }) {
   return (
     <div className={`quick-pair${enabled ? " enabled" : " disabled"}`}>
-      <label className={`quick-pair-label${enabled ? " checked" : ""}`}>
-        <input
-          type="checkbox"
-          className="quick-pair-check"
-          checked={enabled}
-          onChange={(e) => onToggleEnabled(e.target.checked)}
-        />
-        {label}
-      </label>
+      <div
+        className="quick-pair-label-row"
+        onClick={() => onToggleEnabled(!enabled)}
+        title={enabled ? "✓ Aktivní — klikni pro deaktivaci" : "Klikni pro aktivaci"}
+      >
+        <span className={`catalog-toggle-btn${enabled ? " checked" : ""}`}>
+          {enabled ? "✓" : ""}
+        </span>
+        <span className={`quick-pair-label-text${enabled ? " checked" : ""}`}>{label}</span>
+      </div>
       {enabled ? (
         <div className="quick-pair-sliders">
           <CustomSlider
@@ -59,30 +60,14 @@ export default function QuickFilterPanel({
   const fmtKm = (v) => Number(v).toLocaleString("cs-CZ") + " km";
   const fmtKw = (v) => v + " kW";
 
-  function handlePriceFrom(v) {
-    if (priceEnabled) onPriceFromChange(v);
-  }
-  function handlePriceTo(v) {
-    if (priceEnabled) onPriceToChange(v);
-  }
-  function handleYearFrom(v) {
-    if (yearEnabled) onYearFromChange(v);
-  }
-  function handleYearTo(v) {
-    if (yearEnabled) onYearToChange(v);
-  }
-  function handleKmFrom(v) {
-    if (kmEnabled) onKmFromChange(v);
-  }
-  function handleKmTo(v) {
-    if (kmEnabled) onKmToChange(v);
-  }
-  function handlePowerFrom(v) {
-    if (powerEnabled) onPowerFromChange(v);
-  }
-  function handlePowerTo(v) {
-    if (powerEnabled) onPowerToChange(v);
-  }
+  function handlePriceFrom(v) { if (priceEnabled) onPriceFromChange(v); }
+  function handlePriceTo(v) { if (priceEnabled) onPriceToChange(v); }
+  function handleYearFrom(v) { if (yearEnabled) onYearFromChange(v); }
+  function handleYearTo(v) { if (yearEnabled) onYearToChange(v); }
+  function handleKmFrom(v) { if (kmEnabled) onKmFromChange(v); }
+  function handleKmTo(v) { if (kmEnabled) onKmToChange(v); }
+  function handlePowerFrom(v) { if (powerEnabled) onPowerFromChange(v); }
+  function handlePowerTo(v) { if (powerEnabled) onPowerToChange(v); }
 
   return (
     <div className="quick-filters-full">
@@ -90,10 +75,7 @@ export default function QuickFilterPanel({
         <PairSlider
           label="Cena (Kč)"
           enabled={priceEnabled}
-          onToggleEnabled={(v) => {
-            setPriceEnabled(v);
-            if (!v) { onPriceFromChange(""); onPriceToChange(""); }
-          }}
+          onToggleEnabled={(v) => { setPriceEnabled(v); if (!v) { onPriceFromChange(""); onPriceToChange(""); } }}
           valueA={Number(priceFrom) || 0} valueB={Number(priceTo) || 0}
           onChangeA={handlePriceFrom} onChangeB={handlePriceTo}
           min={0} max={5000000} step={50000} fmt={fmtPrice}
@@ -101,10 +83,7 @@ export default function QuickFilterPanel({
         <PairSlider
           label="Rok"
           enabled={yearEnabled}
-          onToggleEnabled={(v) => {
-            setYearEnabled(v);
-            if (!v) { onYearFromChange(""); onYearToChange(""); }
-          }}
+          onToggleEnabled={(v) => { setYearEnabled(v); if (!v) { onYearFromChange(""); onYearToChange(""); } }}
           valueA={Number(yearFrom) || 1950} valueB={Number(yearTo) || 2026}
           onChangeA={handleYearFrom} onChangeB={handleYearTo}
           min={1950} max={2026} step={1}
@@ -112,10 +91,7 @@ export default function QuickFilterPanel({
         <PairSlider
           label="Nájezd (km)"
           enabled={kmEnabled}
-          onToggleEnabled={(v) => {
-            setKmEnabled(v);
-            if (!v) { onKmFromChange(""); onKmToChange(""); }
-          }}
+          onToggleEnabled={(v) => { setKmEnabled(v); if (!v) { onKmFromChange(""); onKmToChange(""); } }}
           valueA={Number(kmFrom) || 0} valueB={Number(kmTo) || 0}
           onChangeA={handleKmFrom} onChangeB={handleKmTo}
           min={0} max={500000} step={10000} fmt={fmtKm}
@@ -123,10 +99,7 @@ export default function QuickFilterPanel({
         <PairSlider
           label="Výkon (kW)"
           enabled={powerEnabled}
-          onToggleEnabled={(v) => {
-            setPowerEnabled(v);
-            if (!v) { onPowerFromChange(""); onPowerToChange(""); }
-          }}
+          onToggleEnabled={(v) => { setPowerEnabled(v); if (!v) { onPowerFromChange(""); onPowerToChange(""); } }}
           valueA={Number(powerFrom) || 0} valueB={Number(powerTo) || 0}
           onChangeA={handlePowerFrom} onChangeB={handlePowerTo}
           min={0} max={500} step={10} fmt={fmtKw}

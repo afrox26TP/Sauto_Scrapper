@@ -30,13 +30,9 @@ export function loadProjects() {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    // Reset running/queued projects to config if they were interrupted
-    return parsed.map((p) => {
-      if (p.phase === "running" || p.phase === "queued") {
-        return { ...p, phase: "config", queuePosition: 0, logs: [...(p.logs || []), "[systém] Stav resetován po obnovení stránky."] };
-      }
-      return p;
-    });
+    // Preserve project phases across refreshes – the status poll will
+    // determine whether a running scraper is still active
+    return parsed;
   } catch {
     return [];
   }
@@ -44,22 +40,17 @@ export function loadProjects() {
 
 export function saveProjects(projects) {
   try {
-    // Don't store too much data in localStorage (limit results to prevent quota)
-    const trimmed = projects.map((p) => ({
-      ...p,
-      results: (p.results || []).slice(0, 500),
-      logs: (p.logs || []).slice(-500),
-    }));
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+    // Store full project data. If quota is exceeded, trim results/logs.
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
   } catch {
-    // localStorage quota exceeded - try to trim more
+    // localStorage quota exceeded – try without results
     try {
-      const minimal = projects.map((p) => ({
+      const trimmed = projects.map((p) => ({
         ...p,
         results: [],
         logs: (p.logs || []).slice(-200),
       }));
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(minimal));
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
     } catch {
       // Give up
     }

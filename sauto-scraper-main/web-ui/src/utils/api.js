@@ -1,5 +1,5 @@
 // ── API wrapper ──
-const API_BASE = "http://localhost:8000";
+const API_BASE = "http://localhost:8001";
 
 function apiUrl(path, query = {}) {
   const url = new URL(`${API_BASE}${path}`);
@@ -24,13 +24,15 @@ async function request(method, path, body = null, query = {}) {
   return res.json();
 }
 
-export async function fetchParams() {
-  const data = await request("GET", "/api/params");
+export async function fetchParams(projectId = null) {
+  const query = projectId ? { project_id: projectId } : {};
+  const data = await request("GET", "/api/params", null, query);
   return data.params || {};
 }
 
-export async function saveParams(params) {
-  const res = await request("PUT", "/api/params", { params });
+export async function saveParams(params, projectId = null) {
+  const query = projectId ? { project_id: projectId } : {};
+  const res = await request("PUT", "/api/params", { params }, query);
   return res;
 }
 
@@ -53,8 +55,9 @@ export async function fetchLogs(limit = 160) {
   return data.lines || [];
 }
 
-export async function runScraper(outputFile = "data/sauto_interesting.json") {
-  const data = await request("POST", "/api/run", { output_file: outputFile });
+export async function runScraper(outputFile = "data/sauto_interesting.json", projectId = null) {
+  const query = projectId ? { project_id: projectId } : {};
+  const data = await request("POST", "/api/run", { output_file: outputFile }, query);
   return data;
 }
 

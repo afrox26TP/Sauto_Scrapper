@@ -23,6 +23,7 @@ export function useProjects(brandOptions, modelsByBrand) {
   const [globalLogs, setGlobalLogs] = useState([]);
   const [scraperRunning, setScraperRunning] = useState(false);
   const [migrated, setMigrated] = useState(false);
+  const firstPollDone = useRef(false);
 
   const projectsRef = useRef(projects);
   projectsRef.current = projects;
@@ -84,8 +85,10 @@ export function useProjects(brandOptions, modelsByBrand) {
       try {
         const status = await fetchStatus();
         setScraperRunning(status.running || false);
+        firstPollDone.current = true;
       } catch {
         setScraperRunning(false);
+        firstPollDone.current = true;
       }
     };
     poll();
@@ -107,6 +110,23 @@ export function useProjects(brandOptions, modelsByBrand) {
     logsInterval.current = setInterval(poll, 1500);
     return () => clearInterval(logsInterval.current);
   }, []);
+
+  // ── Restore running project phase on page refresh ──
+  useEffect(() => {
+    if (!scraperRunning) return;
+    // If scraper is running but no project is in "running" phase,
+    // restore the active project's phase (was reset by older localStorage logic)
+    setProjects((prev) => {
+      const hasRunning = prev.some((p) => p.phase === "running");
+      if (hasRunning) return prev;
+      // Mark the active project as running
+      return prev.map((p) =>
+        p.id === activeProjectId
+          ? { ...p, phase: "running", logs: [...(p.logs || []), "[systém] Scraper běží – stav obnoven po refreshi."] }
+          : p
+      );
+    });
+  }, [scraperRunning]);
 
   // ── Update running project results ──
   useEffect(() => {
@@ -141,7 +161,9 @@ export function useProjects(brandOptions, modelsByBrand) {
 
   // ── Auto-transition running → done when scraper stops ──
   useEffect(() => {
-    if (scraperRunning) return;
+    // Skip until first status poll completes, to avoid
+    // incorrectly transitioning a running project on page refresh
+    if (scraperRunning || !firstPollDone.current) return;
     // Scraper stopped – check if any project was running
     setProjects((prev) => {
       let changed = false;
@@ -216,8 +238,8 @@ export function useProjects(brandOptions, modelsByBrand) {
       )
     );
 
-    saveParams(project.config)
-      .then(() => runScraper(project.resultsPath))
+    saveParams(project.config, projectId)
+      .then(() => runScraper(project.resultsPath, projectId))
       .then(() => {
         setProjects((prev) =>
           prev.map((p) =>
@@ -261,7 +283,7 @@ export function useProjects(brandOptions, modelsByBrand) {
     setProjects((prev) =>
       prev.map((p) =>
         p.id === projectId
-          ? { ...p, phase: "running", logs: [...(p.logs || []), "[systém] Spouštím scraper..."] }
+          ? { ...p, logs: [...(p.logs || []), "[systém] Spouštím scraper..."] }
           : p
       )
     );
@@ -270,19 +292,11 @@ export function useProjects(brandOptions, modelsByBrand) {
       const project = projectsRef.current.find((p) => p.id === projectId);
       if (!project) throw new Error("Projekt nenalezen.");
 
-      await saveParams(project.config);
-      await runScraper(project.resultsPath);
+      await saveParams(project.config, projectId);
+      const runResult = await runScraper(project.resultsPath, projectId);
 
-      setProjects((prev) =>
-        prev.map((p) =>
-          p.id === projectId
-            ? { ...p, logs: [...(p.logs || []), "[systém] Scraper úspěšně spuštěn."] }
-            : p
-        )
-      );
-    } catch (err) {
-      if (err.status === 409) {
-        // Scraper already running - add to queue
+      if (runResult.queued) {
+        // Max concurrent reached – go to queue
         setProjects((prev) => {
           const queuePos = prev.filter((p) => p.phase === "queued").length + 1;
           return prev.map((p) =>
@@ -291,25 +305,35 @@ export function useProjects(brandOptions, modelsByBrand) {
                   ...p,
                   phase: "queued",
                   queuePosition: queuePos,
-                  logs: [...(p.logs || []), `[systém] Zařazeno do fronty (pozice ${queuePos}).`],
+                  logs: [...(p.logs || []), `[systém] Zařazeno do fronty (pozice ${queuePos}, max ${runResult.status?.max_concurrent || 2} současně).`],
                 }
               : p
           );
         });
-      } else {
-        setProjects((prev) =>
-          prev.map((p) =>
-            p.id === projectId
-              ? {
-                  ...p,
-                  phase: "error",
-                  errorMessage: err.message,
-                  logs: [...(p.logs || []), `[chyba] ${err.message}`],
-                }
-              : p
-          )
-        );
+        return;
       }
+
+      // API succeeded – now mark as running
+      setProjects((prev) =>
+        prev.map((p) =>
+          p.id === projectId
+            ? { ...p, phase: "running", logs: [...(p.logs || []), "[systém] Scraper úspěšně spuštěn."] }
+            : p
+        )
+      );
+    } catch (err) {
+      setProjects((prev) =>
+        prev.map((p) =>
+          p.id === projectId
+            ? {
+                ...p,
+                phase: "error",
+                errorMessage: err.message,
+                logs: [...(p.logs || []), `[chyba] ${err.message}`],
+              }
+            : p
+        )
+      );
     }
   }, []);
 

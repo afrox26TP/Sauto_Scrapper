@@ -70,31 +70,28 @@ class ResultMarkPayload(BaseModel):
 
 
 class ScraperRunner:
+    """Manages multiple concurrent scraper processes with per-project isolation."""
+
     def __init__(self) -> None:
         self.lock = threading.Lock()
-        self.process: subprocess.Popen[str] | None = None
+        self.processes: dict[str, subprocess.Popen[str]] = {}  # process_id -> Popen
         self.log_lines: deque[str] = deque(maxlen=250)
-        self.last_exit_code: int | None = None
-        self.last_started_at: float | None = None
-        self.last_finished_at: float | None = None
-        self.last_command: list[str] = []
-        self.last_output_file: str = "data/sauto_interesting.json"
+        self.max_concurrent = 1  # Allow 1 scraper at a time (queue the rest)
+        self._run_counter = 0
 
     def is_running(self) -> bool:
         with self.lock:
-            return self.process is not None and self.process.poll() is None
+            return len(self.processes) > 0
+
+    def _active_count(self) -> int:
+        return sum(1 for p in self.processes.values() if p.poll() is None)
 
     def _status_unlocked(self) -> dict[str, Any]:
-        running = self.process is not None and self.process.poll() is None
-        pid = self.process.pid if running and self.process else None
+        active = self._active_count()
         return {
-            "running": running,
-            "pid": pid,
-            "last_exit_code": self.last_exit_code,
-            "last_started_at": self.last_started_at,
-            "last_finished_at": self.last_finished_at,
-            "last_command": self.last_command,
-            "last_output_file": self.last_output_file,
+            "running": active > 0,
+            "active_processes": active,
+            "max_concurrent": self.max_concurrent,
             "log_count": len(self.log_lines),
         }
 
@@ -104,7 +101,7 @@ class ScraperRunner:
             return {
                 "lines": lines,
                 "count": len(self.log_lines),
-                "running": self.process is not None and self.process.poll() is None,
+                "running": self._active_count() > 0,
             }
 
     def _append_log(self, line: str) -> None:
@@ -118,17 +115,28 @@ class ScraperRunner:
         with self.lock:
             return self._status_unlocked()
 
-    def start(self, output_file: str) -> dict[str, Any]:
+    def start(self, params_file: str, output_file: str, interesting_file: str) -> dict[str, Any]:
         with self.lock:
-            if self.process is not None and self.process.poll() is None:
-                raise RuntimeError("Scraper is already running.")
+            active = self._active_count()
+            if active >= self.max_concurrent:
+                # Queue it — caller should handle this
+                return {"queued": True, "position": active, "max_concurrent": self.max_concurrent}
 
-            # Use a dedicated raw file for scrapy feed export to avoid
-            # conflicting with the spider's own sauto_interesting.json output
-            command = [sys.executable, "-m", "scrapy", "crawl", "sauto", "-O", str(RAW_OUTPUT_PATH.relative_to(ROOT_DIR))]
+            process_id = f"run_{self._run_counter}"
+            self._run_counter += 1
+
+            # Per-project raw output to avoid conflicts
+            raw_per_project = output_file.replace(".json", "_raw.json")
+
+            command = [
+                sys.executable, "-m", "scrapy", "crawl", "sauto",
+                "-a", f"params_file={params_file}",
+                "-a", f"interesting_file={interesting_file}",
+                "-O", raw_per_project,
+            ]
             self.log_lines.clear()
-            self.log_lines.append(f"[web-api] Spouštím: {' '.join(command)}")
-            self.process = subprocess.Popen(
+            self.log_lines.append(f"[web-api] Spouštím [{process_id}]: {' '.join(c for c in command if not c.startswith('-a'))} -a ...")
+            process = subprocess.Popen(
                 command,
                 cwd=ROOT_DIR,
                 stdout=subprocess.PIPE,
@@ -136,25 +144,26 @@ class ScraperRunner:
                 text=True,
                 bufsize=1,
             )
-            self.last_started_at = time.time()
-            self.last_finished_at = None
-            self.last_exit_code = None
-            self.last_command = command
-            self.last_output_file = output_file
+            self.processes[process_id] = process
 
-            thread = threading.Thread(target=self._watch_process, daemon=True)
+            thread = threading.Thread(
+                target=self._watch_process,
+                args=(process_id, process, output_file, interesting_file),
+                daemon=True,
+            )
             thread.start()
 
-            log_thread = threading.Thread(target=self._read_output, daemon=True)
+            log_thread = threading.Thread(
+                target=self._read_output,
+                args=(process,),
+                daemon=True,
+            )
             log_thread.start()
 
-            return self._status_unlocked()
+            return {"started": True, "process_id": process_id, "active": self._active_count()}
 
-    def _read_output(self) -> None:
-        with self.lock:
-            process = self.process
-
-        if process is None or process.stdout is None:
+    def _read_output(self, process: subprocess.Popen[str]) -> None:
+        if process.stdout is None:
             return
 
         for line in process.stdout:
@@ -165,20 +174,24 @@ class ScraperRunner:
         except Exception:
             pass
 
-    def _watch_process(self) -> None:
-        with self.lock:
-            process = self.process
-
-        if process is None:
-            return
-
+    def _watch_process(self, process_id: str, process: subprocess.Popen[str], output_file: str, interesting_file: str) -> None:
         exit_code = process.wait()
 
+        # Copy spider output (per-project interesting file) to the final results path
+        interesting_path = ROOT_DIR / interesting_file
+        if output_file and interesting_path.exists() and output_file != interesting_file:
+            try:
+                import shutil as _shutil
+                target_path = ROOT_DIR / output_file
+                target_path.parent.mkdir(parents=True, exist_ok=True)
+                _shutil.copy2(str(interesting_path), str(target_path))
+                self.log_lines.append(f"[web-api] [{process_id}] Výsledky zkopírovány do {output_file}")
+            except Exception as exc:
+                self.log_lines.append(f"[web-api] [{process_id}] Nepodařilo se zkopírovat výsledky: {exc}")
+
         with self.lock:
-            self.last_exit_code = exit_code
-            self.last_finished_at = time.time()
-            self.process = None
-            self.log_lines.append(f"[web-api] Dokončeno s exit code {exit_code}")
+            self.processes.pop(process_id, None)
+            self.log_lines.append(f"[web-api] [{process_id}] Dokončeno s exit code {exit_code}")
 
 
 def load_json(path: Path, fallback: Any) -> Any:
@@ -384,6 +397,12 @@ app.add_middleware(
 
 runner = ScraperRunner()
 
+# Per-project params directory
+PROJECT_PARAMS_DIR = ROOT_DIR / "data" / "project_params"
+PROJECT_PARAMS_DIR.mkdir(parents=True, exist_ok=True)
+
+_default_params = load_json(PARAMS_PATH, {})
+
 
 @app.get("/api/health")
 def health() -> dict[str, Any]:
@@ -393,27 +412,46 @@ def health() -> dict[str, Any]:
         "version": API_VERSION,
         "uptime_s": uptime_s,
         "python": sys.version.split()[0],
+        "active_scrapers": runner._active_count(),
     }
 
 
 @app.get("/api/params")
-def get_params() -> dict[str, Any]:
-    params = load_json(PARAMS_PATH, {})
-    return {"params": params}
+def get_params(project_id: str | None = None) -> dict[str, Any]:
+    """Get params for a specific project or the global defaults."""
+    if project_id and project_id.strip():
+        proj_path = PROJECT_PARAMS_DIR / f"{project_id}.json"
+        params = load_json(proj_path, _default_params)
+    else:
+        params = load_json(PARAMS_PATH, {})
+    return {"params": params, "project_id": project_id}
 
 
 @app.put("/api/params")
-def update_params(payload: ParamsPayload) -> dict[str, Any]:
+def update_params(payload: ParamsPayload, project_id: str | None = None) -> dict[str, Any]:
     if not isinstance(payload.params, dict):
         raise HTTPException(status_code=400, detail="Invalid params payload.")
 
-    normalized = {str(key): "" if value is None else str(value) for key, value in payload.params.items()}
-    dump_json(PARAMS_PATH, normalized)
-    return {"saved": True, "params": normalized}
+    # Keep custom_presets as dict, everything else as strings
+    normalized = {}
+    for key, value in payload.params.items():
+        if key == "custom_presets":
+            normalized[key] = value if isinstance(value, dict) else {}
+        else:
+            normalized[key] = "" if value is None else str(value)
+
+    if project_id and project_id.strip():
+        # Save to per-project params file
+        proj_path = PROJECT_PARAMS_DIR / f"{project_id}.json"
+        dump_json(proj_path, normalized)
+    else:
+        # Save to global params.json
+        dump_json(PARAMS_PATH, normalized)
+    return {"saved": True, "params": normalized, "project_id": project_id}
 
 
 @app.post("/api/run")
-def run_scraper(payload: RunPayload) -> dict[str, Any]:
+def run_scraper(payload: RunPayload, project_id: str | None = None) -> dict[str, Any]:
     output_file = payload.output_file.strip() or "data/sauto_interesting.json"
 
     if os.path.isabs(output_file):
@@ -423,22 +461,39 @@ def run_scraper(payload: RunPayload) -> dict[str, Any]:
     if ROOT_DIR not in resolved.parents and resolved != ROOT_DIR:
         raise HTTPException(status_code=400, detail="output_file must stay inside project directory.")
 
+    # Determine which params file to use
+    params_file = "params.json"
+    if project_id and project_id.strip():
+        proj_params = PROJECT_PARAMS_DIR / f"{project_id}.json"
+        if proj_params.exists():
+            params_file = str(proj_params.relative_to(ROOT_DIR))
+        else:
+            # No project-specific params yet — use the global ones
+            params_file = str(PARAMS_PATH.relative_to(ROOT_DIR))
+
+    # Per-project interesting file (spider stores its output here)
+    interesting_file = output_file.replace(".json", "_spider_output.json")
+
     # Prevent stale UI data: start each run with a clean target result file.
     dump_json(resolved, [])
 
-    try:
-        status = runner.start(output_file=output_file)
-    except RuntimeError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except OSError as exc:
-        raise HTTPException(status_code=500, detail=f"Unable to start scraper: {exc}") from exc
+    result = runner.start(
+        params_file=params_file,
+        output_file=output_file,
+        interesting_file=interesting_file,
+    )
 
-    return {"started": True, "status": status}
+    if result.get("queued"):
+        return {"started": False, "queued": True, "status": result}
+
+    return {"started": True, "status": result}
 
 
 @app.get("/api/status")
 def get_status() -> dict[str, Any]:
-    return runner.status()
+    status = runner.status()
+    status["queue_length"] = 0
+    return status
 
 
 @app.get("/api/logs")
@@ -450,9 +505,6 @@ def get_logs(limit: int = 120) -> dict[str, Any]:
 def get_results(path: str | None = None) -> dict[str, Any]:
     rel_path = normalize_relative_path(path, "data/sauto_interesting.json")
     result_path = (ROOT_DIR / rel_path).resolve()
-
-    if not result_path.exists():
-        result_path = DEFAULT_RESULTS_PATH
 
     if not result_path.exists():
         return {"items": [], "path": str(rel_path), "count": 0, "marked_ids": []}
@@ -760,7 +812,7 @@ def export_results(path: str | None = None) -> dict[str, Any]:
 
 @app.post("/api/results/delete")
 def delete_results(payload: ResultIdsPayload) -> dict[str, Any]:
-    rel_path = normalize_relative_path(payload.path, runner.last_output_file or "data/sauto_interesting.json")
+    rel_path = normalize_relative_path(payload.path, "data/sauto_interesting.json")
     result_path = (ROOT_DIR / rel_path).resolve()
     if not result_path.exists():
         result_path = DEFAULT_RESULTS_PATH
@@ -788,7 +840,7 @@ def delete_results(payload: ResultIdsPayload) -> dict[str, Any]:
 
 @app.post("/api/results/clear")
 def clear_results(payload: ResultsPathPayload) -> dict[str, Any]:
-    rel_path = normalize_relative_path(payload.path, runner.last_output_file or "data/sauto_interesting.json")
+    rel_path = normalize_relative_path(payload.path, "data/sauto_interesting.json")
     result_path = (ROOT_DIR / rel_path).resolve()
     dump_json(result_path, [])
     return {"cleared": True, "path": str(result_path.relative_to(ROOT_DIR))}
@@ -796,7 +848,7 @@ def clear_results(payload: ResultsPathPayload) -> dict[str, Any]:
 
 @app.post("/api/results/import")
 def import_results(payload: ResultsImportPayload) -> dict[str, Any]:
-    rel_path = normalize_relative_path(payload.path, runner.last_output_file or "data/sauto_interesting.json")
+    rel_path = normalize_relative_path(payload.path, "data/sauto_interesting.json")
     result_path = (ROOT_DIR / rel_path).resolve()
     items = [item for item in payload.items if isinstance(item, dict)]
     dump_json(result_path, items)

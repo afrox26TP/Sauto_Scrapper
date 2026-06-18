@@ -330,6 +330,62 @@ button:disabled {
 .link-btn.danger { color: var(--danger); }
 .link-btn.danger:hover:not(:disabled) { background: var(--danger-soft); }
 
+.setup-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin: -14px -14px 2px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.setup-name-row .btn-run {
+  flex: 0 0 auto;
+}
+
+.setup-name-row .project-name-input {
+  flex: 1;
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+.setup-name-row.setup-name-row-bottom {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  z-index: 100;
+  max-width: min(500px, calc(100vw - 32px));
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+
+.setup-name-row.setup-name-row-bottom.visible {
+  display: flex;
+  animation: slideUp 0.25s ease;
+}
+
+.setup-name-row-bottom-title {
+  flex: 1;
+  font-size: 0.88rem;
+  font-weight: 750;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  padding-left: 4px;
+  padding-right: 12px;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
 /* ── Project Name Input ── */
 .project-name-input {
   display: flex;
@@ -341,11 +397,12 @@ button:disabled {
 .project-name-field {
   flex: 1;
   min-height: 40px;
+  min-width: 0;
   border: 1px solid var(--border);
   padding: 8px 12px;
   background: var(--surface-soft);
   color: var(--text);
-  font-size: 1rem;
+  font-size: 0.92rem;
   font-weight: 700;
   outline: none;
 }
@@ -400,31 +457,23 @@ button:disabled {
   gap: 4px;
 }
 
-.quick-pair-label {
+.quick-pair-label-row {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.quick-pair-label-text {
   font-size: 0.72rem;
   font-weight: 750;
   color: var(--muted);
-  cursor: pointer;
-  user-select: none;
   transition: color 0.15s;
 }
 
-.quick-pair-label.checked {
+.quick-pair-label-text.checked {
   color: var(--green);
-}
-
-.quick-pair-check {
-  accent-color: var(--green);
-  cursor: pointer;
-  width: 14px;
-  height: 14px;
-}
-
-.quick-pair.quick-pair-check:checked {
-  accent-color: var(--green);
 }
 
 .quick-pair-infinite {

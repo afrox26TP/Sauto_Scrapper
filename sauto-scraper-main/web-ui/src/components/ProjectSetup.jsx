@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Play, LoaderCircle, ChevronDown, ChevronUp } from "lucide-react";
 import ProjectNameInput from "./ProjectNameInput";
 import BrandSelector from "./BrandSelector";
@@ -99,6 +99,7 @@ export default function ProjectSetup({
 }) {
   const config = project.config || {};
   const busy = isRunning || project.phase === "running" || project.phase === "queued";
+  const isQueued = project.phase === "queued";
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [brandFilterText, setBrandFilterText] = useState("");
   const [modelFilterText, setModelFilterText] = useState("");
@@ -165,18 +166,34 @@ export default function ProjectSetup({
   const setConfigParam = useCallback((key, val) => { onUpdateConfig({ [key]: val }); }, [onUpdateConfig]);
   const extraKeys = Object.keys(config).filter((k) => !IGNORED_KEYS.has(k));
 
+  const topBarRef = useRef(null);
+  const [showBottomBar, setShowBottomBar] = useState(false);
+
+  useEffect(() => {
+    const el = topBarRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setShowBottomBar(!entry.isIntersecting);
+      },
+      { threshold: 0 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <div className="project-setup">
-      <ProjectNameInput
-        name={project.name}
-        customName={project.customName}
-        onNameChange={(val) => onUpdateProject({ name: val, customName: true })}
-        onToggleCustom={() => onUpdateProject({ customName: !project.customName })}
-      />
-      <div className="setup-actions-top">
+      <div className="setup-name-row" ref={topBarRef}>
         <button className="btn-primary btn-run" onClick={() => onRun(project.id)} disabled={busy}>
-          {busy ? <><LoaderCircle className="ui-icon icon-spin" /> Pracuji…</> : <><Play className="ui-icon" /> Spustit scraper</>}
+          {isQueued ? <><LoaderCircle className="ui-icon icon-spin" /> Ve frontě</> : busy ? <><LoaderCircle className="ui-icon icon-spin" /> Pracuji…</> : <><Play className="ui-icon" /> Spustit</>}
         </button>
+        <ProjectNameInput
+          name={project.name}
+          customName={project.customName}
+          onNameChange={(val) => onUpdateProject({ name: val, customName: true })}
+          onToggleCustom={() => onUpdateProject({ customName: !project.customName })}
+        />
       </div>
 
       {/* Brand / Model / Body / Equipment – první řádek vedle sebe */}
@@ -258,6 +275,16 @@ export default function ProjectSetup({
           {showAdvanced ? <><ChevronUp className="ui-icon" /> Skrýt pokročilé</> : <><ChevronDown className="ui-icon" /> Pokročilé filtry</>}
         </button>
         <span className="muted">{ADVANCED_GROUPS.length} sekcí</span>
+      </div>
+
+      {/* Spodní sticky bar – viditelný jen když horní zmizel */}
+      <div className={`setup-name-row setup-name-row-bottom${showBottomBar ? " visible" : ""}`}>
+        <button className="btn-primary btn-run" onClick={() => onRun(project.id)} disabled={busy}>
+          {isQueued ? <><LoaderCircle className="ui-icon icon-spin" /> Ve frontě</> : busy ? <><LoaderCircle className="ui-icon icon-spin" /> Pracuji…</> : <><Play className="ui-icon" /> Spustit</>}
+        </button>
+        <div className="setup-name-row-bottom-title">
+          {project.name}
+        </div>
       </div>
 
       {showAdvanced && (

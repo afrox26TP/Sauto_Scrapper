@@ -114,26 +114,34 @@ export function hasAny(text, patterns) {
   return patterns.some((pattern) => pattern.test(text));
 }
 
+// ── Helper: read value from item (top-level first, then offer_metrics fallback) ──
+export function getMetric(item, key) {
+  const om = item.offer_metrics;
+  const tv = item[key];
+  if (tv !== null && tv !== undefined) return tv;
+  return (om && om[key] !== null && om[key] !== undefined) ? om[key] : undefined;
+}
+
 // ── First pass: raw component scores (0‑100 after normalization) ──
 export function calculateScoreComponents(item) {
   const equipment = Array.isArray(item.equipment_list) ? item.equipment_list : [];
   const eqText = equipmentText(item);
-  const power = num(item.power_kw, 0);
-  const fuel = String(item.fuel_seo || "").toLowerCase();
-  const gearbox = String(item.gearbox_type || "").toLowerCase();
-  const drive = String(item.drive_type || "").toLowerCase();
-  const brandTier = String(item.brand_tier || "").toLowerCase();
+  const power = num(getMetric(item, "power_kw"), 0);
+  const fuel = String(getMetric(item, "fuel_seo") || "").toLowerCase();
+  const gearbox = String(getMetric(item, "gearbox_type") || "").toLowerCase();
+  const drive = String(getMetric(item, "drive_type") || "").toLowerCase();
+  const brandTier = String(getMetric(item, "brand_tier") || "").toLowerCase();
 
   const raw = {
-    age: scoreMax(item.age_years, [[2, 78], [5, 62], [8, 43], [12, 24], [16, 6], [20, -18], [999, -35]]),
-    mileage: scoreMax(item.tachometer, [[50000, 72], [80000, 58], [140000, 38], [200000, 14], [260000, -12], [9999999, -36]]),
-    price: scoreMax(item.price, [[120000, 56], [200000, 40], [350000, 22], [600000, 4], [1000000, -12], [99999999, -30]]),
-    price_power: scoreMax(item.price_per_kw, [[1200, 72], [1800, 52], [2600, 32], [3600, 10], [5200, -14], [999999, -36]]),
+    age: scoreMax(getMetric(item, "age_years"), [[2, 78], [5, 62], [8, 43], [12, 24], [16, 6], [20, -18], [999, -35]]),
+    mileage: scoreMax(getMetric(item, "tachometer"), [[50000, 72], [80000, 58], [140000, 38], [200000, 14], [260000, -12], [9999999, -36]]),
+    price: scoreMax(getMetric(item, "price"), [[120000, 56], [200000, 40], [350000, 22], [600000, 4], [1000000, -12], [99999999, -30]]),
+    price_power: scoreMax(getMetric(item, "price_per_kw"), [[1200, 72], [1800, 52], [2600, 32], [3600, 10], [5200, -14], [999999, -36]]),
     power: scoreMin(power, [[220, 72], [170, 56], [130, 36], [100, 16], [75, 2], [55, -12], [0, -28]]),
-    cost: scoreMax(item.annual_total_cost, [[35000, 48], [50000, 32], [70000, 14], [95000, -8], [9999999, -28]]),
+    cost: scoreMax(getMetric(item, "annual_total_cost"), [[35000, 48], [50000, 32], [70000, 14], [95000, -8], [9999999, -28]]),
     consumption: fuel === "elektro"
-      ? scoreMax(item.estimated_consumption_per_100km, [[16, 34], [20, 24], [24, 10], [30, -6], [999, -18]])
-      : scoreMax(item.estimated_consumption_per_100km, [[5.5, 34], [6.8, 24], [8.0, 10], [9.5, -8], [999, -24]]),
+      ? scoreMax(getMetric(item, "estimated_consumption_per_100km"), [[16, 34], [20, 24], [24, 10], [30, -6], [999, -18]])
+      : scoreMax(getMetric(item, "estimated_consumption_per_100km"), [[5.5, 34], [6.8, 24], [8.0, 10], [9.5, -8], [999, -24]]),
     equipment: 0,
     flags: 0,
     sport: 0,
@@ -153,9 +161,9 @@ export function calculateScoreComponents(item) {
   if (hasAny(eqText, [/mrtv[eé]ho\s*[uú]hlu/, /j[ií]zdn[ií]ho\s*pruhu/, /lane assist/])) raw.equipment += 8;
   raw.equipment = clamp(raw.equipment, 0, 71);
 
-  if (item.service_book) raw.flags += 14;
-  if (item.first_owner) raw.flags += 9;
-  if (item.tuning) raw.flags -= 28;
+  if (getMetric(item, "service_book")) raw.flags += 14;
+  if (getMetric(item, "first_owner")) raw.flags += 9;
+  if (getMetric(item, "tuning")) raw.flags -= 28;
 
   if (power >= 220) raw.sport += 36;
   else if (power >= 170) raw.sport += 28;
@@ -164,8 +172,8 @@ export function calculateScoreComponents(item) {
   if (drive === "rwd") raw.sport += 12;
   else if (drive === "awd") raw.sport += 9;
   if (gearbox === "manual") raw.sport += 6;
-  if (num(item.price_per_kw, 999999) <= 2200) raw.sport += 10;
-  if (item.tuning) raw.sport -= 18;
+  if (num(getMetric(item, "price_per_kw"), 999999) <= 2200) raw.sport += 10;
+  if (getMetric(item, "tuning")) raw.sport -= 18;
 
   if (brandTier === "premium") raw.luxury += 24;
   else if (brandTier === "budget") raw.luxury -= 6;
@@ -174,7 +182,7 @@ export function calculateScoreComponents(item) {
   if (hasAny(eqText, [/panoramatick[aá]\s*st[rř]echa/, /st[rř]e[sš]n[ií]\s*okno/])) raw.luxury += 9;
   if (equipment.length >= 40) raw.luxury += 14;
   else if (equipment.length >= 25) raw.luxury += 8;
-  if (num(item.age_years, 99) <= 5) raw.luxury += 12;
+  if (num(getMetric(item, "age_years"), 99) <= 5) raw.luxury += 12;
   if (power >= 130) raw.luxury += 7;
   raw.luxury = clamp(raw.luxury, -20, 75);
 
@@ -183,11 +191,11 @@ export function calculateScoreComponents(item) {
     coupe: 1450, kabriolet: 1550, mpv: 1700, suv: 1850,
     terenni: 2000, "pick-up": 2100, van: 1950,
   };
-  const estWeightKg = BODY_WEIGHT_KG[String(item.body_seo || "").toLowerCase()] || 1500;
+  const estWeightKg = BODY_WEIGHT_KG[String(getMetric(item, "body_seo") || "").toLowerCase()] || 1500;
   const powerPerTonne = power > 0 ? power / (estWeightKg / 1000) : 0;
   raw.power_weight = scoreMin(powerPerTonne, [[180, 40], [145, 30], [115, 18], [88, 6], [62, -4], [0, -12]]);
 
-  const listingName = String(item.name || "").toLowerCase();
+  const listingName = String(getMetric(item, "name") || "").toLowerCase();
   const STRONG_BADGE = /(\bamg\b|\bm[1-8]\b|\bm\s?performance\b|\brs\s?\d?\b|\bvrs\b|\bgti\b|\bgtd\b|\bgts\b|\btype[\s-]?r\b|\bsti\b|\bnismo\b|\babarth\b|\bpolestar\b|\bcupra\b|\bgr\b)/;
   const MILD_BADGE = /(m[\s-]?paket|m[\s-]?sport|s[\s-]?line|r[\s-]?line|n[\s-]?line|st[\s-]?line|\bsport\b)/;
   if (STRONG_BADGE.test(listingName)) raw.sport_badge = 24;
@@ -211,7 +219,7 @@ export function calculateScoreComponents(item) {
   raw.premium_equipment =
     premiumCount >= 6 ? 32 : premiumCount >= 4 ? 22 : premiumCount >= 2 ? 12 : premiumCount >= 1 ? 5 : 0;
 
-  const tco5y = num(item.price, 0) + num(item.annual_total_cost, 0) * 5;
+  const tco5y = num(getMetric(item, "price"), 0) + num(getMetric(item, "annual_total_cost"), 0) * 5;
   raw.tco = scoreMax(tco5y, [[250000, 40], [400000, 28], [600000, 14], [900000, 0], [1400000, -14], [99999999, -30]]);
 
   const RANGES = {
@@ -268,8 +276,8 @@ export function getItemScore(item, preset) {
 }
 
 export function isSuspiciousMileage(item) {
-  const age = num(item.age_years);
-  const km = num(item.tachometer);
+  const age = num(getMetric(item, "age_years"));
+  const km = num(getMetric(item, "tachometer"));
   if (age === null || km === null || age <= 0) return false;
   if (age >= 10 && km < 80000) return true;
   const kmPerYear = km / age;

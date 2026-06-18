@@ -228,20 +228,22 @@ export default function App() {
           {renderProjectContent()}
         </div>
 
-        {/* Terminal bar */}
-        <TerminalBar
-          scraperRunning={scraperRunning}
-          globalLogs={globalLogs}
-          tickerStep={tickerStep}
-          tickerPrefix={tickerPrefix()}
-          onShowHistory={() => {
-            setShowLogsModal(true);
-            setTimeout(() => {
-              if (logsModalBodyRef.current)
-                logsModalBodyRef.current.scrollTop = logsModalBodyRef.current.scrollHeight;
-            }, 50);
-          }}
-        />
+        {/* Terminal bar – only show when the active project is running */}
+        {activeProject?.phase === "running" && (
+          <TerminalBar
+            scraperRunning={scraperRunning}
+            globalLogs={globalLogs}
+            tickerStep={tickerStep}
+            tickerPrefix={tickerPrefix()}
+            onShowHistory={() => {
+              setShowLogsModal(true);
+              setTimeout(() => {
+                if (logsModalBodyRef.current)
+                  logsModalBodyRef.current.scrollTop = logsModalBodyRef.current.scrollHeight;
+              }, 50);
+            }}
+          />
+        )}
       </div>
 
       {/* Logs Modal */}

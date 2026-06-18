@@ -12,6 +12,7 @@ import ResultsTable from "./ResultsTable";
 import { CustomCheckbox, CustomSlider } from "./index";
 import {
   getItemScore,
+  getMetric,
   isSuspiciousMileage,
   LOCAL_SCORING_PRESETS,
   DEFAULT_SCORE_WEIGHTS,
@@ -39,11 +40,16 @@ export default function ProjectResults({
   const fileInputRef = useRef(null);
   const logsModalBodyRef = useRef(null);
 
-  // Scoring presets merged
+  // Scoring presets merged – custom presets live inside project.config.custom_presets
+  const customPresets = useMemo(() => {
+    const raw = project.config?.custom_presets;
+    if (raw && typeof raw === "object" && !Array.isArray(raw)) return raw;
+    return {};
+  }, [project.config?.custom_presets]);
+
   const scoringPresets = useMemo(() => {
-    const custom = project.customPresets || {};
-    return { ...LOCAL_SCORING_PRESETS, ...custom };
-  }, [project.customPresets]);
+    return { ...LOCAL_SCORING_PRESETS, ...customPresets };
+  }, [customPresets]);
 
   // Format items
   const formattedItems = useMemo(() => {
@@ -54,12 +60,12 @@ export default function ProjectResults({
 
     return (project.results || []).map((item) => ({
       ...item,
-      _fmt_price: fmt(item.price),
-      _fmt_tacho: fmt(item.tachometer),
-      _fmt_ppkw: fmt(item.price_per_kw, "ppkw"),
-      _fmt_ppkm: fmt(item.price_per_km, "ppkm"),
-      _fmt_kpy: fmt(item.km_per_year),
-      _fmt_atc: fmt(item.annual_total_cost),
+      _fmt_price: fmt(getMetric(item, "price")),
+      _fmt_tacho: fmt(getMetric(item, "tachometer")),
+      _fmt_ppkw: fmt(getMetric(item, "price_per_kw"), "ppkw"),
+      _fmt_ppkm: fmt(getMetric(item, "price_per_km"), "ppkm"),
+      _fmt_kpy: fmt(getMetric(item, "km_per_year")),
+      _fmt_atc: fmt(getMetric(item, "annual_total_cost")),
       _suspicious: isSuspiciousMileage(item),
     }));
   }, [project.results]);
@@ -105,13 +111,13 @@ export default function ProjectResults({
       case "price_per_kw":
       case "price_per_km":
       case "km_per_year":
-        return Number(item?.[key] ?? NaN);
+        return Number(getMetric(item, key) ?? NaN);
       case "name":
       case "drive_type":
       case "gearbox_type":
-        return String(item?.[key] ?? "").toLowerCase();
+        return String(getMetric(item, key) ?? "").toLowerCase();
       default:
-        return item?.[key];
+        return getMetric(item, key) ?? item?.[key];
     }
   }
 
