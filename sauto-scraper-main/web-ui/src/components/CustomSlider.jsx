@@ -108,6 +108,43 @@ export default function CustomSlider({
     [commit],
   );
 
+  // Editable value input
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState("");
+  const editInputRef = useRef(null);
+
+  const handleValueClick = useCallback(() => {
+    setEditText(String(localValue));
+    setEditing(true);
+    setTimeout(() => {
+      editInputRef.current?.select();
+    }, 10);
+  }, [localValue]);
+
+  const handleEditChange = useCallback((e) => {
+    setEditText(e.target.value);
+  }, []);
+
+  const commitEdit = useCallback(() => {
+    setEditing(false);
+    const parsed = parseFloat(editText);
+    if (Number.isFinite(parsed)) {
+      const clamped = Math.min(safeMax, Math.max(safeMin, parsed));
+      const stepped = Math.round((clamped - safeMin) / step) * step + safeMin;
+      setLocalValue(stepped);
+      commit(stepped);
+    }
+  }, [editText, safeMin, safeMax, step, commit]);
+
+  const handleEditKeyDown = useCallback((e) => {
+    if (e.key === "Enter") {
+      e.target.blur();
+    }
+    if (e.key === "Escape") {
+      setEditing(false);
+    }
+  }, []);
+
   return (
     <div className={`custom-slider-field ${className}`}>
       {label && <span className="custom-slider-label">{label}</span>}
@@ -151,7 +188,24 @@ export default function CustomSlider({
             aria-label={label || undefined}
           />
         </div>
-        <span className="custom-slider-value">{displayText}</span>
+        {editing ? (
+          <input
+            ref={editInputRef}
+            type="number"
+            className="custom-slider-value custom-slider-value-input"
+            value={editText}
+            onChange={handleEditChange}
+            onBlur={commitEdit}
+            onKeyDown={handleEditKeyDown}
+            min={safeMin}
+            max={safeMax}
+            step={step}
+          />
+        ) : (
+          <span className="custom-slider-value" onClick={handleValueClick} style={{ cursor: "pointer" }}>
+            {displayText}
+          </span>
+        )}
       </div>
     </div>
   );

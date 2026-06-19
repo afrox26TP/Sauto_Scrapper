@@ -79,6 +79,26 @@ export function useProjects(brandOptions, modelsByBrand) {
     saveProjects(projects);
   }, [projects, migrated]);
 
+  // ── Reload results for done projects from API on page refresh ──
+  useEffect(() => {
+    if (!migrated) return;
+    projects.forEach((p) => {
+      if (p.phase === "done" && p.resultsPath) {
+        fetchResults(p.resultsPath)
+          .then((data) => {
+            setProjects((current) =>
+              current.map((cp) =>
+                cp.id === p.id
+                  ? { ...cp, results: data.items || [], markedIds: data.marked_ids || [] }
+                  : cp
+              )
+            );
+          })
+          .catch(() => {});
+      }
+    });
+  }, [migrated]);
+
   // ── Fetch global scraper status ──
   useEffect(() => {
     const poll = async () => {

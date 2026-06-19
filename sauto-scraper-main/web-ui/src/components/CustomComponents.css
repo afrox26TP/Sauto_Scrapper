@@ -257,6 +257,34 @@
   white-space: nowrap;
   min-width: 88px;
   border: 1px solid var(--border);
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.custom-slider-value:hover {
+  border-color: var(--accent);
+  background: var(--surface);
+}
+
+.custom-slider-value-input {
+  padding: 6px 8px;
+  border-radius: 9px;
+  background: var(--surface-solid);
+  color: var(--text);
+  text-align: right;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  white-space: nowrap;
+  min-width: 88px;
+  border: 1px solid var(--accent);
+  outline: none;
+  font-family: inherit;
+}
+
+.custom-slider-value-input:focus {
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
 /* sm size */

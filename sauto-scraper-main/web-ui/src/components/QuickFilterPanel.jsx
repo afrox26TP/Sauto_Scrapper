@@ -96,7 +96,7 @@ export default function QuickFilterPanel({
           }}
           valueA={Number(priceFrom) || 0} valueB={Number(priceTo) || 0}
           onChangeA={handlePriceFrom} onChangeB={handlePriceTo}
-          min={0} max={5000000} step={50000} fmt={fmtPrice}
+          min={0} max={7500000} step={50000} fmt={fmtPrice}
         />
         <PairSlider
           label="Rok"

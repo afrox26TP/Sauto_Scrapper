@@ -4,7 +4,7 @@ const STORAGE_KEY = "sauto_projects";
 
 export const DEFAULT_PROJECT_CONFIG = {
   category_id: "838",
-  limit: "100",
+  limit: "1000",
   offset: "0",
 };
 
@@ -69,7 +69,7 @@ export function saveProjects(projects) {
     // Don't store too much data in localStorage (limit results to prevent quota)
     const trimmed = projects.map((p) => ({
       ...p,
-      results: (p.results || []).slice(0, 500),
+      results: [],
       logs: (p.logs || []).slice(-500),
     }));
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));

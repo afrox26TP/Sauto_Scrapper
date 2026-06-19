@@ -1,12 +1,21 @@
 {
   "category_id": "838",
-  "limit": "100",
+  "limit": "1000",
   "offset": "0",
-  "manufacturer_seo_name": "bmw",
-  "model_seo_name": "rada-2",
+  "year_from": "",
+  "year_to": "",
+  "manufacturer_seo_name": "",
+  "model_seo_name": "",
   "exclude_manufacturer_seo_name": "",
   "exclude_model_seo_name": "",
-  "seller_type": "soukromy",
+  "operating_lease": "false",
+  "tachometer_from": "",
+  "tachometer_to": "",
+  "power_from": "",
+  "price_to": "",
+  "power_to": "",
+  "price_from": "",
   "condition_seo": "nove,ojete,predvadeci",
-  "exclude_condition_seo": ""
+  "exclude_condition_seo": "",
+  "seller_type": "soukromy"
 }
