@@ -284,17 +284,17 @@ export default memo(function ProjectResults({
           <div className="results-title-row">
             <strong>Výsledky</strong>
             <span className="muted">{project.results.length} záznamů</span>
+            <label className="score-control-inline">
+              <span>Bodování</span>
+              <select value={selectedPreset} onChange={(e) => handlePresetChange(e.target.value)}>
+                {Object.entries(scoringPresets).map(([key, preset]) => (
+                  <option key={key} value={key}>
+                    {preset.name || key}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
-          <label className="score-control-inline">
-            <span>Bodování</span>
-            <select value={selectedPreset} onChange={(e) => handlePresetChange(e.target.value)}>
-              {Object.entries(scoringPresets).map(([key, preset]) => (
-                <option key={key} value={key}>
-                  {preset.name || key}
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
         <div className="results-actions">
           <button className="link-btn" onClick={() => handleExport("all")}>

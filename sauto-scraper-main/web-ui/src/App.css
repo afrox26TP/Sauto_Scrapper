@@ -69,8 +69,8 @@ select { font: inherit; }
 .topbar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 14px;
+  gap: 10px;
+  padding: 5px 10px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   flex: 0 0 auto;
@@ -110,9 +110,9 @@ select { font: inherit; }
 .icon-spin { animation: spin 0.8s linear infinite; }
 
 .topbar h1 {
-  font-size: 0.98rem;
+  font-size: 0.9rem;
   font-weight: 750;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
 }
 
 .brand-block p {
@@ -142,13 +142,13 @@ select { font: inherit; }
 .tabbar-tab {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 14px;
+  gap: 5px;
+  padding: 7px 10px;
   white-space: nowrap;
   cursor: pointer;
   border-bottom: 2px solid transparent;
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   font-weight: 600;
   user-select: none;
   transition: background 0.12s, border-color 0.12s, color 0.12s;
@@ -180,7 +180,7 @@ select { font: inherit; }
 }
 
 .tabbar-name {
-  max-width: 200px;
+  max-width: 170px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -212,14 +212,14 @@ select { font: inherit; }
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 10px 14px;
+  padding: 7px 10px;
   background: transparent;
   border: 0;
   border-left: 1px solid var(--border);
   color: var(--accent);
   cursor: pointer;
   font-weight: 700;
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   flex: 0 0 auto;
 }
 
@@ -237,10 +237,10 @@ select { font: inherit; }
   position: relative;
   flex: 1 1 auto;
   overflow: auto;
-  padding: 14px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .project-switch-overlay {
@@ -926,7 +926,7 @@ button:disabled {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   min-height: 0;
 }
 
@@ -935,46 +935,48 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
+  gap: 8px;
+  padding: 8px 10px;
   background: var(--surface);
   border: 1px solid var(--border);
   flex: 0 0 auto;
 }
 
 .results-header { align-items: center; }
-.results-hd strong { font-size: 1rem; font-weight: 800; }
+.results-hd strong { font-size: 0.9rem; font-weight: 800; }
+.results-header { flex-wrap: wrap; }
 
 .results-title-block {
   min-width: 0;
-  display: grid;
-  gap: 8px;
+  display: flex;
+  align-items: center;
 }
 
 .results-title-row {
-  display: inline-flex;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
 }
 
 .score-control-inline {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 7px;
   color: var(--muted);
 }
 
 .score-control-inline > span:first-child {
-  font-size: 0.76rem;
+  font-size: 0.72rem;
   font-weight: 750;
   color: var(--text);
 }
 
 .score-control-inline select {
-  min-width: 170px;
-  min-height: 34px;
+  min-width: 140px;
+  min-height: 28px;
   border: 1px solid var(--border);
-  padding: 7px 32px 7px 9px;
+  padding: 4px 24px 4px 7px;
   background: var(--surface-soft);
   color: var(--text);
   outline: none;
@@ -992,8 +994,13 @@ button:disabled {
 .selection-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: 5px;
   justify-content: flex-end;
+}
+
+.theme-toggle {
+  padding: 5px 8px;
+  font-size: 0.76rem;
 }
 
 .selection-bar {
