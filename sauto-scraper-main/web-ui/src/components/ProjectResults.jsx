@@ -25,6 +25,8 @@ import {
   fetchResults,
 } from "../utils/api";
 
+const EMPTY_ITEMS = [];
+
 export default memo(function ProjectResults({
   project,
   onUpdateProject,
@@ -37,9 +39,26 @@ export default memo(function ProjectResults({
   const [popupLog, setPopupLog] = useState(null);
   const [loading, setLoading] = useState(false);
   const [tableBusy, setTableBusy] = useState(false);
+  const [switchLoading, setSwitchLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef(null);
   const logsModalBodyRef = useRef(null);
+  const rawResults = project.results ?? EMPTY_ITEMS;
+  const rawMarkedIds = project.markedIds ?? EMPTY_ITEMS;
+  const deferredResults = React.useDeferredValue(rawResults);
+  const deferredMarkedIds = React.useDeferredValue(rawMarkedIds);
+  const deferredLoading = deferredResults !== rawResults || deferredMarkedIds !== rawMarkedIds;
+  const tableLoading = switchLoading || deferredLoading;
+  const effectiveResults = tableLoading ? EMPTY_ITEMS : deferredResults;
+  const effectiveMarkedIds = tableLoading ? EMPTY_ITEMS : deferredMarkedIds;
+
+  useEffect(() => {
+    setSwitchLoading(true);
+    const timer = setTimeout(() => setSwitchLoading(false), 220);
+    setSelectedIds([]);
+    setSelectedPreset(project.selectedPreset || "balanced");
+    return () => clearTimeout(timer);
+  }, [project.id, project.selectedPreset]);
 
   // Scoring presets merged
   const scoringPresets = useMemo(() => {
@@ -49,12 +68,14 @@ export default memo(function ProjectResults({
 
   // Format items
   const formattedItems = useMemo(() => {
+    if (tableLoading) return EMPTY_ITEMS;
+
     const fmt = (v, style) => {
       if (v == null || !Number.isFinite(v)) return null;
       return v.toLocaleString("cs-CZ", style === "ppkw" ? { maximumFractionDigits: 2 } : style === "ppkm" ? { maximumFractionDigits: 4 } : undefined);
     };
 
-    return (project.results || []).map((item) => ({
+    return effectiveResults.map((item) => ({
       ...item,
       _fmt_price: fmt(item.price),
       _fmt_tacho: fmt(item.tachometer),
@@ -64,7 +85,7 @@ export default memo(function ProjectResults({
       _fmt_atc: fmt(item.annual_total_cost),
       _suspicious: isSuspiciousMileage(item),
     }));
-  }, [project.results]);
+  }, [effectiveResults, tableLoading]);
 
   // Precompute score once per item for the active preset.
   const presetScoreByKey = useMemo(() => {
@@ -130,8 +151,8 @@ export default memo(function ProjectResults({
   // Score cache
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const markedIdSet = useMemo(
-    () => new Set((project.markedIds || []).map((id) => String(id))),
-    [project.markedIds]
+    () => new Set(effectiveMarkedIds.map((id) => String(id))),
+    [effectiveMarkedIds]
   );
 
   function resultKey(item) {
@@ -347,28 +368,40 @@ export default memo(function ProjectResults({
       )}
 
       <div className="table-wrap">
-        {(tableBusy || isPending || loading) && (
+        {(tableBusy || isPending || loading) && !tableLoading && (
           <div
             className="results-pending-overlay"
             role="status"
             aria-live="polite"
           >
-            <span className="results-pending-pill">Aktualizuji tabulku...</span>
+            <span className="results-pending-pill">Načítám tabulku...</span>
           </div>
         )}
-        <ResultsTable
-          visibleItems={visibleItems}
-          selectedIdSet={selectedIdSet}
-          markedIdSet={markedIdSet}
-          toggleSelected={toggleSelected}
-          markSelected={handleMark}
-          toggleSelectVisible={toggleSelectVisible}
-          allVisibleSelected={allVisibleSelected}
-          getCachedScore={getCachedScore}
-          toggleSort={toggleSort}
-          sortIndicator={sortIndicator}
-          resultKey={resultKey}
-        />
+        {tableLoading ? (
+          <div className="table-loading-blank" role="status" aria-live="polite">
+            <div className="table-loading-core" aria-hidden="true" />
+            <div className="table-loading-text">Načítám tabulku projektu...</div>
+            <div className="table-loading-bars" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </div>
+          </div>
+        ) : (
+          <ResultsTable
+            visibleItems={visibleItems}
+            selectedIdSet={selectedIdSet}
+            markedIdSet={markedIdSet}
+            toggleSelected={toggleSelected}
+            markSelected={handleMark}
+            toggleSelectVisible={toggleSelectVisible}
+            allVisibleSelected={allVisibleSelected}
+            getCachedScore={getCachedScore}
+            toggleSort={toggleSort}
+            sortIndicator={sortIndicator}
+            resultKey={resultKey}
+          />
+        )}
       </div>
 
       {/* Log modal */}

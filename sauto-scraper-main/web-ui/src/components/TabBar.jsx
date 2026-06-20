@@ -24,7 +24,7 @@ function phaseTitle(phase, queuePosition) {
   }
 }
 
-export default function TabBar({
+export default React.memo(function TabBar({
   projects,
   activeProjectId,
   onActivate,
@@ -41,7 +41,13 @@ export default function TabBar({
             <div
               key={proj.id}
               className={`tabbar-tab${isActive ? " active" : ""}${proj.phase === "running" ? " running" : ""}${proj.phase === "queued" ? " queued" : ""}`}
-              onClick={() => onActivate(proj.id)}
+              onMouseDown={(e) => {
+                if (e.button === 0) onActivate(proj.id);
+              }}
+              onClick={(e) => {
+                // Keyboard-triggered click has detail === 0.
+                if (e.detail === 0) onActivate(proj.id);
+              }}
               title={phaseTitle(proj.phase, proj.queuePosition)}
             >
               <PhaseIcon phase={proj.phase} />
@@ -73,4 +79,4 @@ export default function TabBar({
       </button>
     </div>
   );
-}
+});

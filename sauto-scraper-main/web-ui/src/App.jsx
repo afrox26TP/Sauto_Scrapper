@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { Moon, Sun, X, History } from "lucide-react";
 import TabBar from "./components/TabBar";
 import ProjectSetup from "./components/ProjectSetup";
@@ -25,14 +26,15 @@ export default function App() {
   const [popupLog, setPopupLog] = useState(null);
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState("");
-  const [isSwitchingProject, startSwitchProjectTransition] = React.useTransition();
   const toastTimer = useRef(null);
   const logsModalBodyRef = useRef(null);
+  const uiActiveProjectIdRef = useRef(null);
+  const displayProjectIdRef = useRef(null);
+  const switchRafRef = useRef(null);
+  const switchTokenRef = useRef(0);
 
   const {
     projects,
-    activeProject,
-    activeProjectId,
     globalLogs,
     scraperRunning,
     addProject,
@@ -43,6 +45,45 @@ export default function App() {
     runProject,
     setProjects,
   } = useProjects(brandOptions, modelsByBrand);
+
+  const [uiActiveProjectId, setUiActiveProjectId] = useState(null);
+  const [displayProjectId, setDisplayProjectId] = useState(null);
+
+  useEffect(() => {
+    uiActiveProjectIdRef.current = uiActiveProjectId;
+  }, [uiActiveProjectId]);
+
+  useEffect(() => {
+    displayProjectIdRef.current = displayProjectId;
+  }, [displayProjectId]);
+
+  useEffect(() => {
+    return () => {
+      if (switchRafRef.current) cancelAnimationFrame(switchRafRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (projects.length === 0) {
+      if (uiActiveProjectId !== null) setUiActiveProjectId(null);
+      if (displayProjectId !== null) setDisplayProjectId(null);
+      return;
+    }
+
+    const exists = projects.some((p) => p.id === uiActiveProjectId);
+    if (!exists) {
+      const nextId = projects[0].id;
+      setUiActiveProjectId(nextId);
+      setDisplayProjectId(nextId);
+      activateProject(nextId);
+      return;
+    }
+
+    const displayExists = projects.some((p) => p.id === displayProjectId);
+    if (!displayExists) {
+      setDisplayProjectId(uiActiveProjectId || projects[0].id);
+    }
+  }, [projects, uiActiveProjectId, displayProjectId, activateProject]);
 
   // Theme
   useEffect(() => {
@@ -77,10 +118,17 @@ export default function App() {
   }, []);
 
   // Fetch models for selected brands
+  const currentProject = useMemo(() => {
+    const byDisplay = projects.find((p) => p.id === displayProjectId);
+    if (byDisplay) return byDisplay;
+    const byUi = projects.find((p) => p.id === uiActiveProjectId);
+    return byUi || projects[0] || null;
+  }, [projects, displayProjectId, uiActiveProjectId]);
+
   const selectedBrands = useMemo(() => {
-    if (!activeProject) return [];
-    return uniq(csvToArray(activeProject.config?.manufacturer_seo_name));
-  }, [activeProject?.config?.manufacturer_seo_name]);
+    if (!currentProject) return [];
+    return uniq(csvToArray(currentProject.config?.manufacturer_seo_name));
+  }, [currentProject?.config?.manufacturer_seo_name]);
 
   useEffect(() => {
     selectedBrands.forEach((brand) => {
@@ -102,42 +150,51 @@ export default function App() {
 
   // Refresh project results
   const refreshProjectResults = useCallback(async () => {
-    if (!activeProject) return;
+    if (!currentProject) return;
     try {
-      const data = await fetchResults(activeProject.resultsPath);
-      updateProject(activeProject.id, {
+      const data = await fetchResults(currentProject.resultsPath);
+      updateProject(currentProject.id, {
         results: data.items || [],
         markedIds: data.marked_ids || [],
       });
     } catch {
       // ignore
     }
-  }, [activeProject, updateProject]);
+  }, [currentProject, updateProject]);
 
   const updateActiveProject = useCallback(
     (updates) => {
-      if (!activeProjectId) return;
-      updateProject(activeProjectId, updates);
+      if (!uiActiveProjectId) return;
+      updateProject(uiActiveProjectId, updates);
     },
-    [activeProjectId, updateProject]
+    [uiActiveProjectId, updateProject]
   );
 
   const updateActiveProjectConfig = useCallback(
     (updates) => {
-      if (!activeProjectId) return;
-      updateProjectConfig(activeProjectId, updates);
+      if (!uiActiveProjectId) return;
+      updateProjectConfig(uiActiveProjectId, updates);
     },
-    [activeProjectId, updateProjectConfig]
+    [uiActiveProjectId, updateProjectConfig]
   );
 
-  const activateProjectSmooth = useCallback(
-    (id) => {
-      startSwitchProjectTransition(() => {
-        activateProject(id);
-      });
-    },
-    [activateProject]
-  );
+  const activateProjectSmooth = useCallback((id) => {
+    if (!id || id === uiActiveProjectIdRef.current) return;
+    // Paint active tab highlight immediately, independent from content loading.
+    flushSync(() => {
+      setUiActiveProjectId(id);
+    });
+
+    // Delay heavy content swap by one frame so tab highlight paints instantly.
+    if (switchRafRef.current) cancelAnimationFrame(switchRafRef.current);
+    const token = ++switchTokenRef.current;
+    switchRafRef.current = requestAnimationFrame(() => {
+      if (switchTokenRef.current !== token) return;
+      setDisplayProjectId(id);
+      activateProject(id);
+      switchRafRef.current = null;
+    });
+  }, [activateProject]);
 
   // Toast
   function showToast(msg, type = "") {
@@ -152,7 +209,7 @@ export default function App() {
 
   // Render active project content based on phase
   function renderProjectContent() {
-    if (!activeProject) {
+    if (!currentProject) {
       return (
         <div className="no-project">
           <p>Žádný projekt. Klikni na "+ Nový" pro vytvoření prvního projektu.</p>
@@ -160,11 +217,11 @@ export default function App() {
       );
     }
 
-    switch (activeProject.phase) {
+    switch (currentProject.phase) {
       case "config":
         return (
           <ProjectSetup
-            project={activeProject}
+            project={currentProject}
             brandOptions={brandOptions}
             bodyOptions={bodyOptions}
             equipmentOptions={equipmentOptions}
@@ -179,18 +236,19 @@ export default function App() {
       case "running":
         return (
           <ProjectRunning
-            project={activeProject}
+            project={currentProject}
             globalLogs={globalLogs}
           />
         );
       case "queued":
         return (
-          <ProjectQueued project={activeProject} />
+          <ProjectQueued project={currentProject} />
         );
       case "done":
         return (
           <ProjectResults
-            project={activeProject}
+            key={currentProject.id}
+            project={currentProject}
             onUpdateProject={updateActiveProject}
             onRefresh={refreshProjectResults}
           />
@@ -199,10 +257,10 @@ export default function App() {
         return (
           <div className="project-error">
             <h2>Chyba</h2>
-            <p>{activeProject.errorMessage || "Neznámá chyba."}</p>
+            <p>{currentProject.errorMessage || "Neznámá chyba."}</p>
             <button
               className="btn-primary"
-              onClick={() => updateProject(activeProject.id, { phase: "config", errorMessage: "" })}
+              onClick={() => updateProject(currentProject.id, { phase: "config", errorMessage: "" })}
             >
               Zpět na konfiguraci
             </button>
@@ -242,7 +300,7 @@ export default function App() {
         {/* Tab bar */}
         <TabBar
           projects={projects}
-          activeProjectId={activeProjectId}
+          activeProjectId={uiActiveProjectId}
           onActivate={activateProjectSmooth}
           onRemove={removeProject}
           onAdd={() => addProject()}
@@ -251,11 +309,6 @@ export default function App() {
 
         {/* Main content */}
         <div className="main-content">
-          {isSwitchingProject && (
-            <div className="project-switch-overlay" role="status" aria-live="polite">
-              <span className="project-switch-pill">Prepinam projekt...</span>
-            </div>
-          )}
           {renderProjectContent()}
         </div>
 

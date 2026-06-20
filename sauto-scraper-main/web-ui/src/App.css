@@ -1038,6 +1038,73 @@ button:disabled {
   box-shadow: var(--shadow-sm);
 }
 
+.table-loading-blank {
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background:
+    radial-gradient(1200px 180px at 50% -40px, color-mix(in oklab, var(--accent) 20%, transparent), transparent 60%),
+    linear-gradient(180deg, color-mix(in oklab, var(--surface) 88%, var(--accent) 12%), var(--surface));
+}
+
+.table-loading-core {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 3px solid color-mix(in oklab, var(--border) 70%, transparent);
+  border-top-color: var(--accent);
+  border-right-color: color-mix(in oklab, var(--accent) 60%, var(--text));
+  animation: table-spin 0.9s linear infinite;
+  box-shadow: 0 0 0 6px color-mix(in oklab, var(--accent) 12%, transparent);
+}
+
+.table-loading-text {
+  font-size: 0.86rem;
+  font-weight: 620;
+  letter-spacing: 0.01em;
+  color: var(--text);
+  opacity: 0.95;
+}
+
+.table-loading-bars {
+  width: min(420px, 82%);
+  display: grid;
+  gap: 8px;
+}
+
+.table-loading-bars span {
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg,
+      color-mix(in oklab, var(--surface-solid) 80%, var(--accent) 20%) 0%,
+      color-mix(in oklab, var(--surface-solid) 92%, var(--accent) 8%) 45%,
+      color-mix(in oklab, var(--surface-solid) 80%, var(--accent) 20%) 100%);
+  background-size: 220% 100%;
+  animation: table-shimmer 1.25s ease-in-out infinite;
+}
+
+.table-loading-bars span:nth-child(2) {
+  width: 85%;
+  animation-delay: 0.08s;
+}
+
+.table-loading-bars span:nth-child(3) {
+  width: 68%;
+  animation-delay: 0.16s;
+}
+
+@keyframes table-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes table-shimmer {
+  0% { background-position: 120% 0; }
+  100% { background-position: -120% 0; }
+}
+
 table {
   width: 100%;
   border-collapse: separate;
