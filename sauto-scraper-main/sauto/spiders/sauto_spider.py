@@ -30,12 +30,16 @@ def log_url(func):
 
 
 class CarEvaluator:
+    MAX_REASONABLE_POWER_KW = 900
+
     HARD_REJECT_PATTERNS = (
         (r"na\s*(nahradni\s*)?d[ií]ly", "for parts"),
         (r"bez\s*stk|propadl[ae]\s*stk", "invalid STK"),
         (r"v[aá]da\s*motoru|motor\s*(klepe|zadreny)|z[eě]re\s*olej", "engine issue"),
         (r"exekuc", "legal issue"),
         (r"tot[aá]ln[ií]\s*skoda|po\s*tot[aá]ln[ií]", "total loss"),
+        (r"na\s*spl[aá]tk|spl[aá]tk(y|a|ove)|u[vě]r", "installments/loan mention"),
+        (r"leasing|operativn[ií]\s*leasing", "leasing mention"),
     )
 
     BONUS_PATTERNS = (
@@ -578,9 +582,22 @@ class CarEvaluator:
         brand_market_weight = cls._brand_market_weight(brand_tier)
 
         name = result.get("name") or item.get("name") or "Unknown"
-        description = (result.get("description") or "").lower()
-        title = name.lower()
-        full_text = f"{title}\n{description}"
+        text_parts = [
+            name,
+            result.get("description"),
+            result.get("price_note"),
+            result.get("windshield_note"),
+            result.get("note"),
+            item.get("description"),
+            item.get("price_note"),
+            item.get("windshield_note"),
+            item.get("note"),
+        ]
+        full_text = "\n".join(
+            str(part).lower()
+            for part in text_parts
+            if isinstance(part, str) and part.strip()
+        )
 
         gearbox_name = ((result.get("gearbox_cb") or {}).get("name") or "").lower()
         gearbox_type = cls._infer_gearbox_type(gearbox_name)
@@ -623,6 +640,9 @@ class CarEvaluator:
             return None
 
         power_kw = cls._safe_int(result.get("engine_power"), 0)
+        if power_kw > cls.MAX_REASONABLE_POWER_KW:
+            return None
+
         engine_volume = cls._safe_int(result.get("engine_volume"), 0)
         tachometer = cls._safe_int(result.get("tachometer"), 0)
 
@@ -1132,6 +1152,9 @@ class SautoSpider(scrapy.Spider):
         year = datetime.datetime.now().year - int(offer.get("age_years") or 0)
         tachometer = offer.get("tachometer") or 0
         power_kw = offer.get("power_kw") or 0
+
+        if power_kw > CarEvaluator.MAX_REASONABLE_POWER_KW:
+            return False
 
         if self.filter_year_from is not None and year < self.filter_year_from:
             return False

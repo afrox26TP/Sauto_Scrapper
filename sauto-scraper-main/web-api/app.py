@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -36,6 +37,11 @@ LOCKED_SEARCH_DEFAULTS = {
     "limit": "100",
     "offset": "0",
 }
+MAX_REASONABLE_POWER_KW = 900
+RESULT_TEXT_REJECT_PATTERNS = (
+    re.compile(r"na\s*spl[aá]tk|spl[aá]tk(y|a|ove)|u[vě]r", re.IGNORECASE),
+    re.compile(r"leasing|operativn[ií]\s*leasing", re.IGNORECASE),
+)
 
 
 class ParamsPayload(BaseModel):
@@ -235,6 +241,47 @@ def save_marked_ids(ids: set[str]) -> None:
     dump_json(MARKED_IDS_PATH, sorted(ids))
 
 
+def _parse_power_kw(item: dict[str, Any]) -> float | None:
+    for key in ("power_kw", "engine_power"):
+        value = item.get(key)
+        if value is None:
+            continue
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+def _should_exclude_result_item(item: dict[str, Any]) -> bool:
+    power_kw = _parse_power_kw(item)
+    detail_raw = item.get("detail_raw") if isinstance(item.get("detail_raw"), dict) else {}
+    nested_result = detail_raw.get("result") if isinstance(detail_raw.get("result"), dict) else {}
+
+    # Fallback for records where power is only present in nested detail payload.
+    if power_kw is None:
+        power_kw = _parse_power_kw(nested_result)
+
+    if power_kw is not None and power_kw > MAX_REASONABLE_POWER_KW:
+        return True
+
+    text_parts = [
+        item.get("name"),
+        item.get("title"),
+        item.get("description"),
+        item.get("price_note"),
+        item.get("windshield_note"),
+        item.get("note"),
+        nested_result.get("name"),
+        nested_result.get("description"),
+        nested_result.get("price_note"),
+        nested_result.get("windshield_note"),
+        nested_result.get("note"),
+    ]
+    text = "\n".join(part for part in text_parts if isinstance(part, str) and part.strip())
+    return any(pattern.search(text) for pattern in RESULT_TEXT_REJECT_PATTERNS)
+
+
 def load_result_items(result_path: Path) -> list[dict[str, Any]]:
     if not result_path.exists():
         return []
@@ -260,7 +307,11 @@ def load_result_items(result_path: Path) -> list[dict[str, Any]]:
         return []
     if not isinstance(data, list):
         return []
-    return [item for item in data if isinstance(item, dict)]
+    return [
+        item
+        for item in data
+        if isinstance(item, dict) and not _should_exclude_result_item(item)
+    ]
 
 
 def _load_catalog_cache() -> dict[str, Any]:

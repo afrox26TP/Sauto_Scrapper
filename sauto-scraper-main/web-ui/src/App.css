@@ -234,12 +234,35 @@ select { font: inherit; }
 
 /* ── Main Content ── */
 .main-content {
+  position: relative;
   flex: 1 1 auto;
   overflow: auto;
   padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.project-switch-overlay {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  pointer-events: none;
+}
+
+.project-switch-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--text);
+  background: color-mix(in oklab, var(--surface-solid) 85%, var(--accent) 15%);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
 }
 
 /* ── Status dot ── */
@@ -979,10 +1002,33 @@ button:disabled {
 
 /* ── Table ── */
 .table-wrap {
+  position: relative;
   flex: 1;
   overflow: auto;
   background: var(--surface);
   border: 1px solid var(--border);
+}
+
+.results-pending-overlay {
+  position: absolute;
+  top: 54px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.results-pending-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--text);
+  background: color-mix(in oklab, var(--surface-solid) 85%, var(--accent) 15%);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
 }
 
 table {

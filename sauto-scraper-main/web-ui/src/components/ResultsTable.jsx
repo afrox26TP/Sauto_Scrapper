@@ -4,9 +4,8 @@ import { Star } from "lucide-react";
 
 const ResultsTable = memo(function ResultsTable({
   visibleItems,
-  scoreCache,
-  selectedIds,
-  markedIds,
+  selectedIdSet,
+  markedIdSet,
   toggleSelected,
   markSelected,
   toggleSelectVisible,
@@ -67,8 +66,8 @@ const ResultsTable = memo(function ResultsTable({
       <tbody>
         {visibleItems.map((item, i) => {
           const key = resultKey(item);
-          const selected = selectedIds.includes(key);
-          const marked = markedIds.includes(String(item.ad_id));
+          const selected = selectedIdSet.has(key);
+          const marked = markedIdSet.has(String(item.ad_id));
           const cachedScore = getCachedScore(item);
           const scoreClass =
             cachedScore >= 80 ? "score-hi" : cachedScore >= 50 ? "score-mid" : "score-lo";

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useCallback, useEffect } from "react";
+import React, { memo, useState, useRef, useMemo, useCallback, useEffect, useTransition } from "react";
 import {
   Download,
   Upload,
@@ -25,7 +25,7 @@ import {
   fetchResults,
 } from "../utils/api";
 
-export default function ProjectResults({
+export default memo(function ProjectResults({
   project,
   onUpdateProject,
   onRefresh,
@@ -36,6 +36,8 @@ export default function ProjectResults({
   const [showLogsModal, setShowLogsModal] = useState(false);
   const [popupLog, setPopupLog] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [tableBusy, setTableBusy] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef(null);
   const logsModalBodyRef = useRef(null);
 
@@ -64,14 +66,25 @@ export default function ProjectResults({
     }));
   }, [project.results]);
 
+  // Precompute score once per item for the active preset.
+  const presetScoreByKey = useMemo(() => {
+    const cache = new Map();
+    const preset = scoringPresets[selectedPreset];
+    if (!preset) return cache;
+    for (const item of formattedItems) {
+      cache.set(resultKey(item), getItemScore(item, preset));
+    }
+    return cache;
+  }, [formattedItems, selectedPreset, scoringPresets]);
+
   // Sort
   const visibleItems = useMemo(() => {
     const list = [...formattedItems];
     if (!sortConfig.key) return list;
 
     list.sort((a, b) => {
-      const av = sortValue(a, sortConfig.key);
-      const bv = sortValue(b, sortConfig.key);
+      const av = sortValue(a, sortConfig.key, presetScoreByKey);
+      const bv = sortValue(b, sortConfig.key, presetScoreByKey);
 
       const aMissing = av === "" || av === null || av === undefined || Number.isNaN(av);
       const bMissing = bv === "" || bv === null || bv === undefined || Number.isNaN(bv);
@@ -90,12 +103,11 @@ export default function ProjectResults({
     });
 
     return list;
-  }, [formattedItems, sortConfig, selectedPreset, scoringPresets]);
+  }, [formattedItems, sortConfig, presetScoreByKey]);
 
-  function sortValue(item, key) {
+  function sortValue(item, key, scoreByKey) {
     if (key === "score") {
-      const preset = scoringPresets[selectedPreset];
-      return getItemScore(item, preset);
+      return scoreByKey.get(resultKey(item)) ?? 0;
     }
     switch (key) {
       case "price":
@@ -116,23 +128,18 @@ export default function ProjectResults({
   }
 
   // Score cache
-  const scoreCache = useMemo(() => {
-    const cache = new Map();
-    const preset = scoringPresets[selectedPreset];
-    if (!preset) return cache;
-    for (const item of visibleItems) {
-      const key = resultKey(item);
-      cache.set(key, getItemScore(item, preset));
-    }
-    return cache;
-  }, [visibleItems, selectedPreset, scoringPresets]);
+  const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const markedIdSet = useMemo(
+    () => new Set((project.markedIds || []).map((id) => String(id))),
+    [project.markedIds]
+  );
 
   function resultKey(item) {
     return String(item.ad_id || item.id || item.url || item.name || "");
   }
 
   function getCachedScore(item) {
-    return scoreCache.get(resultKey(item)) ?? 0;
+    return presetScoreByKey.get(resultKey(item)) ?? 0;
   }
 
   function toggleSelected(id) {
@@ -145,14 +152,23 @@ export default function ProjectResults({
   function toggleSelectVisible() {
     const visibleIds = visibleItems.map((item) => resultKey(item)).filter(Boolean);
     if (visibleIds.length === 0) return;
-    const allSelected = visibleIds.every((id) => selectedIds.includes(id));
-    setSelectedIds(allSelected ? selectedIds.filter((id) => !visibleIds.includes(id)) : Array.from(new Set([...selectedIds, ...visibleIds])));
+    const allSelected = visibleIds.every((id) => selectedIdSet.has(id));
+    setSelectedIds((prev) => {
+      if (allSelected) {
+        const visibleSet = new Set(visibleIds);
+        return prev.filter((id) => !visibleSet.has(id));
+      }
+      return Array.from(new Set([...prev, ...visibleIds]));
+    });
   }
 
   function toggleSort(key) {
-    setSortConfig((prev) => {
-      if (prev.key !== key) return { key, direction: key === "score" ? "desc" : "asc" };
-      return { key, direction: prev.direction === "asc" ? "desc" : "asc" };
+    setTableBusy(true);
+    startTransition(() => {
+      setSortConfig((prev) => {
+        if (prev.key !== key) return { key, direction: key === "score" ? "desc" : "asc" };
+        return { key, direction: prev.direction === "asc" ? "desc" : "asc" };
+      });
     });
   }
 
@@ -161,8 +177,15 @@ export default function ProjectResults({
     return sortConfig.direction === "asc" ? "↑" : "↓";
   }
 
-  const allVisibleSelected = visibleItems.length > 0 && visibleItems.every((item) => selectedIds.includes(resultKey(item)));
   const selectedCount = selectedIds.length;
+  const allVisibleSelected =
+    visibleItems.length > 0 && visibleItems.every((item) => selectedIdSet.has(resultKey(item)));
+
+  useEffect(() => {
+    if (!tableBusy) return;
+    const rafId = requestAnimationFrame(() => setTableBusy(false));
+    return () => cancelAnimationFrame(rafId);
+  }, [visibleItems, tableBusy]);
 
   // Actions
   async function handleDeleteSelected() {
@@ -208,7 +231,7 @@ export default function ProjectResults({
 
   function handleExport(scope) {
     const exportItems = scope === "selected"
-      ? visibleItems.filter((item) => selectedIds.includes(resultKey(item)))
+      ? visibleItems.filter((item) => selectedIdSet.has(resultKey(item)))
       : visibleItems;
 
     const blob = new Blob([JSON.stringify(exportItems, null, 2)], { type: "application/json;charset=utf-8" });
@@ -246,8 +269,12 @@ export default function ProjectResults({
       // Custom preset creation would go here
       return;
     }
-    setSelectedPreset(val);
-    onUpdateProject({ selectedPreset: val });
+    if (val === selectedPreset) return;
+    setTableBusy(true);
+    startTransition(() => {
+      setSelectedPreset(val);
+      onUpdateProject({ selectedPreset: val });
+    });
   }
 
   return (
@@ -308,7 +335,7 @@ export default function ProjectResults({
               <Trash2 className="ui-icon" aria-hidden="true" /> Smazat
             </button>
             <button className="link-btn" onClick={toggleSelectVisible}>
-              {visibleItems.every((item) => selectedIds.includes(resultKey(item)))
+              {allVisibleSelected
                 ? "Odznačit viditelné"
                 : "Vybrat viditelné"}
             </button>
@@ -320,11 +347,19 @@ export default function ProjectResults({
       )}
 
       <div className="table-wrap">
+        {(tableBusy || isPending || loading) && (
+          <div
+            className="results-pending-overlay"
+            role="status"
+            aria-live="polite"
+          >
+            <span className="results-pending-pill">Aktualizuji tabulku...</span>
+          </div>
+        )}
         <ResultsTable
           visibleItems={visibleItems}
-          scoreCache={scoreCache}
-          selectedIds={selectedIds}
-          markedIds={project.markedIds || []}
+          selectedIdSet={selectedIdSet}
+          markedIdSet={markedIdSet}
           toggleSelected={toggleSelected}
           markSelected={handleMark}
           toggleSelectVisible={toggleSelectVisible}
@@ -386,4 +421,4 @@ export default function ProjectResults({
       )}
     </div>
   );
-}
+});

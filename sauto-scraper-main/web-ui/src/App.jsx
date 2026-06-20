@@ -25,6 +25,7 @@ export default function App() {
   const [popupLog, setPopupLog] = useState(null);
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState("");
+  const [isSwitchingProject, startSwitchProjectTransition] = React.useTransition();
   const toastTimer = useRef(null);
   const logsModalBodyRef = useRef(null);
 
@@ -113,6 +114,31 @@ export default function App() {
     }
   }, [activeProject, updateProject]);
 
+  const updateActiveProject = useCallback(
+    (updates) => {
+      if (!activeProjectId) return;
+      updateProject(activeProjectId, updates);
+    },
+    [activeProjectId, updateProject]
+  );
+
+  const updateActiveProjectConfig = useCallback(
+    (updates) => {
+      if (!activeProjectId) return;
+      updateProjectConfig(activeProjectId, updates);
+    },
+    [activeProjectId, updateProjectConfig]
+  );
+
+  const activateProjectSmooth = useCallback(
+    (id) => {
+      startSwitchProjectTransition(() => {
+        activateProject(id);
+      });
+    },
+    [activateProject]
+  );
+
   // Toast
   function showToast(msg, type = "") {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -144,8 +170,8 @@ export default function App() {
             equipmentOptions={equipmentOptions}
             modelsByBrand={modelsByBrand}
             loadingModelsByBrand={loadingModelsByBrand}
-            onUpdateConfig={(updates) => updateProjectConfig(activeProject.id, updates)}
-            onUpdateProject={(updates) => updateProject(activeProject.id, updates)}
+            onUpdateConfig={updateActiveProjectConfig}
+            onUpdateProject={updateActiveProject}
             onRun={runProject}
             isRunning={scraperRunning}
           />
@@ -165,7 +191,7 @@ export default function App() {
         return (
           <ProjectResults
             project={activeProject}
-            onUpdateProject={(updates) => updateProject(activeProject.id, updates)}
+            onUpdateProject={updateActiveProject}
             onRefresh={refreshProjectResults}
           />
         );
@@ -217,7 +243,7 @@ export default function App() {
         <TabBar
           projects={projects}
           activeProjectId={activeProjectId}
-          onActivate={activateProject}
+          onActivate={activateProjectSmooth}
           onRemove={removeProject}
           onAdd={() => addProject()}
           scraperRunning={scraperRunning}
@@ -225,6 +251,11 @@ export default function App() {
 
         {/* Main content */}
         <div className="main-content">
+          {isSwitchingProject && (
+            <div className="project-switch-overlay" role="status" aria-live="polite">
+              <span className="project-switch-pill">Prepinam projekt...</span>
+            </div>
+          )}
           {renderProjectContent()}
         </div>
 
