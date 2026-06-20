@@ -210,7 +210,7 @@ All search parameters live in `params.json`. You can edit it directly or use the
 | `manufacturer_seo_name` | string | Brand SEO name (comma-separated for multiple) | `""` |
 | `model_seo_name` | string | Model SEO name (comma-separated) | `""` |
 | `condition_seo` | string | Condition: `nove,ojete,predvadeci` (new/used/demo) | `"nove,ojete,predvadeci"` |
-| `seller_type` | string | `soukromy` (private) or `bazar` (dealer) | `"soukromy"` |
+| `seller_type` | string | `soukromy` (private) or `bazar` (dealer); empty = all sellers | `""` |
 | `operating_lease` | string | `"true"` / `"false"` | `"false"` |
 | `price_from` | int | Min price (CZK, 0 = no limit) | `"0"` |
 | `price_to` | int | Max price (CZK, 0 = no limit) | `"0"` |

@@ -753,6 +753,22 @@ class SautoSpider(scrapy.Spider):
     NOTIFIED_FILE = "notified_ids.json"
     INTERESTING_OFFERS_FILE = "data/sauto_interesting.json"
     CATALOG_CACHE_FILE = "data/sauto_catalog_cache.json"
+    CZECH_REGION_SEO = (
+        "hlavni-mesto-praha",
+        "stredocesky-kraj",
+        "jihocesky-kraj",
+        "plzensky-kraj",
+        "karlovarsky-kraj",
+        "ustecky-kraj",
+        "liberecky-kraj",
+        "kralovehradecky-kraj",
+        "pardubicky-kraj",
+        "vysocina",
+        "jihomoravsky-kraj",
+        "olomoucky-kraj",
+        "zlinsky-kraj",
+        "moravskoslezsky-kraj",
+    )
 
     def __init__(self, *args, **kwargs):
         super(SautoSpider, self).__init__(*args, **kwargs)
@@ -777,6 +793,13 @@ class SautoSpider(scrapy.Spider):
         self.scored_cars = []
         self.all_items = []
         self.seen_ad_ids = set()
+        self.search_items_seen = 0
+        self.search_items_after_strict = 0
+        self.detail_requests_sent = 0
+        self.detail_success = 0
+        self.detail_fail = 0
+        self.evaluator_rejects = 0
+        self.detail_filter_rejects = 0
 
         self.strict_manufacturer_seo = None
         self.strict_model_seo = None
@@ -1074,7 +1097,11 @@ class SautoSpider(scrapy.Spider):
             for x in (self._norm_str(params.get("exclude_model_seo_name")) or "").split(",")
             if x.strip()
         }
-        self.strict_seller_type = self._norm_str(params.get("seller_type"))
+        self.strict_seller_type = self._to_choice(
+            self._norm_str(params.get("seller_type")),
+            {"soukromy", "bazar"},
+            None,
+        )
 
     def _passes_strict_filter(self, item: dict) -> bool:
         m_cb = item.get("manufacturer_cb") or {}
@@ -1402,7 +1429,22 @@ class SautoSpider(scrapy.Spider):
         self._load_runtime_options(params)
         self._load_strict_filters(params)
         self._load_custom_preset_filters(params)
-        yield self._make_search_request(self._build_search_params(params))
+        base_params = self._build_search_params(params)
+
+        # Sauto search endpoint can report very high totals while becoming
+        # unreliable for deep offsets on broad queries. When user wants only
+        # one seller type and no explicit location, split the crawl by regions
+        # to keep each query narrow and avoid losing large parts of matches.
+        has_region_filter = self._norm_str(base_params.get("region_seo")) is not None
+        has_district_filter = self._norm_str(base_params.get("district_seo")) is not None
+        if self.strict_seller_type and not has_region_filter and not has_district_filter:
+            for region_seo in self.CZECH_REGION_SEO:
+                region_params = base_params.copy()
+                region_params["region_seo"] = region_seo
+                yield self._make_search_request(region_params)
+            return
+
+        yield self._make_search_request(base_params)
 
     def _load_custom_preset_filters(self, params: dict):
         """Merge hard_rejects, must_have_equipment and excluded_equipment
@@ -1443,8 +1485,10 @@ class SautoSpider(scrapy.Spider):
         results = data.get("results", []) or []
 
         for r in results:
+            self.search_items_seen += 1
             if not self._passes_strict_filter(r):
                 continue
+            self.search_items_after_strict += 1
 
             manufacturer = (r.get("manufacturer_cb") or {}).get("seo_name")
             model = (r.get("model_cb") or {}).get("seo_name")
@@ -1465,6 +1509,7 @@ class SautoSpider(scrapy.Spider):
             )
 
             if ad_id:
+                self.detail_requests_sent += 1
                 yield scrapy.Request(
                     url=self.DETAIL_API_URL.format(ad_id),
                     method="GET",
@@ -1504,6 +1549,7 @@ class SautoSpider(scrapy.Spider):
 
     def parse_detail(self, response):
         base_item = response.meta.get("base_item") or {}
+        self.detail_success += 1
         try:
             detail = json.loads(response.text)
         except json.JSONDecodeError:
@@ -1521,7 +1567,9 @@ class SautoSpider(scrapy.Spider):
             min_price=self.min_price,
             target_annual_km=self.target_annual_km,
         )
-        if raw_offer and self._passes_detail_filters(raw_offer):
+        if raw_offer is None:
+            self.evaluator_rejects += 1
+        elif self._passes_detail_filters(raw_offer):
             self.scored_cars.append(raw_offer)
             base_item["offer_metrics"] = {
                 "price_per_kw": raw_offer["price_per_kw"],
@@ -1547,6 +1595,7 @@ class SautoSpider(scrapy.Spider):
                 "images_count": raw_offer["images_count"],
             }
         else:
+            self.detail_filter_rejects += 1
             base_item["filtered_out"] = raw_offer is not None
             pass
 
@@ -1556,6 +1605,7 @@ class SautoSpider(scrapy.Spider):
 
     def handle_detail_error(self, failure):
         base_item = failure.request.meta.get("base_item") or {}
+        self.detail_fail += 1
         base_item["detail_fetch_ok"] = False
         base_item["detail_raw"] = None
         base_item["detail_error"] = str(failure.value)
@@ -1635,6 +1685,19 @@ class SautoSpider(scrapy.Spider):
         return "\n".join(lines)
 
     def closed(self, reason):
+        self.logger.info(
+            "Run diagnostics | search_seen=%s strict_pass=%s detail_req=%s detail_ok=%s detail_fail=%s "
+            "evaluator_rejects=%s detail_filter_rejects=%s final_scored=%s",
+            self.search_items_seen,
+            self.search_items_after_strict,
+            self.detail_requests_sent,
+            self.detail_success,
+            self.detail_fail,
+            self.evaluator_rejects,
+            self.detail_filter_rejects,
+            len(self.scored_cars),
+        )
+
         all_offers = self._apply_advanced_sorting(list(self.scored_cars))
         top_offers = all_offers[: self.top_n]
 
