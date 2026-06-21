@@ -1038,6 +1038,41 @@ button:disabled {
   box-shadow: var(--shadow-sm);
 }
 
+.results-soft-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in oklab, var(--surface) 78%, transparent);
+  backdrop-filter: blur(1.4px);
+}
+
+.results-soft-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--border) 88%, var(--accent) 12%);
+  background: color-mix(in oklab, var(--surface-solid) 70%, transparent);
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 640;
+  box-shadow: var(--shadow-sm);
+}
+
+.results-soft-spinner {
+  width: 13px;
+  height: 13px;
+  border-radius: 999px;
+  border: 2px solid color-mix(in oklab, var(--border) 72%, transparent);
+  border-top-color: var(--accent);
+  animation: table-spin 0.75s linear infinite;
+}
+
 .table-loading-blank {
   min-height: 300px;
   display: flex;

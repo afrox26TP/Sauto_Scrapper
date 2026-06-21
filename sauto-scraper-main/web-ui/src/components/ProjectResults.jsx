@@ -1,4 +1,5 @@
-import React, { memo, useState, useRef, useMemo, useCallback, useEffect, useTransition } from "react";
+import React, { memo, useState, useRef, useMemo, useCallback, useEffect } from "react";
+import { flushSync } from "react-dom";
 import {
   Download,
   Upload,
@@ -32,6 +33,10 @@ export default memo(function ProjectResults({
   onUpdateProject,
   onRefresh,
 }) {
+  function resultKey(item) {
+    return String(item.ad_id || item.id || item.url || item.name || "");
+  }
+
   const [selectedIds, setSelectedIds] = useState([]);
   const [sortConfig, setSortConfig] = useState({ key: "score", direction: "desc" });
   const [selectedPreset, setSelectedPreset] = useState(project.selectedPreset || "balanced");
@@ -40,17 +45,14 @@ export default memo(function ProjectResults({
   const [loading, setLoading] = useState(false);
   const [tableBusy, setTableBusy] = useState(false);
   const [switchLoading, setSwitchLoading] = useState(true);
-  const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef(null);
   const logsModalBodyRef = useRef(null);
+  const workTimerRef = useRef(null);
   const rawResults = project.results ?? EMPTY_ITEMS;
   const rawMarkedIds = project.markedIds ?? EMPTY_ITEMS;
-  const deferredResults = React.useDeferredValue(rawResults);
-  const deferredMarkedIds = React.useDeferredValue(rawMarkedIds);
-  const deferredLoading = deferredResults !== rawResults || deferredMarkedIds !== rawMarkedIds;
-  const tableLoading = switchLoading || deferredLoading;
-  const effectiveResults = tableLoading ? EMPTY_ITEMS : deferredResults;
-  const effectiveMarkedIds = tableLoading ? EMPTY_ITEMS : deferredMarkedIds;
+  const tableLoading = switchLoading;
+  const effectiveResults = tableLoading ? EMPTY_ITEMS : rawResults;
+  const effectiveMarkedIds = tableLoading ? EMPTY_ITEMS : rawMarkedIds;
 
   useEffect(() => {
     setSwitchLoading(true);
@@ -58,7 +60,13 @@ export default memo(function ProjectResults({
     setSelectedIds([]);
     setSelectedPreset(project.selectedPreset || "balanced");
     return () => clearTimeout(timer);
-  }, [project.id, project.selectedPreset]);
+  }, [project.id]);
+
+  useEffect(() => {
+    return () => {
+      if (workTimerRef.current) clearTimeout(workTimerRef.current);
+    };
+  }, []);
 
   // Scoring presets merged
   const scoringPresets = useMemo(() => {
@@ -155,22 +163,18 @@ export default memo(function ProjectResults({
     [effectiveMarkedIds]
   );
 
-  function resultKey(item) {
-    return String(item.ad_id || item.id || item.url || item.name || "");
-  }
-
-  function getCachedScore(item) {
+  const getCachedScore = useCallback((item) => {
     return presetScoreByKey.get(resultKey(item)) ?? 0;
-  }
+  }, [presetScoreByKey]);
 
-  function toggleSelected(id) {
+  const toggleSelected = useCallback((id) => {
     const key = String(id);
     setSelectedIds((prev) =>
       prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key]
     );
-  }
+  }, []);
 
-  function toggleSelectVisible() {
+  const toggleSelectVisible = useCallback(() => {
     const visibleIds = visibleItems.map((item) => resultKey(item)).filter(Boolean);
     if (visibleIds.length === 0) return;
     const allSelected = visibleIds.every((id) => selectedIdSet.has(id));
@@ -181,32 +185,43 @@ export default memo(function ProjectResults({
       }
       return Array.from(new Set([...prev, ...visibleIds]));
     });
-  }
+  }, [visibleItems, resultKey, selectedIdSet]);
 
-  function toggleSort(key) {
-    setTableBusy(true);
-    startTransition(() => {
+  const toggleSort = useCallback((key) => {
+    flushSync(() => setTableBusy(true));
+    if (workTimerRef.current) clearTimeout(workTimerRef.current);
+    workTimerRef.current = setTimeout(() => {
       setSortConfig((prev) => {
         if (prev.key !== key) return { key, direction: key === "score" ? "desc" : "asc" };
         return { key, direction: prev.direction === "asc" ? "desc" : "asc" };
       });
-    });
-  }
+      setTimeout(() => setTableBusy(false), 0);
+      workTimerRef.current = null;
+    }, 0);
+  }, []);
 
-  function sortIndicator(key) {
+  const sortIndicator = useCallback((key) => {
     if (sortConfig.key !== key) return "⇅";
     return sortConfig.direction === "asc" ? "↑" : "↓";
-  }
+  }, [sortConfig]);
 
   const selectedCount = selectedIds.length;
   const allVisibleSelected =
     visibleItems.length > 0 && visibleItems.every((item) => selectedIdSet.has(resultKey(item)));
+  const softTableLoading = (tableBusy || loading) && !tableLoading;
 
-  useEffect(() => {
-    if (!tableBusy) return;
-    const rafId = requestAnimationFrame(() => setTableBusy(false));
-    return () => cancelAnimationFrame(rafId);
-  }, [visibleItems, tableBusy]);
+  async function handleRefresh() {
+    flushSync(() => setTableBusy(true));
+    if (workTimerRef.current) clearTimeout(workTimerRef.current);
+    workTimerRef.current = setTimeout(async () => {
+      try {
+        await onRefresh();
+      } finally {
+        setTableBusy(false);
+      }
+      workTimerRef.current = null;
+    }, 0);
+  }
 
   // Actions
   async function handleDeleteSelected() {
@@ -237,7 +252,7 @@ export default memo(function ProjectResults({
     }
   }
 
-  async function handleMark(marked) {
+  const handleMark = useCallback(async (marked) => {
     if (selectedCount === 0) return;
     setLoading(true);
     try {
@@ -248,7 +263,7 @@ export default memo(function ProjectResults({
     } finally {
       setLoading(false);
     }
-  }
+  }, [selectedCount, selectedIds, onRefresh]);
 
   function handleExport(scope) {
     const exportItems = scope === "selected"
@@ -291,11 +306,14 @@ export default memo(function ProjectResults({
       return;
     }
     if (val === selectedPreset) return;
-    setTableBusy(true);
-    startTransition(() => {
+    flushSync(() => setTableBusy(true));
+    if (workTimerRef.current) clearTimeout(workTimerRef.current);
+    workTimerRef.current = setTimeout(() => {
       setSelectedPreset(val);
       onUpdateProject({ selectedPreset: val });
-    });
+      setTimeout(() => setTableBusy(false), 0);
+      workTimerRef.current = null;
+    }, 0);
   }
 
   return (
@@ -324,7 +342,7 @@ export default memo(function ProjectResults({
           <button className="link-btn" onClick={() => fileInputRef.current?.click()}>
             <Upload className="ui-icon" aria-hidden="true" /> Import
           </button>
-          <button className="link-btn" onClick={onRefresh}>
+          <button className="link-btn" onClick={handleRefresh}>
             <RefreshCw className="ui-icon" aria-hidden="true" /> Obnovit
           </button>
         </div>
@@ -368,13 +386,16 @@ export default memo(function ProjectResults({
       )}
 
       <div className="table-wrap">
-        {(tableBusy || isPending || loading) && !tableLoading && (
+        {softTableLoading && (
           <div
-            className="results-pending-overlay"
+            className="results-soft-overlay"
             role="status"
             aria-live="polite"
           >
-            <span className="results-pending-pill">Načítám tabulku...</span>
+            <div className="results-soft-badge">
+              <span className="results-soft-spinner" aria-hidden="true" />
+              <span>Načítám tabulku...</span>
+            </div>
           </div>
         )}
         {tableLoading ? (
