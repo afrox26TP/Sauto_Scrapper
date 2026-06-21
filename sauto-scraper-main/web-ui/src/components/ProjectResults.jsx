@@ -12,8 +12,6 @@ import {
 import ResultsTable from "./ResultsTable";
 import { CustomCheckbox, CustomSlider } from "./index";
 import {
-  getItemScore,
-  isSuspiciousMileage,
   LOCAL_SCORING_PRESETS,
   DEFAULT_SCORE_WEIGHTS,
   ALL_WEIGHT_KEYS,
@@ -45,14 +43,16 @@ export default memo(function ProjectResults({
   const [loading, setLoading] = useState(false);
   const [tableBusy, setTableBusy] = useState(false);
   const [switchLoading, setSwitchLoading] = useState(true);
+  const [workerRows, setWorkerRows] = useState(EMPTY_ITEMS);
+  const [workerMarkedIds, setWorkerMarkedIds] = useState(EMPTY_ITEMS);
+  const [workerKick, setWorkerKick] = useState(0);
   const fileInputRef = useRef(null);
   const logsModalBodyRef = useRef(null);
-  const workTimerRef = useRef(null);
+  const workerRef = useRef(null);
+  const workerRequestRef = useRef(0);
   const rawResults = project.results ?? EMPTY_ITEMS;
   const rawMarkedIds = project.markedIds ?? EMPTY_ITEMS;
   const tableLoading = switchLoading;
-  const effectiveResults = tableLoading ? EMPTY_ITEMS : rawResults;
-  const effectiveMarkedIds = tableLoading ? EMPTY_ITEMS : rawMarkedIds;
 
   useEffect(() => {
     setSwitchLoading(true);
@@ -63,8 +63,24 @@ export default memo(function ProjectResults({
   }, [project.id]);
 
   useEffect(() => {
+    const worker = new Worker(new URL("../workers/resultsWorker.js", import.meta.url), { type: "module" });
+    workerRef.current = worker;
+
+    worker.onmessage = (event) => {
+      const { requestId, visibleItems, markedIds } = event.data || {};
+      if (requestId !== workerRequestRef.current) return;
+      setWorkerRows(Array.isArray(visibleItems) ? visibleItems : EMPTY_ITEMS);
+      setWorkerMarkedIds(Array.isArray(markedIds) ? markedIds : EMPTY_ITEMS);
+      setTableBusy(false);
+    };
+
+    worker.onerror = () => {
+      setTableBusy(false);
+    };
+
     return () => {
-      if (workTimerRef.current) clearTimeout(workTimerRef.current);
+      worker.terminate();
+      workerRef.current = null;
     };
   }, []);
 
@@ -74,98 +90,38 @@ export default memo(function ProjectResults({
     return { ...LOCAL_SCORING_PRESETS, ...custom };
   }, [project.customPresets]);
 
-  // Format items
-  const formattedItems = useMemo(() => {
-    if (tableLoading) return EMPTY_ITEMS;
-
-    const fmt = (v, style) => {
-      if (v == null || !Number.isFinite(v)) return null;
-      return v.toLocaleString("cs-CZ", style === "ppkw" ? { maximumFractionDigits: 2 } : style === "ppkm" ? { maximumFractionDigits: 4 } : undefined);
-    };
-
-    return effectiveResults.map((item) => ({
-      ...item,
-      _fmt_price: fmt(item.price),
-      _fmt_tacho: fmt(item.tachometer),
-      _fmt_ppkw: fmt(item.price_per_kw, "ppkw"),
-      _fmt_ppkm: fmt(item.price_per_km, "ppkm"),
-      _fmt_kpy: fmt(item.km_per_year),
-      _fmt_atc: fmt(item.annual_total_cost),
-      _suspicious: isSuspiciousMileage(item),
-    }));
-  }, [effectiveResults, tableLoading]);
-
-  // Precompute score once per item for the active preset.
-  const presetScoreByKey = useMemo(() => {
-    const cache = new Map();
-    const preset = scoringPresets[selectedPreset];
-    if (!preset) return cache;
-    for (const item of formattedItems) {
-      cache.set(resultKey(item), getItemScore(item, preset));
+  useEffect(() => {
+    if (tableLoading) {
+      setWorkerRows(EMPTY_ITEMS);
+      setWorkerMarkedIds(EMPTY_ITEMS);
+      return;
     }
-    return cache;
-  }, [formattedItems, selectedPreset, scoringPresets]);
 
-  // Sort
-  const visibleItems = useMemo(() => {
-    const list = [...formattedItems];
-    if (!sortConfig.key) return list;
+    if (!workerRef.current) return;
 
-    list.sort((a, b) => {
-      const av = sortValue(a, sortConfig.key, presetScoreByKey);
-      const bv = sortValue(b, sortConfig.key, presetScoreByKey);
+    workerRequestRef.current += 1;
+    const requestId = workerRequestRef.current;
 
-      const aMissing = av === "" || av === null || av === undefined || Number.isNaN(av);
-      const bMissing = bv === "" || bv === null || bv === undefined || Number.isNaN(bv);
-      if (aMissing && bMissing) return 0;
-      if (aMissing) return 1;
-      if (bMissing) return -1;
-
-      let cmp = 0;
-      if (typeof av === "number" && typeof bv === "number") {
-        cmp = av - bv;
-      } else {
-        cmp = String(av).localeCompare(String(bv), "cs");
-      }
-
-      return sortConfig.direction === "asc" ? cmp : -cmp;
+    workerRef.current.postMessage({
+      requestId,
+      items: rawResults,
+      markedIds: rawMarkedIds,
+      sortConfig,
+      preset: scoringPresets[selectedPreset] || null,
     });
-
-    return list;
-  }, [formattedItems, sortConfig, presetScoreByKey]);
-
-  function sortValue(item, key, scoreByKey) {
-    if (key === "score") {
-      return scoreByKey.get(resultKey(item)) ?? 0;
-    }
-    switch (key) {
-      case "price":
-      case "power_kw":
-      case "tachometer":
-      case "annual_total_cost":
-      case "price_per_kw":
-      case "price_per_km":
-      case "km_per_year":
-        return Number(item?.[key] ?? NaN);
-      case "name":
-      case "drive_type":
-      case "gearbox_type":
-        return String(item?.[key] ?? "").toLowerCase();
-      default:
-        return item?.[key];
-    }
-  }
+  }, [tableLoading, rawResults, rawMarkedIds, sortConfig, selectedPreset, scoringPresets, workerKick]);
 
   // Score cache
+  const visibleItems = workerRows;
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const markedIdSet = useMemo(
-    () => new Set(effectiveMarkedIds.map((id) => String(id))),
-    [effectiveMarkedIds]
+    () => new Set(workerMarkedIds.map((id) => String(id))),
+    [workerMarkedIds]
   );
 
   const getCachedScore = useCallback((item) => {
-    return presetScoreByKey.get(resultKey(item)) ?? 0;
-  }, [presetScoreByKey]);
+    return Number(item?._score ?? 0);
+  }, []);
 
   const toggleSelected = useCallback((id) => {
     const key = String(id);
@@ -189,14 +145,9 @@ export default memo(function ProjectResults({
 
   const toggleSort = useCallback((key) => {
     flushSync(() => setTableBusy(true));
-    if (workTimerRef.current) clearTimeout(workTimerRef.current);
-    workTimerRef.current = setTimeout(() => {
-      setSortConfig((prev) => {
-        if (prev.key !== key) return { key, direction: key === "score" ? "desc" : "asc" };
-        return { key, direction: prev.direction === "asc" ? "desc" : "asc" };
-      });
-      setTimeout(() => setTableBusy(false), 0);
-      workTimerRef.current = null;
+    setSortConfig((prev) => {
+      if (prev.key !== key) return { key, direction: key === "score" ? "desc" : "asc" };
+      return { key, direction: prev.direction === "asc" ? "desc" : "asc" };
     }, 0);
   }, []);
 
@@ -212,15 +163,9 @@ export default memo(function ProjectResults({
 
   async function handleRefresh() {
     flushSync(() => setTableBusy(true));
-    if (workTimerRef.current) clearTimeout(workTimerRef.current);
-    workTimerRef.current = setTimeout(async () => {
-      try {
-        await onRefresh();
-      } finally {
-        setTableBusy(false);
-      }
-      workTimerRef.current = null;
-    }, 0);
+    await onRefresh();
+    // Force worker recompute even if upstream data identity did not change.
+    setWorkerKick((n) => n + 1);
   }
 
   // Actions
@@ -307,13 +252,8 @@ export default memo(function ProjectResults({
     }
     if (val === selectedPreset) return;
     flushSync(() => setTableBusy(true));
-    if (workTimerRef.current) clearTimeout(workTimerRef.current);
-    workTimerRef.current = setTimeout(() => {
-      setSelectedPreset(val);
-      onUpdateProject({ selectedPreset: val });
-      setTimeout(() => setTableBusy(false), 0);
-      workTimerRef.current = null;
-    }, 0);
+    setSelectedPreset(val);
+    onUpdateProject({ selectedPreset: val });
   }
 
   return (
@@ -325,7 +265,10 @@ export default memo(function ProjectResults({
             <span className="muted">{project.results.length} záznamů</span>
             <label className="score-control-inline">
               <span>Bodování</span>
-              <select value={selectedPreset} onChange={(e) => handlePresetChange(e.target.value)}>
+              <select
+                value={selectedPreset}
+                onChange={(e) => handlePresetChange(e.target.value)}
+              >
                 {Object.entries(scoringPresets).map(([key, preset]) => (
                   <option key={key} value={key}>
                     {preset.name || key}

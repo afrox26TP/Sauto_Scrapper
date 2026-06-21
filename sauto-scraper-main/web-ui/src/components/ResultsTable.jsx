@@ -1,4 +1,5 @@
 import React, { memo } from "react";
+import { TableVirtuoso } from "react-virtuoso";
 import { CustomCheckbox } from "./index";
 import { Star } from "lucide-react";
 
@@ -19,63 +20,75 @@ const ResultsTable = memo(function ResultsTable({
     return <p className="empty">Žádné výsledky — spusť scraper a obnov.</p>;
   }
 
+  const header = (
+    <tr>
+      <th className="cell-check">
+        <CustomCheckbox checked={allVisibleSelected} onChange={toggleSelectVisible} size="sm" />
+      </th>
+      <th className="cell-mark"></th>
+      <th className="sortable-th" onClick={() => toggleSort("score")}>
+        Skóre <span>{sortIndicator("score")}</span>
+      </th>
+      <th className="sortable-th" onClick={() => toggleSort("name")}>
+        Název <span>{sortIndicator("name")}</span>
+      </th>
+      <th className="sortable-th" onClick={() => toggleSort("price")}>
+        Cena (Kč) <span>{sortIndicator("price")}</span>
+      </th>
+      <th className="sortable-th" onClick={() => toggleSort("power_kw")}>
+        kW <span>{sortIndicator("power_kw")}</span>
+      </th>
+      <th className="sortable-th" onClick={() => toggleSort("tachometer")}>
+        Km <span>{sortIndicator("tachometer")}</span>
+      </th>
+      <th className="sortable-th" onClick={() => toggleSort("drive_type")}>
+        Pohon <span>{sortIndicator("drive_type")}</span>
+      </th>
+      <th className="sortable-th" onClick={() => toggleSort("gearbox_type")}>
+        Převod. <span>{sortIndicator("gearbox_type")}</span>
+      </th>
+      <th className="sortable-th" onClick={() => toggleSort("price_per_kw")}>
+        Kč/kW <span>{sortIndicator("price_per_kw")}</span>
+      </th>
+      <th className="sortable-th" onClick={() => toggleSort("price_per_km")}>
+        Kč/km <span>{sortIndicator("price_per_km")}</span>
+      </th>
+      <th className="sortable-th" onClick={() => toggleSort("km_per_year")}>
+        Km/rok <span>{sortIndicator("km_per_year")}</span>
+      </th>
+      <th className="sortable-th" onClick={() => toggleSort("annual_total_cost")}>
+        Náklady/rok <span>{sortIndicator("annual_total_cost")}</span>
+      </th>
+      <th></th>
+    </tr>
+  );
+
+  const itemClassName = (_, item) => {
+    const key = resultKey(item);
+    const selected = selectedIdSet.has(key);
+    const marked = markedIdSet.has(String(item.ad_id));
+    const cachedScore = getCachedScore(item);
+    return `${selected ? "row-selected" : ""}${marked ? " row-marked" : ""} ${
+      cachedScore >= 80 ? "row-score-hi" : cachedScore >= 50 ? "row-score-mid" : "row-score-lo"
+    }`;
+  };
+
   return (
-    <table>
-      <thead>
-        <tr>
-          <th className="cell-check">
-            <CustomCheckbox checked={allVisibleSelected} onChange={toggleSelectVisible} size="sm" />
-          </th>
-          <th className="cell-mark"></th>
-          <th className="sortable-th" onClick={() => toggleSort("score")}>
-            Skóre <span>{sortIndicator("score")}</span>
-          </th>
-          <th className="sortable-th" onClick={() => toggleSort("name")}>
-            Název <span>{sortIndicator("name")}</span>
-          </th>
-          <th className="sortable-th" onClick={() => toggleSort("price")}>
-            Cena (Kč) <span>{sortIndicator("price")}</span>
-          </th>
-          <th className="sortable-th" onClick={() => toggleSort("power_kw")}>
-            kW <span>{sortIndicator("power_kw")}</span>
-          </th>
-          <th className="sortable-th" onClick={() => toggleSort("tachometer")}>
-            Km <span>{sortIndicator("tachometer")}</span>
-          </th>
-          <th className="sortable-th" onClick={() => toggleSort("drive_type")}>
-            Pohon <span>{sortIndicator("drive_type")}</span>
-          </th>
-          <th className="sortable-th" onClick={() => toggleSort("gearbox_type")}>
-            Převod. <span>{sortIndicator("gearbox_type")}</span>
-          </th>
-          <th className="sortable-th" onClick={() => toggleSort("price_per_kw")}>
-            Kč/kW <span>{sortIndicator("price_per_kw")}</span>
-          </th>
-          <th className="sortable-th" onClick={() => toggleSort("price_per_km")}>
-            Kč/km <span>{sortIndicator("price_per_km")}</span>
-          </th>
-          <th className="sortable-th" onClick={() => toggleSort("km_per_year")}>
-            Km/rok <span>{sortIndicator("km_per_year")}</span>
-          </th>
-          <th className="sortable-th" onClick={() => toggleSort("annual_total_cost")}>
-            Náklady/rok <span>{sortIndicator("annual_total_cost")}</span>
-          </th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {visibleItems.map((item, i) => {
+    <div className="results-virtuoso-wrap">
+      <TableVirtuoso
+        data={visibleItems}
+        fixedHeaderContent={() => header}
+        itemClassName={itemClassName}
+        itemContent={(index, item) => {
           const key = resultKey(item);
           const selected = selectedIdSet.has(key);
           const marked = markedIdSet.has(String(item.ad_id));
           const cachedScore = getCachedScore(item);
           const scoreClass =
             cachedScore >= 80 ? "score-hi" : cachedScore >= 50 ? "score-mid" : "score-lo";
-          const rowClass = `${selected ? "row-selected" : ""}${marked ? " row-marked" : ""} ${
-            cachedScore >= 80 ? "row-score-hi" : cachedScore >= 50 ? "row-score-mid" : "row-score-lo"
-          }`;
+
           return (
-            <tr key={item.ad_id || i} className={rowClass}>
+            <>
               <td className="cell-check">
                 <CustomCheckbox checked={selected} onChange={() => toggleSelected(key)} size="sm" />
               </td>
@@ -119,11 +132,11 @@ const ResultsTable = memo(function ResultsTable({
                   "—"
                 )}
               </td>
-            </tr>
+            </>
           );
-        })}
-      </tbody>
-    </table>
+        }}
+      />
+    </div>
   );
 });
 
