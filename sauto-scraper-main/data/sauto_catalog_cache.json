@@ -1,6 +1,6 @@
 {
   "brands": {
-    "updated_at": 1781976431,
+    "updated_at": 1782233110,
     "items": [
       {
         "value": "alfa-romeo",
@@ -19,8 +19,16 @@
         "label": "Audi"
       },
       {
+        "value": "baic",
+        "label": "BAIC"
+      },
+      {
         "value": "bentley",
         "label": "Bentley"
+      },
+      {
+        "value": "bestune",
+        "label": "Bestune"
       },
       {
         "value": "bmw",
@@ -35,12 +43,12 @@
         "label": "Cadillac"
       },
       {
-        "value": "chevrolet",
-        "label": "Chevrolet"
+        "value": "chery",
+        "label": "Chery"
       },
       {
-        "value": "chrysler",
-        "label": "Chrysler"
+        "value": "chevrolet",
+        "label": "Chevrolet"
       },
       {
         "value": "citroen",
@@ -59,12 +67,12 @@
         "label": "Dodge"
       },
       {
-        "value": "ds",
-        "label": "DS"
+        "value": "dongfeng",
+        "label": "Dongfeng"
       },
       {
-        "value": "ferrari",
-        "label": "Ferrari"
+        "value": "ds",
+        "label": "DS"
       },
       {
         "value": "fiat",
@@ -75,16 +83,16 @@
         "label": "Ford"
       },
       {
-        "value": "gmc",
-        "label": "GMC"
-      },
-      {
         "value": "honda",
         "label": "Honda"
       },
       {
         "value": "hyundai",
         "label": "Hyundai"
+      },
+      {
+        "value": "infiniti",
+        "label": "Infiniti"
       },
       {
         "value": "jaecoo",
@@ -99,6 +107,10 @@
         "label": "Jeep"
       },
       {
+        "value": "kgm",
+        "label": "KGM"
+      },
+      {
         "value": "kia",
         "label": "Kia"
       },
@@ -109,6 +121,10 @@
       {
         "value": "lamborghini",
         "label": "Lamborghini"
+      },
+      {
+        "value": "lancia",
+        "label": "Lancia"
       },
       {
         "value": "land-rover",
@@ -163,24 +179,24 @@
         "label": "Opel"
       },
       {
-        "value": "peugeot",
-        "label": "Peugeot"
+        "value": "ostatni",
+        "label": "Ostatní"
       },
       {
-        "value": "polestar",
-        "label": "Polestar"
+        "value": "peugeot",
+        "label": "Peugeot"
       },
       {
         "value": "porsche",
         "label": "Porsche"
       },
       {
-        "value": "ram",
-        "label": "RAM"
-      },
-      {
         "value": "renault",
         "label": "Renault"
+      },
+      {
+        "value": "rolls-royce",
+        "label": "Rolls-Royce"
       },
       {
         "value": "saab",
@@ -211,10 +227,6 @@
         "label": "Suzuki"
       },
       {
-        "value": "swm",
-        "label": "SWM"
-      },
-      {
         "value": "tesla",
         "label": "Tesla"
       },
@@ -231,13 +243,13 @@
         "label": "Volvo"
       },
       {
-        "value": "zeekr",
-        "label": "Zeekr"
+        "value": "xpeng",
+        "label": "XPENG"
       }
     ]
   },
   "equipment": {
-    "updated_at": 1781976539,
+    "updated_at": 1782233208,
     "items": [
       {
         "value": "1 monitor",
@@ -1071,23 +1083,23 @@
   },
   "models": {
     "bmw": {
-      "updated_at": 1781976542,
+      "updated_at": 1782233210,
       "items": [
         {
-          "value": "i8",
-          "label": "i8"
+          "value": "m2",
+          "label": "M2"
         },
         {
-          "value": "ix",
-          "label": "iX"
+          "value": "m4",
+          "label": "M4"
         },
         {
-          "value": "m8",
-          "label": "M8"
+          "value": "m5",
+          "label": "M5"
         },
         {
-          "value": "rada-1",
-          "label": "Řada 1"
+          "value": "ostatni",
+          "label": "Ostatní"
         },
         {
           "value": "rada-2",
@@ -1134,6 +1146,10 @@
           "label": "X5"
         },
         {
+          "value": "x6",
+          "label": "X6"
+        },
+        {
           "value": "x7",
           "label": "X7"
         },
@@ -1146,7 +1162,7 @@
     }
   },
   "bodies": {
-    "updated_at": 1781976857,
+    "updated_at": 1782233521,
     "items": [
       {
         "value": "chladicimrazici",

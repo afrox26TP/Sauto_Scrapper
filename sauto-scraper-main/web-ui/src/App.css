@@ -1023,6 +1023,7 @@ button:disabled {
 
 .results-virtuoso-wrap > div {
   height: 100%;
+  scrollbar-gutter: stable;
 }
 
 .results-pending-overlay {
@@ -1156,10 +1157,19 @@ table {
   font-size: 0.82rem;
 }
 
-th {
+.results-table {
+  min-width: 1210px;
+  table-layout: fixed;
+  font-variant-numeric: tabular-nums;
+}
+
+thead {
   position: sticky;
   top: 0;
   z-index: 2;
+}
+
+th {
   padding: 11px 12px;
   text-align: left;
   color: var(--muted);
@@ -1234,6 +1244,7 @@ tr.row-selected.row-score-lo td { background: rgba(220, 38, 38, 0.07); border-bo
   display: inline;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
+  cursor: help;
 }
 
 .score-hi { color: var(--green); }

@@ -267,6 +267,75 @@ export function getItemScore(item, preset) {
   return Math.round(weightedScore);
 }
 
+function formatScoreNumber(value, decimals = 0) {
+  if (!Number.isFinite(value)) return "0";
+  if (decimals <= 0) return String(Math.round(value));
+  return Number(value.toFixed(decimals)).toLocaleString("cs-CZ", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: decimals,
+  });
+}
+
+const SCORE_COMPONENT_LABELS = {
+  age: "Stari",
+  mileage: "Najezd",
+  price: "Cena",
+  price_power: "Cena/kW",
+  power: "Vykon",
+  consumption: "Spotreba",
+  cost: "Provozni naklady",
+  equipment: "Vybava",
+  flags: "Stav/Historie",
+  sport: "Sport",
+  luxury: "Luxus",
+  power_weight: "Vykon/vaha",
+  sport_badge: "Sportovni oznaceni",
+  premium_equipment: "Premiova vybava",
+  tco: "TCO (5 let)",
+};
+
+export function getItemScoreDetails(item, preset, topN = 6) {
+  const components = calculateScoreComponents(item);
+  const weights = getPresetWeights(preset);
+
+  const contributions = Object.entries(components).map(([key, componentScore]) => {
+    const weight = weights[key] ?? DEFAULT_SCORE_WEIGHTS[key] ?? 1;
+    const points = componentScore * weight;
+    return {
+      key,
+      label: SCORE_COMPONENT_LABELS[key] || key,
+      componentScore,
+      weight,
+      points,
+    };
+  });
+
+  const total = contributions.reduce((sum, entry) => sum + entry.points, 0);
+  const score = Math.round(total);
+  const topFactors = contributions
+    .slice()
+    .sort((a, b) => Math.abs(b.points) - Math.abs(a.points))
+    .slice(0, Math.max(1, topN));
+
+  const tooltipLines = [
+    `Skore: ${formatScoreNumber(score)}`,
+    `Preset: ${preset?.name || "Custom"}`,
+    "Nejvetsi vlivy:",
+    ...topFactors.map((entry) => {
+      const sign = entry.points >= 0 ? "+" : "-";
+      const absPoints = Math.abs(entry.points);
+      return `${entry.label}: ${formatScoreNumber(entry.componentScore)} x ${formatScoreNumber(entry.weight, 2)} = ${sign}${formatScoreNumber(absPoints, 1)}`;
+    }),
+  ];
+
+  return {
+    score,
+    contributions,
+    topFactors,
+    tooltip: tooltipLines.join("\n"),
+  };
+}
+
 export function isSuspiciousMileage(item) {
   const age = num(item.age_years);
   const km = num(item.tachometer);

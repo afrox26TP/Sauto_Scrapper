@@ -3,6 +3,45 @@ import { TableVirtuoso } from "react-virtuoso";
 import { CustomCheckbox } from "./index";
 import { Star } from "lucide-react";
 
+const COLUMN_WIDTHS = [
+  "42px",  // select
+  "42px",  // mark
+  "82px",  // score
+  "180px", // name
+  "108px", // price
+  "72px",  // power
+  "100px", // km
+  "92px",  // drive
+  "92px",  // gearbox
+  "84px",  // price/kw
+  "84px",  // price/km
+  "84px",  // km/year
+  "100px", // annual cost
+  "48px",  // link
+];
+
+const SCORE_GREEN_MIN = 620;
+const SCORE_ORANGE_MIN = 540;
+
+function getScoreTone(score) {
+  if (score >= SCORE_GREEN_MIN) return "hi";
+  if (score >= SCORE_ORANGE_MIN) return "mid";
+  return "lo";
+}
+
+const virtuosoComponents = {
+  Table: ({ children, ...props }) => (
+    <table {...props} className="results-table">
+      <colgroup>
+        {COLUMN_WIDTHS.map((width, index) => (
+          <col key={index} style={{ width }} />
+        ))}
+      </colgroup>
+      {children}
+    </table>
+  ),
+};
+
 const ResultsTable = memo(function ResultsTable({
   visibleItems,
   selectedIdSet,
@@ -68,14 +107,16 @@ const ResultsTable = memo(function ResultsTable({
     const selected = selectedIdSet.has(key);
     const marked = markedIdSet.has(String(item.ad_id));
     const cachedScore = getCachedScore(item);
+    const tone = getScoreTone(cachedScore);
     return `${selected ? "row-selected" : ""}${marked ? " row-marked" : ""} ${
-      cachedScore >= 80 ? "row-score-hi" : cachedScore >= 50 ? "row-score-mid" : "row-score-lo"
+      tone === "hi" ? "row-score-hi" : tone === "mid" ? "row-score-mid" : "row-score-lo"
     }`;
   };
 
   return (
     <div className="results-virtuoso-wrap">
       <TableVirtuoso
+        components={virtuosoComponents}
         data={visibleItems}
         fixedHeaderContent={() => header}
         itemClassName={itemClassName}
@@ -84,8 +125,8 @@ const ResultsTable = memo(function ResultsTable({
           const selected = selectedIdSet.has(key);
           const marked = markedIdSet.has(String(item.ad_id));
           const cachedScore = getCachedScore(item);
-          const scoreClass =
-            cachedScore >= 80 ? "score-hi" : cachedScore >= 50 ? "score-mid" : "score-lo";
+          const tone = getScoreTone(cachedScore);
+          const scoreClass = tone === "hi" ? "score-hi" : tone === "mid" ? "score-mid" : "score-lo";
 
           return (
             <>
@@ -103,7 +144,9 @@ const ResultsTable = memo(function ResultsTable({
                 </button>
               </td>
               <td>
-                <span className={`score ${scoreClass}`}>{cachedScore}</span>
+                <span className={`score ${scoreClass}`} title={item._scoreTooltip || "Skore bez detailu"}>
+                  {cachedScore}
+                </span>
                 {item._suspicious && (
                   <span
                     className="suspicious-badge"

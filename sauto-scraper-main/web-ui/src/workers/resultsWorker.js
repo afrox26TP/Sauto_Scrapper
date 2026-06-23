@@ -1,4 +1,4 @@
-import { getItemScore, isSuspiciousMileage } from "../utils/scoring";
+import { getItemScoreDetails, isSuspiciousMileage } from "../utils/scoring";
 
 const CS_COLLATOR = new Intl.Collator("cs", { sensitivity: "base", numeric: true });
 
@@ -56,18 +56,22 @@ function formatItems(items, preset) {
     );
   };
 
-  return (items || []).map((item) => ({
-    ...item,
-    _fmt_price: fmt(item.price),
-    _fmt_tacho: fmt(item.tachometer),
-    _fmt_ppkw: fmt(item.price_per_kw, "ppkw"),
-    _fmt_ppkm: fmt(item.price_per_km, "ppkm"),
-    _fmt_kpy: fmt(item.km_per_year),
-    _fmt_atc: fmt(item.annual_total_cost),
-    _suspicious: isSuspiciousMileage(item),
-    _score: getItemScore(item, preset),
-    _resultKey: resultKey(item),
-  }));
+  return (items || []).map((item) => {
+    const scoreDetails = getItemScoreDetails(item, preset);
+    return {
+      ...item,
+      _fmt_price: fmt(item.price),
+      _fmt_tacho: fmt(item.tachometer),
+      _fmt_ppkw: fmt(item.price_per_kw, "ppkw"),
+      _fmt_ppkm: fmt(item.price_per_km, "ppkm"),
+      _fmt_kpy: fmt(item.km_per_year),
+      _fmt_atc: fmt(item.annual_total_cost),
+      _suspicious: isSuspiciousMileage(item),
+      _score: scoreDetails.score,
+      _scoreTooltip: scoreDetails.tooltip,
+      _resultKey: resultKey(item),
+    };
+  });
 }
 
 self.onmessage = (event) => {
