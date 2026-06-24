@@ -9,7 +9,7 @@ import {
   History,
   X,
 } from "lucide-react";
-import ResultsTable from "./ResultsTable";
+import ResultsTable, { RESULT_COLUMN_TOGGLE_OPTIONS } from "./ResultsTable";
 import { CustomCheckbox, CustomSlider } from "./index";
 import {
   LOCAL_SCORING_PRESETS,
@@ -25,6 +25,22 @@ import {
 } from "../utils/api";
 
 const EMPTY_ITEMS = [];
+const DEFAULT_VISIBLE_RESULT_COLUMNS = RESULT_COLUMN_TOGGLE_OPTIONS.map((col) => col.key);
+const REQUIRED_VISIBLE_COLUMNS = ["name", "price"];
+
+function ensureRequiredColumns(value) {
+  const set = new Set(Array.isArray(value) ? value : []);
+  REQUIRED_VISIBLE_COLUMNS.forEach((key) => set.add(key));
+  return Array.from(set);
+}
+
+function sanitizeVisibleColumns(value) {
+  if (!Array.isArray(value) || value.length === 0) return ensureRequiredColumns(DEFAULT_VISIBLE_RESULT_COLUMNS);
+  const valid = new Set(DEFAULT_VISIBLE_RESULT_COLUMNS);
+  const filtered = value.filter((key) => valid.has(key));
+  const normalized = filtered.length > 0 ? filtered : DEFAULT_VISIBLE_RESULT_COLUMNS;
+  return ensureRequiredColumns(normalized);
+}
 
 export default memo(function ProjectResults({
   project,
@@ -38,6 +54,9 @@ export default memo(function ProjectResults({
   const [selectedIds, setSelectedIds] = useState([]);
   const [sortConfig, setSortConfig] = useState({ key: "score", direction: "desc" });
   const [selectedPreset, setSelectedPreset] = useState(project.selectedPreset || "balanced");
+  const [visibleColumnKeys, setVisibleColumnKeys] = useState(() =>
+    sanitizeVisibleColumns(project.visibleResultColumns)
+  );
   const [showLogsModal, setShowLogsModal] = useState(false);
   const [popupLog, setPopupLog] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -59,6 +78,7 @@ export default memo(function ProjectResults({
     const timer = setTimeout(() => setSwitchLoading(false), 220);
     setSelectedIds([]);
     setSelectedPreset(project.selectedPreset || "balanced");
+    setVisibleColumnKeys(sanitizeVisibleColumns(project.visibleResultColumns));
     return () => clearTimeout(timer);
   }, [project.id]);
 
@@ -256,6 +276,23 @@ export default memo(function ProjectResults({
     onUpdateProject({ selectedPreset: val });
   }
 
+  const visibleColumnSet = useMemo(() => new Set(visibleColumnKeys), [visibleColumnKeys]);
+
+  const handleToggleColumn = useCallback(
+    (columnKey) => {
+      if (REQUIRED_VISIBLE_COLUMNS.includes(columnKey)) return;
+      setVisibleColumnKeys((prev) => {
+        const exists = prev.includes(columnKey);
+        if (exists && prev.length === 1) return prev;
+        const next = exists ? prev.filter((key) => key !== columnKey) : [...prev, columnKey];
+        const sanitizedNext = sanitizeVisibleColumns(next);
+        onUpdateProject({ visibleResultColumns: sanitizedNext });
+        return sanitizedNext;
+      });
+    },
+    [onUpdateProject]
+  );
+
   return (
     <div className="project-results">
       <div className="results-hd results-header">
@@ -276,6 +313,26 @@ export default memo(function ProjectResults({
                 ))}
               </select>
             </label>
+            <details className="columns-dropdown">
+              <summary className="columns-dropdown-trigger">Sloupce</summary>
+              <div className="columns-dropdown-menu" role="group" aria-label="Zobrazeni sloupcu tabulky">
+                {RESULT_COLUMN_TOGGLE_OPTIONS.map((col) => {
+                  const checked = visibleColumnSet.has(col.key);
+                  const isRequired = REQUIRED_VISIBLE_COLUMNS.includes(col.key);
+                  const disableUncheck = isRequired || (checked && visibleColumnKeys.length === 1);
+                  return (
+                    <CustomCheckbox
+                      key={col.key}
+                      label={isRequired ? `${col.label} (povinne)` : col.label}
+                      checked={checked}
+                      disabled={disableUncheck}
+                      onChange={() => handleToggleColumn(col.key)}
+                      size="sm"
+                    />
+                  );
+                })}
+              </div>
+            </details>
           </div>
         </div>
         <div className="results-actions">
@@ -354,6 +411,7 @@ export default memo(function ProjectResults({
         ) : (
           <ResultsTable
             visibleItems={visibleItems}
+            visibleColumnKeys={visibleColumnKeys}
             selectedIdSet={selectedIdSet}
             markedIdSet={markedIdSet}
             toggleSelected={toggleSelected}

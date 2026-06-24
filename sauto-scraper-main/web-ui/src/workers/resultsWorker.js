@@ -19,10 +19,15 @@ function getSortKey(item, key) {
     case "price_per_kw":
     case "price_per_km":
     case "km_per_year":
+    case "age_years":
+    case "months_to_stk":
+    case "listing_age_days":
       return Number(item?.[key] ?? NaN);
     case "name":
     case "drive_type":
     case "gearbox_type":
+    case "fuel_seo":
+    case "body_seo":
       return String(item?.[key] ?? "");
     default:
       return item?.[key];
