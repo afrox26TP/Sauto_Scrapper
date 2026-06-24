@@ -17,6 +17,9 @@ The API will be available at `http://localhost:8000`.
 - `GET /api/params`
 - `PUT /api/params`
 - `POST /api/run` (queue run job)
+- `POST /api/pause` (pause active scraper)
+- `POST /api/resume` (resume paused scraper)
+- `POST /api/stop` (early stop active scraper)
 - `GET /api/status` (runner + queue summary)
 - `GET /api/jobs`
 - `GET /api/jobs/{job_id}`

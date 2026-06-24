@@ -40,14 +40,19 @@ export default function App() {
 
   const {
     projects,
-    globalLogs,
     scraperRunning,
+    scraperPaused,
+    scraperStartedAt,
+    billingRates: runtimeBillingRates,
     addProject,
     removeProject,
     activateProject,
     updateProject,
     updateProjectConfig,
     runProject,
+    pauseRunningProject,
+    resumeRunningProject,
+    stopRunningProject,
     setProjects,
   } = useProjects(brandOptions, modelsByBrand);
 
@@ -161,6 +166,63 @@ export default function App() {
     return uniq(csvToArray(currentProject.config?.manufacturer_seo_name));
   }, [currentProject?.config?.manufacturer_seo_name]);
 
+  const currentProjectLogs = useMemo(() => {
+    if (!currentProject) return [];
+    const projectLogs = currentProject.logs || [];
+    const liveLogs = currentProject.phase === "running" ? (currentProject.liveLogs || []) : [];
+    return [...projectLogs, ...liveLogs].slice(-200);
+  }, [currentProject]);
+
+  const estimatedTotalRunSec = useMemo(() => {
+    const projectSpecific = Number(currentProject?.lastRunDurationSec || 0);
+    if (Number.isFinite(projectSpecific) && projectSpecific > 0) {
+      return Math.max(30, Math.min(600, Math.round(projectSpecific)));
+    }
+
+    const finished = (projects || [])
+      .map((p) => Number(p.lastRunDurationSec || 0))
+      .filter((n) => Number.isFinite(n) && n > 0)
+      .sort((a, b) => a - b);
+
+    if (!finished.length) return 90;
+
+    const mid = Math.floor(finished.length / 2);
+    const median =
+      finished.length % 2 === 0
+        ? (finished[mid - 1] + finished[mid]) / 2
+        : finished[mid];
+
+    return Math.max(30, Math.min(600, Math.round(median)));
+  }, [projects, currentProject?.lastRunDurationSec]);
+
+  const handlePause = useCallback(async () => {
+    if (!currentProject) return;
+    try {
+      await pauseRunningProject(currentProject.id);
+    } catch (err) {
+      showToast(err.message || "Pause selhal.", "error");
+    }
+  }, [currentProject, pauseRunningProject]);
+
+  const handleResume = useCallback(async () => {
+    if (!currentProject) return;
+    try {
+      await resumeRunningProject(currentProject.id);
+    } catch (err) {
+      showToast(err.message || "Resume selhal.", "error");
+    }
+  }, [currentProject, resumeRunningProject]);
+
+  const handleStop = useCallback(async () => {
+    if (!currentProject) return;
+    try {
+      await stopRunningProject(currentProject.id);
+      showToast("Scraper se ukončuje...", "info");
+    } catch (err) {
+      showToast(err.message || "Stop selhal.", "error");
+    }
+  }, [currentProject, stopRunningProject]);
+
   useEffect(() => {
     selectedBrands.forEach((brand) => {
       const b = String(brand || "").trim();
@@ -226,6 +288,14 @@ export default function App() {
       switchRafRef.current = null;
     });
   }, [activateProject]);
+
+  const handleAddProject = useCallback(() => {
+    const proj = addProject();
+    if (!proj?.id) return;
+    setUiActiveProjectId(proj.id);
+    setDisplayProjectId(proj.id);
+    activateProject(proj.id);
+  }, [addProject, activateProject]);
 
   // Toast
   function showToast(msg, type = "") {
@@ -365,7 +435,13 @@ export default function App() {
         return (
           <ProjectRunning
             project={currentProject}
-            globalLogs={globalLogs}
+            scraperPaused={scraperPaused}
+            scraperStartedAt={scraperStartedAt}
+            billingRates={runtimeBillingRates}
+            estimatedTotalSec={estimatedTotalRunSec}
+            onPause={handlePause}
+            onResume={handleResume}
+            onStop={handleStop}
           />
         );
       case "queued":
@@ -448,7 +524,7 @@ export default function App() {
             activeProjectId={uiActiveProjectId}
             onActivate={activateProjectSmooth}
             onRemove={removeProject}
-            onAdd={() => addProject()}
+            onAdd={handleAddProject}
             scraperRunning={scraperRunning}
           />
         ) : null}
@@ -461,9 +537,9 @@ export default function App() {
         {/* Terminal bar */}
         {currentPage === "dashboard" ? (
           <TerminalBar
-            scraperRunning={scraperRunning}
-            globalLogs={globalLogs}
-            tickerStep={tickerStep}
+            projectRunning={currentProject?.phase === "running"}
+            projectPaused={currentProject?.phase === "running" && scraperPaused}
+            projectLogs={currentProjectLogs}
             tickerPrefix={tickerPrefix()}
             onShowHistory={() => {
               setShowLogsModal(true);
@@ -482,16 +558,16 @@ export default function App() {
           <div className="debug-modal" onClick={(e) => e.stopPropagation()}>
             <div className="debug-modal-head">
               <strong>Debug výpis — Historie</strong>
-              <span className="muted">{globalLogs.length} řádků</span>
+              <span className="muted">{currentProjectLogs.length} řádků</span>
               <button className="debug-modal-close" onClick={() => setShowLogsModal(false)}>
                 <X className="ui-icon" aria-hidden="true" />
               </button>
             </div>
             <div className="debug-modal-body" ref={logsModalBodyRef}>
-              {globalLogs.length === 0 ? (
+              {currentProjectLogs.length === 0 ? (
                 <div className="debug-empty">Zatím žádný log výstup.</div>
               ) : (
-                globalLogs.map((line, i) => (
+                currentProjectLogs.map((line, i) => (
                   <div
                     key={`log-${i}`}
                     className="debug-modal-line"

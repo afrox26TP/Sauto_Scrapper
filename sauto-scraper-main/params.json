@@ -2,7 +2,9 @@
   "category_id": "838",
   "limit": "100",
   "offset": "0",
-  "condition_seo": "nove,ojete,predvadeci",
-  "exclude_condition_seo": "",
+  "manufacturer_seo_name": "bmw",
+  "model_seo_name": "m2",
+  "exclude_manufacturer_seo_name": "",
+  "exclude_model_seo_name": "",
   "seller_type": "soukromy"
 }

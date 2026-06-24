@@ -1,0 +1,187 @@
+{
+  "updated_at": 1782329960.8191996,
+  "rates": {
+    "run_base_czk": 5.0,
+    "item_czk": 0.02,
+    "api_call_czk": 0.05,
+    "proxy_run_czk": 0.0
+  },
+  "projects": {
+    "default": {
+      "project_id": "default",
+      "runs_total": 1,
+      "runs_success": 0,
+      "runs_failed": 1,
+      "items_total": 9,
+      "api_calls": 0,
+      "costs": {
+        "runs_czk": 5.0,
+        "items_czk": 0.18,
+        "api_calls_czk": 0.0,
+        "proxy_czk": 0.0
+      },
+      "total_czk": 5.18,
+      "last_event_at": 1782323408.887078
+    },
+    "proj_mqsdv4s7_34ok86": {
+      "project_id": "proj_mqsdv4s7_34ok86",
+      "runs_total": 1,
+      "runs_success": 0,
+      "runs_failed": 1,
+      "items_total": 9,
+      "api_calls": 0,
+      "costs": {
+        "runs_czk": 5.0,
+        "items_czk": 0.18,
+        "api_calls_czk": 0.0,
+        "proxy_czk": 0.0
+      },
+      "total_czk": 5.18,
+      "last_event_at": 1782324366.852952
+    },
+    "proj_mqsg9zhh_o6n1b2": {
+      "project_id": "proj_mqsg9zhh_o6n1b2",
+      "runs_total": 1,
+      "runs_success": 0,
+      "runs_failed": 1,
+      "items_total": 0,
+      "api_calls": 0,
+      "costs": {
+        "runs_czk": 5.0,
+        "items_czk": 0.0,
+        "api_calls_czk": 0.0,
+        "proxy_czk": 0.0
+      },
+      "total_czk": 5.0,
+      "last_event_at": 1782328396.7696064
+    },
+    "proj_mqsgkegt_1hwng1": {
+      "project_id": "proj_mqsgkegt_1hwng1",
+      "runs_total": 1,
+      "runs_success": 0,
+      "runs_failed": 1,
+      "items_total": 9,
+      "api_calls": 0,
+      "costs": {
+        "runs_czk": 5.0,
+        "items_czk": 0.18,
+        "api_calls_czk": 0.0,
+        "proxy_czk": 0.0
+      },
+      "total_czk": 5.18,
+      "last_event_at": 1782328945.3845975
+    },
+    "proj_mqsgqq0v_ylui9d": {
+      "project_id": "proj_mqsgqq0v_ylui9d",
+      "runs_total": 1,
+      "runs_success": 0,
+      "runs_failed": 1,
+      "items_total": 9,
+      "api_calls": 0,
+      "costs": {
+        "runs_czk": 5.0,
+        "items_czk": 0.18,
+        "api_calls_czk": 0.0,
+        "proxy_czk": 0.0
+      },
+      "total_czk": 5.18,
+      "last_event_at": 1782329189.2034373
+    },
+    "proj_mqsh5shr_byv15h": {
+      "project_id": "proj_mqsh5shr_byv15h",
+      "runs_total": 1,
+      "runs_success": 0,
+      "runs_failed": 1,
+      "items_total": 0,
+      "api_calls": 0,
+      "costs": {
+        "runs_czk": 5.0,
+        "items_czk": 0.0,
+        "api_calls_czk": 0.0,
+        "proxy_czk": 0.0
+      },
+      "total_czk": 5.0,
+      "last_event_at": 1782329960.8191903
+    }
+  },
+  "events": [
+    {
+      "type": "run_usage",
+      "at": 1782323408.887078,
+      "project_id": "default",
+      "job_id": "job_cc6dda843f63",
+      "exit_code": -1,
+      "item_count": 9,
+      "charges": {
+        "run_base_czk": 5.0,
+        "items_czk": 0.18,
+        "proxy_czk": 0.0
+      }
+    },
+    {
+      "type": "run_usage",
+      "at": 1782324366.852952,
+      "project_id": "proj_mqsdv4s7_34ok86",
+      "job_id": "job_a0cc6433b0bd",
+      "exit_code": -1,
+      "item_count": 9,
+      "charges": {
+        "run_base_czk": 5.0,
+        "items_czk": 0.18,
+        "proxy_czk": 0.0
+      }
+    },
+    {
+      "type": "run_usage",
+      "at": 1782328396.7696064,
+      "project_id": "proj_mqsg9zhh_o6n1b2",
+      "job_id": "job_12c5c476f097",
+      "exit_code": 1,
+      "item_count": 0,
+      "charges": {
+        "run_base_czk": 5.0,
+        "items_czk": 0.0,
+        "proxy_czk": 0.0
+      }
+    },
+    {
+      "type": "run_usage",
+      "at": 1782328945.3845975,
+      "project_id": "proj_mqsgkegt_1hwng1",
+      "job_id": "job_56721b5e3733",
+      "exit_code": -1,
+      "item_count": 9,
+      "charges": {
+        "run_base_czk": 5.0,
+        "items_czk": 0.18,
+        "proxy_czk": 0.0
+      }
+    },
+    {
+      "type": "run_usage",
+      "at": 1782329189.2034373,
+      "project_id": "proj_mqsgqq0v_ylui9d",
+      "job_id": "job_2e30f708a062",
+      "exit_code": -1,
+      "item_count": 9,
+      "charges": {
+        "run_base_czk": 5.0,
+        "items_czk": 0.18,
+        "proxy_czk": 0.0
+      }
+    },
+    {
+      "type": "run_usage",
+      "at": 1782329960.8191903,
+      "project_id": "proj_mqsh5shr_byv15h",
+      "job_id": "job_938479f2e6c0",
+      "exit_code": -1,
+      "item_count": 0,
+      "charges": {
+        "run_base_czk": 5.0,
+        "items_czk": 0.0,
+        "proxy_czk": 0.0
+      }
+    }
+  ]
+}

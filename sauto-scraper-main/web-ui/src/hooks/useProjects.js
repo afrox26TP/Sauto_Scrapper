@@ -4,12 +4,17 @@ import {
   loadProjects,
   saveProjects,
   generateAutoName,
+  ensureUniqueProjectName,
 } from "../utils/storage";
 import {
   fetchStatus,
   fetchResults,
   fetchLogs,
   runScraper,
+  pauseScraper,
+  resumeScraper,
+  stopScraper,
+  fetchBillingRates,
   saveParams,
   fetchParams,
 } from "../utils/api";
@@ -22,8 +27,18 @@ export function useProjects(brandOptions, modelsByBrand) {
   });
   const [globalLogs, setGlobalLogs] = useState([]);
   const [scraperRunning, setScraperRunning] = useState(false);
+  const [scraperPaused, setScraperPaused] = useState(false);
+  const [scraperStartedAt, setScraperStartedAt] = useState(null);
+  const [runnerPid, setRunnerPid] = useState(null);
+  const [billingRates, setBillingRates] = useState({
+    run_base_czk: 5.0,
+    item_czk: 0.02,
+    api_call_czk: 0.05,
+    proxy_run_czk: 0.0,
+  });
   const [statusReady, setStatusReady] = useState(false);
   const [migrated, setMigrated] = useState(false);
+  const stopRequestedProjectIdRef = useRef(null);
 
   const projectsRef = useRef(projects);
   projectsRef.current = projects;
@@ -105,8 +120,14 @@ export function useProjects(brandOptions, modelsByBrand) {
       try {
         const status = await fetchStatus();
         setScraperRunning(status.running || false);
+        setScraperPaused(status.paused || false);
+        setScraperStartedAt(typeof status.last_started_at === "number" ? status.last_started_at : null);
+        setRunnerPid(status.pid || null);
       } catch {
         setScraperRunning(false);
+        setScraperPaused(false);
+        setScraperStartedAt(null);
+        setRunnerPid(null);
       } finally {
         setStatusReady(true);
       }
@@ -116,12 +137,37 @@ export function useProjects(brandOptions, modelsByBrand) {
     return () => clearInterval(statusInterval.current);
   }, []);
 
+  useEffect(() => {
+    const loadRates = async () => {
+      try {
+        const rates = await fetchBillingRates();
+        if (rates && typeof rates === "object") {
+          setBillingRates((prev) => ({ ...prev, ...rates }));
+        }
+      } catch {
+        // keep defaults
+      }
+    };
+    loadRates();
+    const t = setInterval(loadRates, 30000);
+    return () => clearInterval(t);
+  }, []);
+
   // ── Fetch global logs ──
   useEffect(() => {
     const poll = async () => {
       try {
         const lines = await fetchLogs(160);
         setGlobalLogs(lines);
+        setProjects((prev) => {
+          const runningIdx = prev.findIndex((p) => p.phase === "running");
+          if (runningIdx === -1) return prev;
+          return prev.map((p, idx) =>
+            idx === runningIdx
+              ? { ...p, liveLogs: Array.isArray(lines) ? lines : [] }
+              : p
+          );
+        });
       } catch {
         // ignore
       }
@@ -182,11 +228,25 @@ export function useProjects(brandOptions, modelsByBrand) {
                         phase: "done",
                         results: data.items || [],
                         markedIds: data.marked_ids || [],
-                        logs: [...(cp.logs || []), "[systém] Scraping dokončen."],
+                        lastRunDurationSec:
+                          typeof scraperStartedAt === "number"
+                            ? Math.max(1, Math.round(Date.now() / 1000 - scraperStartedAt))
+                            : cp.lastRunDurationSec,
+                        logs: [
+                          ...(cp.logs || []),
+                          ...((cp.liveLogs || []).slice(-160)),
+                          stopRequestedProjectIdRef.current === cp.id
+                            ? "[systém] Scraping ukončen uživatelem."
+                            : "[systém] Scraping dokončen.",
+                        ],
+                        liveLogs: [],
                       }
                     : cp
                 )
               );
+              if (stopRequestedProjectIdRef.current === p.id) {
+                stopRequestedProjectIdRef.current = null;
+              }
               // After transition, check queue
               setTimeout(() => {
                 setProjects((curr) => {
@@ -225,7 +285,7 @@ export function useProjects(brandOptions, modelsByBrand) {
         return p;
       });
     });
-  }, [scraperRunning, statusReady]);
+  }, [scraperRunning, statusReady, scraperStartedAt]);
 
   // ── Start queued scrape helper (no deps on closures) ──
   function startQueuedScrape(projectId) {
@@ -235,15 +295,21 @@ export function useProjects(brandOptions, modelsByBrand) {
     setProjects((prev) =>
       prev.map((p) =>
         p.id === projectId
-          ? { ...p, phase: "running", logs: [...(p.logs || []), "[systém] Spouštím scraper z fronty..."] }
+          ? {
+              ...p,
+              phase: "running",
+              logs: [...(p.logs || []), "[systém] Spouštím scraper z fronty..."],
+              liveLogs: [],
+            }
           : p
       )
     );
 
     saveParams(project.config)
-      .then(() => runScraper(project.resultsPath))
+      .then(() => runScraper(project.resultsPath, project.id))
       .then(() => {
         setScraperRunning(true);
+        setScraperPaused(false);
         setProjects((prev) =>
           prev.map((p) =>
             p.id === projectId
@@ -286,7 +352,12 @@ export function useProjects(brandOptions, modelsByBrand) {
     setProjects((prev) =>
       prev.map((p) =>
         p.id === projectId
-          ? { ...p, phase: "running", logs: [...(p.logs || []), "[systém] Spouštím scraper..."] }
+          ? {
+              ...p,
+              phase: "running",
+              logs: [...(p.logs || []), "[systém] Spouštím scraper..."],
+              liveLogs: [],
+            }
           : p
       )
     );
@@ -296,8 +367,9 @@ export function useProjects(brandOptions, modelsByBrand) {
       if (!project) throw new Error("Projekt nenalezen.");
 
       await saveParams(project.config);
-      await runScraper(project.resultsPath);
+      await runScraper(project.resultsPath, project.id);
       setScraperRunning(true);
+      setScraperPaused(false);
 
       setProjects((prev) =>
         prev.map((p) =>
@@ -344,7 +416,8 @@ export function useProjects(brandOptions, modelsByBrand) {
     (name = "", config = {}) => {
       const proj = createProject(name, config);
       const autoName = generateAutoName(config, brandOptions, modelsByBrand);
-      proj.name = name || autoName;
+      const requestedName = name || autoName;
+      proj.name = ensureUniqueProjectName(requestedName, projectsRef.current);
       proj.customName = !!name;
       setProjects((prev) => [...prev, proj]);
       setActiveProjectId(proj.id);
@@ -388,7 +461,8 @@ export function useProjects(brandOptions, modelsByBrand) {
           const updated = { ...p, config: newConfig };
           // Auto-name if not custom
           if (!p.customName) {
-            updated.name = generateAutoName(newConfig, brandOptions, modelsByBrand);
+            const autoName = generateAutoName(newConfig, brandOptions, modelsByBrand);
+            updated.name = ensureUniqueProjectName(autoName, prev, p.id);
           }
           return updated;
         })
@@ -406,6 +480,107 @@ export function useProjects(brandOptions, modelsByBrand) {
     [startScrapeForProject]
   );
 
+  const pauseRunningProject = useCallback(async (projectId) => {
+    try {
+      await pauseScraper();
+      setScraperPaused(true);
+      setProjects((prev) =>
+        prev.map((p) =>
+          p.id === projectId
+            ? { ...p, logs: [...(p.logs || []), "[systém] Pozastaveno uživatelem."] }
+            : p
+        )
+      );
+    } catch (err) {
+      setProjects((prev) =>
+        prev.map((p) =>
+          p.id === projectId
+            ? { ...p, logs: [...(p.logs || []), `[chyba] Pause selhal: ${err.message}`] }
+            : p
+        )
+      );
+      throw err;
+    }
+  }, []);
+
+  const resumeRunningProject = useCallback(async (projectId) => {
+    try {
+      await resumeScraper();
+      setScraperPaused(false);
+      setProjects((prev) =>
+        prev.map((p) =>
+          p.id === projectId
+            ? { ...p, logs: [...(p.logs || []), "[systém] Pokračuji po pauze."] }
+            : p
+        )
+      );
+    } catch (err) {
+      setProjects((prev) =>
+        prev.map((p) =>
+          p.id === projectId
+            ? { ...p, logs: [...(p.logs || []), `[chyba] Resume selhal: ${err.message}`] }
+            : p
+        )
+      );
+      throw err;
+    }
+  }, []);
+
+  const stopRunningProject = useCallback(async (projectId) => {
+    stopRequestedProjectIdRef.current = projectId;
+    setProjects((prev) =>
+      prev.map((p) =>
+        p.id === projectId
+          ? { ...p, logs: [...(p.logs || []), "[systém] Posílám požadavek na předčasné ukončení..."] }
+          : p
+      )
+    );
+
+    try {
+      await stopScraper();
+      setScraperPaused(false);
+      setScraperRunning(false);
+
+      const project = projectsRef.current.find((p) => p.id === projectId);
+      let latestItems = project?.results || [];
+      let latestMarked = project?.markedIds || [];
+      if (project?.resultsPath) {
+        try {
+          const data = await fetchResults(project.resultsPath);
+          latestItems = data.items || latestItems;
+          latestMarked = data.marked_ids || latestMarked;
+        } catch {
+          // keep current in-memory results if fetch fails
+        }
+      }
+
+      setProjects((prev) =>
+        prev.map((p) =>
+          p.id === projectId
+            ? {
+                ...p,
+                phase: "done",
+                results: latestItems,
+                markedIds: latestMarked,
+                liveLogs: [],
+                logs: [...(p.logs || []), "[systém] Běh byl předčasně ukončen uživatelem."],
+              }
+            : p
+        )
+      );
+    } catch (err) {
+      stopRequestedProjectIdRef.current = null;
+      setProjects((prev) =>
+        prev.map((p) =>
+          p.id === projectId
+            ? { ...p, logs: [...(p.logs || []), `[chyba] Stop selhal: ${err.message}`] }
+            : p
+        )
+      );
+      throw err;
+    }
+  }, []);
+
   const activeProject = projects.find((p) => p.id === activeProjectId) || projects[0] || createProject();
 
   return {
@@ -414,12 +589,19 @@ export function useProjects(brandOptions, modelsByBrand) {
     activeProject,
     globalLogs,
     scraperRunning,
+    scraperPaused,
+    scraperStartedAt,
+    runnerPid,
+    billingRates,
     addProject,
     removeProject,
     activateProject,
     updateProject,
     updateProjectConfig,
     runProject,
+    pauseRunningProject,
+    resumeRunningProject,
+    stopRunningProject,
     setProjects,
   };
 }

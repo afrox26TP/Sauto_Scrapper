@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import signal
 import subprocess
 import sys
 import threading
@@ -104,6 +105,7 @@ class ScraperRunner:
         self.last_command: list[str] = []
         self.last_output_file: str = "data/sauto_interesting.json"
         self.on_finished: Callable[[int, str], None] | None = None
+        self.paused: bool = False
 
     def is_running(self) -> bool:
         with self.lock:
@@ -114,6 +116,7 @@ class ScraperRunner:
         pid = self.process.pid if running and self.process else None
         return {
             "running": running,
+            "paused": self.paused if running else False,
             "pid": pid,
             "last_exit_code": self.last_exit_code,
             "last_started_at": self.last_started_at,
@@ -163,17 +166,24 @@ class ScraperRunner:
             ]
             self.log_lines.clear()
             self.log_lines.append(f"[web-api] Spouštím: {' '.join(command)}")
+            popen_kwargs: dict[str, Any] = {
+                "cwd": ROOT_DIR,
+                "stdout": subprocess.PIPE,
+                "stderr": subprocess.STDOUT,
+                "text": True,
+                "bufsize": 1,
+            }
+            if os.name == "nt":
+                popen_kwargs["creationflags"] = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+
             self.process = subprocess.Popen(
                 command,
-                cwd=ROOT_DIR,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                bufsize=1,
+                **popen_kwargs,
             )
             self.last_started_at = time.time()
             self.last_finished_at = None
             self.last_exit_code = None
+            self.paused = False
             self.last_command = command
             self.last_output_file = output_file
 
@@ -214,6 +224,7 @@ class ScraperRunner:
         with self.lock:
             self.last_exit_code = exit_code
             self.last_finished_at = time.time()
+            self.paused = False
             output_file = self.last_output_file
             self.process = None
             self.log_lines.append(f"[web-api] Dokončeno s exit code {exit_code}")
@@ -224,6 +235,227 @@ class ScraperRunner:
                 callback(exit_code, output_file)
             except Exception:
                 pass
+
+    def _run_ps_control(self, action: str, pid: int) -> None:
+        cmdlet = "Suspend-Process" if action == "suspend" else "Resume-Process"
+        script = f"{cmdlet} -Id {pid} -ErrorAction Stop"
+        completed = subprocess.run(
+            ["powershell", "-NoProfile", "-Command", script],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if completed.returncode != 0:
+            err = (completed.stderr or completed.stdout or "").strip()
+            raise OSError(err or f"{cmdlet} failed.")
+
+    def _windows_process_tree(self, root_pid: int) -> list[int]:
+        if os.name != "nt":
+            return [root_pid]
+
+        script = (
+            "Get-CimInstance Win32_Process "
+            "| Select-Object ProcessId,ParentProcessId "
+            "| ConvertTo-Json -Compress"
+        )
+        completed = subprocess.run(
+            ["powershell", "-NoProfile", "-Command", script],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if completed.returncode != 0:
+            return [root_pid]
+
+        raw = (completed.stdout or "").strip()
+        if not raw:
+            return [root_pid]
+
+        try:
+            snapshot = json.loads(raw)
+        except Exception:
+            return [root_pid]
+
+        if isinstance(snapshot, dict):
+            snapshot = [snapshot]
+        if not isinstance(snapshot, list):
+            return [root_pid]
+
+        children_by_parent: dict[int, list[int]] = {}
+        for row in snapshot:
+            if not isinstance(row, dict):
+                continue
+            try:
+                child_pid = int(row.get("ProcessId"))
+                parent_pid = int(row.get("ParentProcessId"))
+            except Exception:
+                continue
+            children_by_parent.setdefault(parent_pid, []).append(child_pid)
+
+        tree: list[int] = []
+        queue = [int(root_pid)]
+        visited: set[int] = set()
+        while queue:
+            current = queue.pop(0)
+            if current in visited:
+                continue
+            visited.add(current)
+            tree.append(current)
+            queue.extend(children_by_parent.get(current, []))
+
+        return tree if tree else [root_pid]
+
+    def _suspend_process_tree(self, pid: int) -> None:
+        if os.name != "nt":
+            self._suspend_process(pid)
+            return
+
+        tree = self._windows_process_tree(pid)
+        errors: list[str] = []
+        for target_pid in reversed(tree):
+            try:
+                self._suspend_process(target_pid)
+            except Exception as ex:
+                errors.append(f"{target_pid}: {ex}")
+        if errors:
+            raise RuntimeError("; ".join(errors))
+
+    def _resume_process_tree(self, pid: int) -> None:
+        if os.name != "nt":
+            self._resume_process(pid)
+            return
+
+        tree = self._windows_process_tree(pid)
+        errors: list[str] = []
+        for target_pid in tree:
+            try:
+                self._resume_process(target_pid)
+            except Exception as ex:
+                errors.append(f"{target_pid}: {ex}")
+        if errors:
+            raise RuntimeError("; ".join(errors))
+
+    def _suspend_process(self, pid: int) -> None:
+        if os.name == "nt":
+            try:
+                self._run_ps_control("suspend", pid)
+            except Exception:
+                # Fallback: low-level suspend if PowerShell cmdlet is unavailable.
+                import ctypes
+
+                PROCESS_SUSPEND_RESUME = 0x0800
+                kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+                ntdll = ctypes.WinDLL("ntdll", use_last_error=True)
+
+                handle = kernel32.OpenProcess(PROCESS_SUSPEND_RESUME, False, pid)
+                if not handle:
+                    raise OSError("Unable to open process for suspend.")
+
+                try:
+                    status = ntdll.NtSuspendProcess(handle)
+                    if status != 0:
+                        raise OSError(f"NtSuspendProcess failed with status {status}.")
+                finally:
+                    kernel32.CloseHandle(handle)
+            return
+
+        os.kill(pid, signal.SIGSTOP)
+
+    def _resume_process(self, pid: int) -> None:
+        if os.name == "nt":
+            try:
+                self._run_ps_control("resume", pid)
+            except Exception:
+                import ctypes
+
+                PROCESS_SUSPEND_RESUME = 0x0800
+                kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+                ntdll = ctypes.WinDLL("ntdll", use_last_error=True)
+
+                handle = kernel32.OpenProcess(PROCESS_SUSPEND_RESUME, False, pid)
+                if not handle:
+                    raise OSError("Unable to open process for resume.")
+
+                try:
+                    status = ntdll.NtResumeProcess(handle)
+                    if status != 0:
+                        raise OSError(f"NtResumeProcess failed with status {status}.")
+                finally:
+                    kernel32.CloseHandle(handle)
+            return
+
+        os.kill(pid, signal.SIGCONT)
+
+    def _graceful_stop(self, process: subprocess.Popen[str], timeout_s: int = 20) -> bool:
+        try:
+            if os.name == "nt":
+                process.send_signal(signal.CTRL_BREAK_EVENT)
+            else:
+                process.send_signal(signal.SIGINT)
+            process.wait(timeout=timeout_s)
+            return True
+        except Exception:
+            return False
+
+    def pause(self) -> dict[str, Any]:
+        with self.lock:
+            if self.process is None or self.process.poll() is not None:
+                raise RuntimeError("No running scraper process to pause.")
+            if self.paused:
+                return self._status_unlocked()
+            pid = self.process.pid
+
+        self._suspend_process_tree(pid)
+
+        with self.lock:
+            self.paused = True
+            self.log_lines.append("[web-api] Scraper pozastaven.")
+            return self._status_unlocked()
+
+    def resume(self) -> dict[str, Any]:
+        with self.lock:
+            if self.process is None or self.process.poll() is not None:
+                raise RuntimeError("No running scraper process to resume.")
+            if not self.paused:
+                return self._status_unlocked()
+            pid = self.process.pid
+
+        self._resume_process_tree(pid)
+
+        with self.lock:
+            self.paused = False
+            self.log_lines.append("[web-api] Scraper pokračuje.")
+            return self._status_unlocked()
+
+    def stop(self) -> dict[str, Any]:
+        with self.lock:
+            if self.process is None or self.process.poll() is not None:
+                raise RuntimeError("No running scraper process to stop.")
+            process = self.process
+            was_paused = self.paused
+
+        # Process may be paused; resume before terminate so shutdown can complete.
+        if was_paused:
+            try:
+                self._resume_process_tree(process.pid)
+            except Exception:
+                pass
+
+        graceful = self._graceful_stop(process, timeout_s=20)
+        if not graceful and process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=5)
+            except Exception:
+                process.kill()
+
+        with self.lock:
+            self.paused = False
+            if graceful:
+                self.log_lines.append("[web-api] Scraper byl ukončen uživatelem (graceful stop).")
+            else:
+                self.log_lines.append("[web-api] Scraper byl ukončen uživatelem (force stop).")
+            return self._status_unlocked()
 
 
 class RunQueue:
@@ -833,6 +1065,39 @@ def run_scraper(payload: RunPayload) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail="output_file must stay inside project directory.")
 
     return run_queue.enqueue(output_file=output_file, project_id=project_id)
+
+
+@app.post("/api/pause")
+def pause_scraper() -> dict[str, Any]:
+    try:
+        status = runner.pause()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except OSError as exc:
+        raise HTTPException(status_code=500, detail=f"Unable to pause scraper: {exc}") from exc
+    return {"paused": True, "status": status}
+
+
+@app.post("/api/resume")
+def resume_scraper() -> dict[str, Any]:
+    try:
+        status = runner.resume()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except OSError as exc:
+        raise HTTPException(status_code=500, detail=f"Unable to resume scraper: {exc}") from exc
+    return {"resumed": True, "status": status}
+
+
+@app.post("/api/stop")
+def stop_scraper() -> dict[str, Any]:
+    try:
+        status = runner.stop()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except OSError as exc:
+        raise HTTPException(status_code=500, detail=f"Unable to stop scraper: {exc}") from exc
+    return {"stopped": True, "status": status}
 
 
 @app.get("/api/status")

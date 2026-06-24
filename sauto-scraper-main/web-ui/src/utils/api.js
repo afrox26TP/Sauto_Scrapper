@@ -53,9 +53,21 @@ export async function fetchLogs(limit = 160) {
   return data.lines || [];
 }
 
-export async function runScraper(outputFile = "data/sauto_interesting.json") {
-  const data = await request("POST", "/api/run", { output_file: outputFile });
+export async function runScraper(outputFile = "data/sauto_interesting.json", projectId = "default") {
+  const data = await request("POST", "/api/run", { output_file: outputFile, project_id: projectId });
   return data;
+}
+
+export async function pauseScraper() {
+  return request("POST", "/api/pause", {});
+}
+
+export async function resumeScraper() {
+  return request("POST", "/api/resume", {});
+}
+
+export async function stopScraper() {
+  return request("POST", "/api/stop", {});
 }
 
 export async function deleteResultItems(ids, path) {

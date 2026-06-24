@@ -268,6 +268,9 @@ The FastAPI backend serves on `http://localhost:8000`:
 | `GET` | `/api/params` | Load current params |
 | `PUT` | `/api/params` | Save params |
 | `POST` | `/api/run` | Enqueue scraper job (starts now or waits in queue) |
+| `POST` | `/api/pause` | Pause active scraper run |
+| `POST` | `/api/resume` | Resume paused scraper run |
+| `POST` | `/api/stop` | Stop active scraper early |
 | `GET` | `/api/status` | Scraper + queue status |
 | `GET` | `/api/jobs` | Queue summary (active/pending/history) |
 | `GET` | `/api/jobs/{job_id}` | Single job detail |

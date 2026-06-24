@@ -146,3 +146,23 @@ export function generateAutoName(config, brandOptions = [], modelsByBrand = {}) 
   if (parts.length === 0) return "Nový projekt";
   return parts.join(" · ");
 }
+
+export function ensureUniqueProjectName(baseName, projects = [], currentProjectId = null) {
+  const cleanBase = String(baseName || "").trim() || "Nový projekt";
+  const existing = new Set(
+    (projects || [])
+      .filter((p) => p && p.id !== currentProjectId)
+      .map((p) => String(p.name || "").trim().toLowerCase())
+      .filter(Boolean)
+  );
+
+  if (!existing.has(cleanBase.toLowerCase())) {
+    return cleanBase;
+  }
+
+  let index = 2;
+  while (existing.has(`${cleanBase}${index}`.toLowerCase())) {
+    index += 1;
+  }
+  return `${cleanBase}${index}`;
+}
