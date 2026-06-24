@@ -102,6 +102,11 @@ export async function fetchScoringPresets() {
   };
 }
 
+export async function fetchBillingRates() {
+  const data = await request("GET", "/api/billing/rates");
+  return data.rates || {};
+}
+
 export async function saveCustomPreset(payload, presetId = null) {
   if (presetId) {
     return request("PUT", `/api/scoring/presets/custom/${encodeURIComponent(presetId)}`, payload);

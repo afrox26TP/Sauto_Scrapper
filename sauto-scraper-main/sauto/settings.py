@@ -61,6 +61,9 @@ DEFAULT_REQUEST_HEADERS = {
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 DOWNLOADER_MIDDLEWARES = {
     "sauto.middlewares.RandomUserAgentMiddleware": 400,
+    "sauto.middlewares.RotatingProxyMiddleware": 610,
+    "scrapy.downloadermiddlewares.retry.RetryMiddleware": 620,
+    "scrapy.downloadermiddlewares.httpproxy.HttpProxyMiddleware": 750,
 }
 
 # Enable or disable extensions

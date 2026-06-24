@@ -267,8 +267,10 @@ The FastAPI backend serves on `http://localhost:8000`:
 | `GET` | `/api/health` | Health check (uptime, version) |
 | `GET` | `/api/params` | Load current params |
 | `PUT` | `/api/params` | Save params |
-| `POST` | `/api/run` | Start scraper subprocess |
-| `GET` | `/api/status` | Scraper status (running, PID, exit code) |
+| `POST` | `/api/run` | Enqueue scraper job (starts now or waits in queue) |
+| `GET` | `/api/status` | Scraper + queue status |
+| `GET` | `/api/jobs` | Queue summary (active/pending/history) |
+| `GET` | `/api/jobs/{job_id}` | Single job detail |
 | `GET` | `/api/logs` | Live scraper logs (last 250 lines) |
 | `GET` | `/api/results` | Load scored results with marked status |
 | `GET` | `/api/catalog/brands` | Fetch brand list from Sauto.cz (24h cache) |
@@ -279,6 +281,69 @@ The FastAPI backend serves on `http://localhost:8000`:
 | `POST` | `/api/results/clear` | Clear all results |
 | `POST` | `/api/results/import` | Import results JSON |
 | `POST` | `/api/results/mark` | Mark/unmark results by ID |
+
+---
+
+## Proxy Rotation (Production)
+
+The scraper now supports environment-driven proxy rotation in downloader middleware.
+
+Supported variables:
+
+- `SAUTO_PROXY_LIST`: comma-separated or newline-separated proxy URLs
+- `SAUTO_PROXY_URL`: single proxy URL fallback
+- `SAUTO_PROXY_MODE`: `round_robin` (default) or `random`
+- `SAUTO_PROXY_BAN_STATUSES`: comma-separated HTTP codes that trigger proxy retry, default `403,407,429,500,502,503,504`
+
+Examples:
+
+```bash
+# Single proxy
+export SAUTO_PROXY_URL="http://user:pass@proxy1.example.com:10000"
+
+# Proxy pool
+export SAUTO_PROXY_LIST="http://user:pass@proxy1.example.com:10000,http://user:pass@proxy2.example.com:10000"
+export SAUTO_PROXY_MODE="round_robin"
+```
+
+Notes:
+
+- If no proxy env var is provided, middleware stays disabled and scraper runs as before.
+- Keep request rate low even with proxies (`DOWNLOAD_DELAY`, `AUTOTHROTTLE`) to reduce blocking.
+
+---
+
+## API Security (Production)
+
+To protect write operations in SaaS mode, set:
+
+- `SAUTO_API_KEYS`: comma-separated API keys.
+
+When configured, all `/api/*` write endpoints (`POST`, `PUT`, `PATCH`, `DELETE`) require header:
+
+- `x-api-key: <your-key>`
+
+---
+
+## Billing Model (Usage Only)
+
+No plans/tiers are required.
+
+- Scraper billing: per run + per output item.
+- Integration billing: per API call when request contains `x-api-key`.
+
+Billing endpoints:
+
+- `GET /api/billing/rates`
+- `GET /api/billing/usage?project_id=<id>`
+- `GET /api/billing/events?project_id=<id>&limit=100`
+
+Default rates are configurable with env vars:
+
+- `BILLING_RUN_BASE_CZK`
+- `BILLING_ITEM_CZK`
+- `BILLING_API_CALL_CZK`
+- `BILLING_PROXY_RUN_CZK`
 
 ---
 

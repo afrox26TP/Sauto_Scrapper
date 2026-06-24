@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { Moon, Sun, X, History } from "lucide-react";
+import { Moon, Sun, X, History, BadgeEuro, ArrowLeft } from "lucide-react";
 import TabBar from "./components/TabBar";
 import ProjectSetup from "./components/ProjectSetup";
 import ProjectRunning from "./components/ProjectRunning";
@@ -8,14 +8,19 @@ import ProjectQueued from "./components/ProjectQueued";
 import ProjectResults from "./components/ProjectResults";
 import TerminalBar from "./components/TerminalBar";
 import { useProjects } from "./hooks/useProjects";
-import { fetchBrands, fetchBodies, fetchModels, fetchResults, fetchEquipment } from "./utils/api";
+import { fetchBillingRates, fetchBrands, fetchBodies, fetchModels, fetchResults, fetchEquipment } from "./utils/api";
 import { csvToArray, uniq } from "./utils/scoring";
 
 export default function App() {
+  const [currentPage, setCurrentPage] = useState(() =>
+    window.location.pathname.startsWith("/pricing") ? "pricing" : "dashboard"
+  );
   const [theme, setTheme] = useState(() => {
     const stored = window.localStorage.getItem("sauto_theme");
     return stored === "dark" ? "dark" : "light";
   });
+  const [billingRates, setBillingRates] = useState(null);
+  const [billingRatesError, setBillingRatesError] = useState("");
   const [brandOptions, setBrandOptions] = useState([]);
   const [bodyOptions, setBodyOptions] = useState([]);
   const [equipmentOptions, setEquipmentOptions] = useState([]);
@@ -62,6 +67,32 @@ export default function App() {
       if (switchRafRef.current) cancelAnimationFrame(switchRafRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    const onPopState = () => {
+      setCurrentPage(window.location.pathname.startsWith("/pricing") ? "pricing" : "dashboard");
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  useEffect(() => {
+    if (currentPage !== "pricing") return;
+    fetchBillingRates()
+      .then((rates) => {
+        setBillingRates(rates || {});
+        setBillingRatesError("");
+      })
+      .catch(() => {
+        setBillingRates({
+          run_base_czk: 5.0,
+          item_czk: 0.02,
+          api_call_czk: 0.05,
+          proxy_run_czk: 0.0,
+        });
+        setBillingRatesError("Sazby z API teď nejsou dostupné, používám výchozí sazby.");
+      });
+  }, [currentPage]);
 
   useEffect(() => {
     if (projects.length === 0) {
@@ -207,6 +238,103 @@ export default function App() {
     }, 3000);
   }
 
+  function navigateTo(page) {
+    const target = page === "pricing" ? "pricing" : "dashboard";
+    const path = target === "pricing" ? "/pricing" : "/";
+    if (window.location.pathname !== path) {
+      window.history.pushState({}, "", path);
+    }
+    setCurrentPage(target);
+  }
+
+  function fmtCzk(value) {
+    const num = Number(value || 0);
+    return `${num.toFixed(2)} Kč`;
+  }
+
+  function renderPricingPage() {
+    const runBase = Number(billingRates?.run_base_czk ?? 5.0);
+    const item = Number(billingRates?.item_czk ?? 0.02);
+    const apiCall = Number(billingRates?.api_call_czk ?? 0.05);
+    const proxyRun = Number(billingRates?.proxy_run_czk ?? 0.0);
+    const exampleItems = 120;
+    const exampleApiCalls = 250;
+    const exampleScraperCost = runBase + (exampleItems * item) + proxyRun;
+    const exampleIntegrationCost = exampleApiCalls * apiCall;
+    const exampleTotalCost = exampleScraperCost + exampleIntegrationCost;
+
+    return (
+      <div className="pricing-page">
+        <div className="pricing-head">
+          <h2>Pricing</h2>
+          <p>Platíš jen za skutečné použití. Žádné měsíční plány, žádné minimální commit ceny.</p>
+        </div>
+
+        <div className="pricing-grid">
+          <article className="pricing-card">
+            <h3>Scraper Usage</h3>
+            <p className="pricing-line"><strong>{fmtCzk(runBase)}</strong> za každý dokončený run</p>
+            <p className="pricing-line"><strong>{fmtCzk(item)}</strong> za každý výsledný inzerát v outputu</p>
+            <p className="pricing-line"><strong>{fmtCzk(proxyRun)}</strong> proxy příplatek za run při zapnutých proxy</p>
+          </article>
+
+          <article className="pricing-card">
+            <h3>API Integrace</h3>
+            <p className="pricing-line"><strong>{fmtCzk(apiCall)}</strong> za každý API call s hlavičkou <code>x-api-key</code></p>
+            <p className="pricing-note">Bez <code>x-api-key</code> se call nepočítá jako integrační usage.</p>
+          </article>
+
+          <article className="pricing-card pricing-card-wide">
+            <h3>Jak se počítá cena</h3>
+            <p className="pricing-formula">
+              Cena runu = <code>run_base</code> + (<code>počet výsledků * item_rate</code>) + <code>proxy_run</code>
+            </p>
+            <p className="pricing-formula">
+              Cena integrace = <code>počet API callů * api_call_rate</code>
+            </p>
+            <div className="pricing-example">
+              <h4>Příklad</h4>
+              <p className="pricing-formula">
+                1 run s <strong>{exampleItems}</strong> výsledky: <code>{fmtCzk(runBase)}</code> + ({exampleItems} * <code>{fmtCzk(item)}</code>) + <code>{fmtCzk(proxyRun)}</code> = <strong>{fmtCzk(exampleScraperCost)}</strong>
+              </p>
+              <p className="pricing-formula">
+                Integrace <strong>{exampleApiCalls}</strong> API callů: {exampleApiCalls} * <code>{fmtCzk(apiCall)}</code> = <strong>{fmtCzk(exampleIntegrationCost)}</strong>
+              </p>
+              <p className="pricing-formula pricing-total">
+                Celkem v příkladu: <strong>{fmtCzk(exampleTotalCost)}</strong>
+              </p>
+            </div>
+            <p className="pricing-note">
+              Aktuální sazby načítáme z backendu přes <code>/api/billing/rates</code>.
+            </p>
+            {billingRatesError ? <p className="pricing-note">{billingRatesError}</p> : null}
+            <div className="pricing-actions">
+              <button className="btn-primary" onClick={() => navigateTo("dashboard")}>
+                <ArrowLeft className="ui-icon" aria-hidden="true" /> Zpět na dashboard
+              </button>
+            </div>
+          </article>
+
+          <article className="pricing-card pricing-card-wide">
+            <h3>Proč se platí</h3>
+            <p className="pricing-note">
+              Účtujeme jen reálnou spotřebu, protože každé spuštění a API integrace mají přímé provozní náklady.
+            </p>
+            <ul className="pricing-bullets">
+              <li>Proxy infrastruktura a její rotace proti blokacím.</li>
+              <li>Výpočetní výkon backendu během scrapingu a zpracování dat.</li>
+              <li>Síťový provoz, monitoring, logování a provoz API endpointů.</li>
+              <li>Průběžná údržba scraperu při změnách cílového webu.</li>
+            </ul>
+            <p className="pricing-note">
+              Proto nemáme fixní paušál: kdo používá méně, platí méně; kdo používá více, platí férově podle usage.
+            </p>
+          </article>
+        </div>
+      </div>
+    );
+  }
+
   // Render active project content based on phase
   function renderProjectContent() {
     if (!currentProject) {
@@ -277,8 +405,24 @@ export default function App() {
         {/* Top bar */}
         <div className="topbar">
           <div className="brand-block">
-            <h1>Sauto Scraper</h1>
+            <button
+              type="button"
+              className="brand-home-btn"
+              onClick={() => navigateTo("dashboard")}
+              title="Zpět na domovskou obrazovku"
+            >
+              <h1>Sauto Scraper</h1>
+            </button>
           </div>
+          <div className="topbar-spacer" />
+          <button
+            type="button"
+            className={`topbar-link-btn ${currentPage === "pricing" ? "active" : ""}`}
+            onClick={() => navigateTo("pricing")}
+            title="Otevřít pricing"
+          >
+            <BadgeEuro className="ui-icon" aria-hidden="true" /> Pricing
+          </button>
           <button
             type="button"
             className="theme-toggle"
@@ -298,34 +442,38 @@ export default function App() {
         </div>
 
         {/* Tab bar */}
-        <TabBar
-          projects={projects}
-          activeProjectId={uiActiveProjectId}
-          onActivate={activateProjectSmooth}
-          onRemove={removeProject}
-          onAdd={() => addProject()}
-          scraperRunning={scraperRunning}
-        />
+        {currentPage === "dashboard" ? (
+          <TabBar
+            projects={projects}
+            activeProjectId={uiActiveProjectId}
+            onActivate={activateProjectSmooth}
+            onRemove={removeProject}
+            onAdd={() => addProject()}
+            scraperRunning={scraperRunning}
+          />
+        ) : null}
 
         {/* Main content */}
         <div className="main-content">
-          {renderProjectContent()}
+          {currentPage === "pricing" ? renderPricingPage() : renderProjectContent()}
         </div>
 
         {/* Terminal bar */}
-        <TerminalBar
-          scraperRunning={scraperRunning}
-          globalLogs={globalLogs}
-          tickerStep={tickerStep}
-          tickerPrefix={tickerPrefix()}
-          onShowHistory={() => {
-            setShowLogsModal(true);
-            setTimeout(() => {
-              if (logsModalBodyRef.current)
-                logsModalBodyRef.current.scrollTop = logsModalBodyRef.current.scrollHeight;
-            }, 50);
-          }}
-        />
+        {currentPage === "dashboard" ? (
+          <TerminalBar
+            scraperRunning={scraperRunning}
+            globalLogs={globalLogs}
+            tickerStep={tickerStep}
+            tickerPrefix={tickerPrefix()}
+            onShowHistory={() => {
+              setShowLogsModal(true);
+              setTimeout(() => {
+                if (logsModalBodyRef.current)
+                  logsModalBodyRef.current.scrollTop = logsModalBodyRef.current.scrollHeight;
+              }, 50);
+            }}
+          />
+        ) : null}
       </div>
 
       {/* Logs Modal */}

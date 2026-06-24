@@ -7,17 +7,18 @@ import subprocess
 import sys
 import threading
 import time
+import uuid
 from collections import deque
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from starlette.responses import JSONResponse
 
-import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "sauto" / "spiders"))
 from sauto_spider import CarEvaluator
 
@@ -30,6 +31,7 @@ DEFAULT_RESULTS_PATH = ROOT_DIR / "data" / "sauto_interesting.json"
 RAW_OUTPUT_PATH = ROOT_DIR / "data" / "sauto_raw.json"
 MARKED_IDS_PATH = ROOT_DIR / "marked_ids.json"
 CATALOG_CACHE_PATH = ROOT_DIR / "data" / "sauto_catalog_cache.json"
+BILLING_LEDGER_PATH = ROOT_DIR / "data" / "billing_usage.json"
 CATALOG_CACHE_TTL_S = 24 * 60 * 60
 SAUTO_SEARCH_API = "https://www.sauto.cz/api/v1/items/search"
 LOCKED_SEARCH_DEFAULTS = {
@@ -42,6 +44,16 @@ RESULT_TEXT_REJECT_PATTERNS = (
     re.compile(r"na\s*spl[aá]tk|spl[aá]tk(y|a|ove)|u[vě]r", re.IGNORECASE),
     re.compile(r"leasing|operativn[ií]\s*leasing", re.IGNORECASE),
 )
+WRITE_HTTP_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+API_KEYS = {
+    token.strip()
+    for token in (os.getenv("SAUTO_API_KEYS") or "").split(",")
+    if token.strip()
+}
+BILLING_RUN_BASE_CZK = float(os.getenv("BILLING_RUN_BASE_CZK", "5.0"))
+BILLING_ITEM_CZK = float(os.getenv("BILLING_ITEM_CZK", "0.02"))
+BILLING_API_CALL_CZK = float(os.getenv("BILLING_API_CALL_CZK", "0.05"))
+BILLING_PROXY_RUN_CZK = float(os.getenv("BILLING_PROXY_RUN_CZK", "0.0"))
 
 
 class ParamsPayload(BaseModel):
@@ -50,6 +62,7 @@ class ParamsPayload(BaseModel):
 
 class RunPayload(BaseModel):
     output_file: str = "data/sauto_interesting.json"
+    project_id: str = "default"
 
 
 class ResultsPathPayload(BaseModel):
@@ -90,6 +103,7 @@ class ScraperRunner:
         self.last_finished_at: float | None = None
         self.last_command: list[str] = []
         self.last_output_file: str = "data/sauto_interesting.json"
+        self.on_finished: Callable[[int, str], None] | None = None
 
     def is_running(self) -> bool:
         with self.lock:
@@ -194,12 +208,306 @@ class ScraperRunner:
             return
 
         exit_code = process.wait()
+        callback = None
+        output_file = "data/sauto_interesting.json"
 
         with self.lock:
             self.last_exit_code = exit_code
             self.last_finished_at = time.time()
+            output_file = self.last_output_file
             self.process = None
             self.log_lines.append(f"[web-api] Dokončeno s exit code {exit_code}")
+            callback = self.on_finished
+
+        if callback is not None:
+            try:
+                callback(exit_code, output_file)
+            except Exception:
+                pass
+
+
+class RunQueue:
+    def __init__(self, scraper_runner: ScraperRunner) -> None:
+        self._runner = scraper_runner
+        self._runner.on_finished = self._on_runner_finished
+        self._lock = threading.Lock()
+        self._pending: deque[dict[str, Any]] = deque()
+        self._history: deque[dict[str, Any]] = deque(maxlen=200)
+        self._jobs: dict[str, dict[str, Any]] = {}
+        self._active_job_id: str | None = None
+        self.on_job_finished: Callable[[dict[str, Any]], None] | None = None
+
+    def _new_job(self, output_file: str, project_id: str) -> dict[str, Any]:
+        now = time.time()
+        job = {
+            "job_id": f"job_{uuid.uuid4().hex[:12]}",
+            "project_id": project_id or "default",
+            "output_file": output_file,
+            "status": "queued",
+            "created_at": now,
+            "started_at": None,
+            "finished_at": None,
+            "exit_code": None,
+            "error": None,
+        }
+        self._jobs[job["job_id"]] = job
+        return job
+
+    def enqueue(self, output_file: str, project_id: str) -> dict[str, Any]:
+        with self._lock:
+            job = self._new_job(output_file=output_file, project_id=project_id)
+            self._pending.append(job)
+            started_now = self._try_start_next_unlocked()
+            return {
+                "accepted": True,
+                "started": started_now,
+                "job": dict(job),
+                "queue": self.summary_unlocked(),
+            }
+
+    def _try_start_next_unlocked(self) -> bool:
+        if self._runner.is_running() or not self._pending:
+            return False
+
+        while self._pending:
+            job = self._pending.popleft()
+            job["status"] = "running"
+            job["started_at"] = time.time()
+            self._active_job_id = job["job_id"]
+
+            # Ensure each job starts from clean output data.
+            resolved = (ROOT_DIR / job["output_file"]).resolve()
+            dump_json(resolved, [])
+
+            try:
+                self._runner.start(output_file=job["output_file"])
+                return True
+            except Exception as exc:
+                job["status"] = "failed"
+                job["finished_at"] = time.time()
+                job["error"] = str(exc)
+                job["exit_code"] = -1
+                self._history.append(dict(job))
+                self._active_job_id = None
+
+        return False
+
+    def _on_runner_finished(self, exit_code: int, output_file: str) -> None:
+        completed_job: dict[str, Any] | None = None
+        with self._lock:
+            finished_at = time.time()
+            active_job = self._jobs.get(self._active_job_id or "") if self._active_job_id else None
+            if active_job is not None:
+                active_job["finished_at"] = finished_at
+                active_job["exit_code"] = exit_code
+                active_job["status"] = "finished" if exit_code == 0 else "failed"
+                active_job["output_file"] = output_file or active_job["output_file"]
+                completed_job = dict(active_job)
+                self._history.append(dict(active_job))
+            self._active_job_id = None
+            self._try_start_next_unlocked()
+
+        if completed_job is not None and self.on_job_finished is not None:
+            try:
+                self.on_job_finished(completed_job)
+            except Exception:
+                pass
+
+    def summary_unlocked(self) -> dict[str, Any]:
+        active = self._jobs.get(self._active_job_id or "") if self._active_job_id else None
+        return {
+            "active_job": dict(active) if active else None,
+            "pending_count": len(self._pending),
+            "pending_jobs": [dict(job) for job in list(self._pending)[:20]],
+            "history": list(self._history)[-20:],
+        }
+
+    def summary(self) -> dict[str, Any]:
+        with self._lock:
+            return self.summary_unlocked()
+
+    def get_job(self, job_id: str) -> dict[str, Any] | None:
+        with self._lock:
+            job = self._jobs.get(job_id)
+            return dict(job) if job else None
+
+
+class BillingLedger:
+    def __init__(self, path: Path) -> None:
+        self._path = path
+        self._lock = threading.Lock()
+        self._data = self._load()
+
+    def _empty(self) -> dict[str, Any]:
+        return {
+            "updated_at": time.time(),
+            "rates": {
+                "run_base_czk": BILLING_RUN_BASE_CZK,
+                "item_czk": BILLING_ITEM_CZK,
+                "api_call_czk": BILLING_API_CALL_CZK,
+                "proxy_run_czk": BILLING_PROXY_RUN_CZK,
+            },
+            "projects": {},
+            "events": [],
+        }
+
+    def _load(self) -> dict[str, Any]:
+        data = load_json(self._path, self._empty())
+        if not isinstance(data, dict):
+            return self._empty()
+        data.setdefault("rates", self._empty()["rates"])
+        data.setdefault("projects", {})
+        data.setdefault("events", [])
+        data.setdefault("updated_at", time.time())
+        return data
+
+    def _save_unlocked(self) -> None:
+        self._data["updated_at"] = time.time()
+        dump_json(self._path, self._data)
+
+    def _ensure_project_unlocked(self, project_id: str) -> dict[str, Any]:
+        projects = self._data.setdefault("projects", {})
+        project_key = (project_id or "default").strip() or "default"
+        if project_key not in projects or not isinstance(projects.get(project_key), dict):
+            projects[project_key] = {
+                "project_id": project_key,
+                "runs_total": 0,
+                "runs_success": 0,
+                "runs_failed": 0,
+                "items_total": 0,
+                "api_calls": 0,
+                "costs": {
+                    "runs_czk": 0.0,
+                    "items_czk": 0.0,
+                    "api_calls_czk": 0.0,
+                    "proxy_czk": 0.0,
+                },
+                "total_czk": 0.0,
+                "last_event_at": None,
+            }
+        return projects[project_key]
+
+    def _recompute_total_unlocked(self, project: dict[str, Any]) -> None:
+        costs = project.get("costs", {})
+        project["total_czk"] = round(
+            float(costs.get("runs_czk", 0.0))
+            + float(costs.get("items_czk", 0.0))
+            + float(costs.get("api_calls_czk", 0.0))
+            + float(costs.get("proxy_czk", 0.0)),
+            4,
+        )
+
+    def _append_event_unlocked(self, event: dict[str, Any]) -> None:
+        events = self._data.setdefault("events", [])
+        events.append(event)
+        if len(events) > 1000:
+            del events[:-1000]
+
+    def _rates_unlocked(self) -> dict[str, float]:
+        rates = self._data.get("rates", {})
+        return {
+            "run_base_czk": float(rates.get("run_base_czk", BILLING_RUN_BASE_CZK)),
+            "item_czk": float(rates.get("item_czk", BILLING_ITEM_CZK)),
+            "api_call_czk": float(rates.get("api_call_czk", BILLING_API_CALL_CZK)),
+            "proxy_run_czk": float(rates.get("proxy_run_czk", BILLING_PROXY_RUN_CZK)),
+        }
+
+    def record_job_usage(self, job: dict[str, Any]) -> None:
+        project_id = str(job.get("project_id") or "default")
+        output_rel = str(job.get("output_file") or "data/sauto_interesting.json")
+        exit_code = int(job.get("exit_code") or -1)
+
+        result_path = (ROOT_DIR / output_rel).resolve()
+        item_count = len(load_result_items(result_path)) if result_path.exists() else 0
+
+        with self._lock:
+            project = self._ensure_project_unlocked(project_id)
+            project["runs_total"] += 1
+            if exit_code == 0:
+                project["runs_success"] += 1
+            else:
+                project["runs_failed"] += 1
+
+            project["items_total"] += item_count
+            costs = project["costs"]
+            costs["runs_czk"] = round(float(costs.get("runs_czk", 0.0)) + BILLING_RUN_BASE_CZK, 4)
+            costs["items_czk"] = round(float(costs.get("items_czk", 0.0)) + (item_count * BILLING_ITEM_CZK), 4)
+
+            if os.getenv("SAUTO_PROXY_LIST") or os.getenv("SAUTO_PROXY_URL"):
+                costs["proxy_czk"] = round(float(costs.get("proxy_czk", 0.0)) + BILLING_PROXY_RUN_CZK, 4)
+
+            project["last_event_at"] = time.time()
+            self._recompute_total_unlocked(project)
+            self._append_event_unlocked(
+                {
+                    "type": "run_usage",
+                    "at": project["last_event_at"],
+                    "project_id": project_id,
+                    "job_id": job.get("job_id"),
+                    "exit_code": exit_code,
+                    "item_count": item_count,
+                    "charges": {
+                        "run_base_czk": BILLING_RUN_BASE_CZK,
+                        "items_czk": round(item_count * BILLING_ITEM_CZK, 4),
+                        "proxy_czk": BILLING_PROXY_RUN_CZK if (os.getenv("SAUTO_PROXY_LIST") or os.getenv("SAUTO_PROXY_URL")) else 0.0,
+                    },
+                }
+            )
+            self._save_unlocked()
+
+    def record_api_call(self, project_id: str, path: str, method: str, status_code: int) -> None:
+        with self._lock:
+            project = self._ensure_project_unlocked(project_id)
+            project["api_calls"] += 1
+            costs = project["costs"]
+            costs["api_calls_czk"] = round(float(costs.get("api_calls_czk", 0.0)) + BILLING_API_CALL_CZK, 4)
+            project["last_event_at"] = time.time()
+            self._recompute_total_unlocked(project)
+            self._append_event_unlocked(
+                {
+                    "type": "api_call",
+                    "at": project["last_event_at"],
+                    "project_id": project_id,
+                    "path": path,
+                    "method": method,
+                    "status_code": int(status_code),
+                    "charge_czk": BILLING_API_CALL_CZK,
+                }
+            )
+            self._save_unlocked()
+
+    def get_rates(self) -> dict[str, float]:
+        with self._lock:
+            return self._rates_unlocked()
+
+    def get_usage(self, project_id: str | None = None) -> dict[str, Any]:
+        with self._lock:
+            projects = self._data.get("projects", {})
+            if not project_id:
+                return {
+                    "rates": self._rates_unlocked(),
+                    "projects": dict(projects),
+                    "updated_at": self._data.get("updated_at"),
+                }
+
+            key = (project_id or "default").strip() or "default"
+            return {
+                "rates": self._rates_unlocked(),
+                "project": dict(projects.get(key, self._ensure_project_unlocked(key))),
+                "updated_at": self._data.get("updated_at"),
+            }
+
+    def get_events(self, project_id: str | None = None, limit: int = 50) -> dict[str, Any]:
+        with self._lock:
+            events = self._data.get("events", [])
+            if project_id:
+                key = (project_id or "default").strip() or "default"
+                events = [ev for ev in events if str(ev.get("project_id") or "") == key]
+            limit_n = max(1, min(int(limit or 50), 500))
+            return {
+                "events": events[-limit_n:],
+                "count": len(events),
+            }
 
 
 def load_json(path: Path, fallback: Any) -> Any:
@@ -448,7 +756,38 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.middleware("http")
+async def api_key_guard(request: Request, call_next):
+    path = request.url.path
+    method = request.method.upper()
+    api_key = request.headers.get("x-api-key", "").strip()
+    project_header = request.headers.get("x-project-id", "").strip()
+
+    if not API_KEYS:
+        response = await call_next(request)
+    else:
+        if path.startswith("/api/") and method in WRITE_HTTP_METHODS:
+            if api_key not in API_KEYS:
+                return JSONResponse(status_code=401, content={"detail": "Missing or invalid API key."})
+        response = await call_next(request)
+
+    # Bill only integration traffic: requests that carry x-api-key.
+    if path.startswith("/api/") and api_key:
+        project_id = project_header or f"integration-{api_key[:10]}"
+        billing_ledger.record_api_call(
+            project_id=project_id,
+            path=path,
+            method=method,
+            status_code=int(response.status_code),
+        )
+
+    return response
+
 runner = ScraperRunner()
+run_queue = RunQueue(runner)
+billing_ledger = BillingLedger(BILLING_LEDGER_PATH)
+run_queue.on_job_finished = billing_ledger.record_job_usage
 
 
 @app.get("/api/health")
@@ -484,6 +823,7 @@ def update_params(payload: ParamsPayload) -> dict[str, Any]:
 @app.post("/api/run")
 def run_scraper(payload: RunPayload) -> dict[str, Any]:
     output_file = payload.output_file.strip() or "data/sauto_interesting.json"
+    project_id = (payload.project_id or "default").strip() or "default"
 
     if os.path.isabs(output_file):
         raise HTTPException(status_code=400, detail="Use a relative output_file path.")
@@ -492,22 +832,45 @@ def run_scraper(payload: RunPayload) -> dict[str, Any]:
     if ROOT_DIR not in resolved.parents and resolved != ROOT_DIR:
         raise HTTPException(status_code=400, detail="output_file must stay inside project directory.")
 
-    # Prevent stale UI data: start each run with a clean target result file.
-    dump_json(resolved, [])
-
-    try:
-        status = runner.start(output_file=output_file)
-    except RuntimeError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except OSError as exc:
-        raise HTTPException(status_code=500, detail=f"Unable to start scraper: {exc}") from exc
-
-    return {"started": True, "status": status}
+    return run_queue.enqueue(output_file=output_file, project_id=project_id)
 
 
 @app.get("/api/status")
 def get_status() -> dict[str, Any]:
-    return runner.status()
+    runner_status = runner.status()
+    return {
+        **runner_status,
+        "runner": runner_status,
+        "queue": run_queue.summary(),
+    }
+
+
+@app.get("/api/jobs")
+def get_jobs() -> dict[str, Any]:
+    return run_queue.summary()
+
+
+@app.get("/api/jobs/{job_id}")
+def get_job(job_id: str) -> dict[str, Any]:
+    job = run_queue.get_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found.")
+    return {"job": job}
+
+
+@app.get("/api/billing/rates")
+def get_billing_rates() -> dict[str, Any]:
+    return {"rates": billing_ledger.get_rates()}
+
+
+@app.get("/api/billing/usage")
+def get_billing_usage(project_id: str | None = None) -> dict[str, Any]:
+    return billing_ledger.get_usage(project_id=project_id)
+
+
+@app.get("/api/billing/events")
+def get_billing_events(project_id: str | None = None, limit: int = 50) -> dict[str, Any]:
+    return billing_ledger.get_events(project_id=project_id, limit=limit)
 
 
 @app.get("/api/logs")

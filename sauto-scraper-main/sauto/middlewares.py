@@ -1,26 +1,153 @@
-# Define here the models for your spider middleware
-#
-# See documentation in:
-# https://docs.scrapy.org/en/latest/topics/spider-middleware.html
+import os
+import random
+import logging
+from collections import deque
+from typing import Iterable
 
 from fake_useragent import UserAgent
+from scrapy import Request, signals
+from scrapy.downloadermiddlewares.retry import get_retry_request
 
-from scrapy import signals
 
-# useful for handling different item types with a single interface
-from itemadapter import is_item, ItemAdapter
+def _parse_proxy_list(raw_value: str) -> list[str]:
+    proxies: list[str] = []
+    for chunk in raw_value.replace("\n", ",").split(","):
+        value = chunk.strip()
+        if value:
+            proxies.append(value)
+    return proxies
 
 
 class RandomUserAgentMiddleware:
     """Middleware to rotate User-Agent for each request using fake-useragent."""
 
-    FALLBACK_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+    FALLBACK_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 
     def __init__(self):
         self.ua = UserAgent(fallback=self.FALLBACK_UA)
 
     def process_request(self, request, spider):
-        request.headers['User-Agent'] = self.ua.random
+        request.headers["User-Agent"] = self.ua.random
+
+
+class RotatingProxyMiddleware:
+    """Assigns proxies to requests and retries with a different proxy on ban-like responses."""
+
+    DEFAULT_BAN_STATUSES = {403, 407, 429, 500, 502, 503, 504}
+    RETRY_EXCEPTIONS = ("TimeoutError", "TCPTimedOutError", "ConnectionRefusedError", "ConnectionDone")
+    LOGGER = logging.getLogger(__name__)
+
+    def __init__(self, proxies: Iterable[str], mode: str, ban_statuses: set[int]):
+        self.mode = (mode or "round_robin").strip().lower()
+        self.ban_statuses = ban_statuses or set(self.DEFAULT_BAN_STATUSES)
+        self.proxies = deque(proxies)
+        self._enabled = bool(self.proxies)
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        list_env = os.getenv("SAUTO_PROXY_LIST") or os.getenv("PROXY_LIST") or ""
+        one_env = os.getenv("SAUTO_PROXY_URL") or os.getenv("PROXY_URL") or ""
+        mode = os.getenv("SAUTO_PROXY_MODE", "round_robin")
+        ban_statuses_raw = os.getenv("SAUTO_PROXY_BAN_STATUSES", "")
+
+        proxies = _parse_proxy_list(list_env)
+        if one_env.strip():
+            proxies.append(one_env.strip())
+
+        parsed_ban_statuses: set[int] = set()
+        for token in ban_statuses_raw.replace(" ", "").split(","):
+            if not token:
+                continue
+            try:
+                parsed_ban_statuses.add(int(token))
+            except ValueError:
+                continue
+
+        middleware = cls(
+            proxies=proxies,
+            mode=mode,
+            ban_statuses=parsed_ban_statuses or set(cls.DEFAULT_BAN_STATUSES),
+        )
+        if middleware._enabled:
+            crawler.stats.set_value("proxy_pool/size", len(middleware.proxies))
+            cls.LOGGER.info(
+                "RotatingProxyMiddleware enabled with %s proxies (mode=%s).",
+                len(middleware.proxies),
+                middleware.mode,
+            )
+        else:
+            cls.LOGGER.info("RotatingProxyMiddleware disabled (no proxies configured).")
+        return middleware
+
+    def _choose_proxy(self, current_proxy: str | None = None) -> str | None:
+        if not self.proxies:
+            return None
+        if self.mode == "random":
+            candidates = [proxy for proxy in self.proxies if proxy != current_proxy] or list(self.proxies)
+            return random.choice(candidates)
+
+        if current_proxy and len(self.proxies) > 1 and self.proxies[0] == current_proxy:
+            self.proxies.rotate(-1)
+        selected = self.proxies[0]
+        self.proxies.rotate(-1)
+        return selected
+
+    def process_request(self, request: Request, spider):
+        if not self._enabled:
+            return None
+        if request.meta.get("disable_proxy"):
+            return None
+        if request.meta.get("proxy"):
+            return None
+
+        proxy = self._choose_proxy()
+        if not proxy:
+            return None
+        request.meta["proxy"] = proxy
+        return None
+
+    def process_response(self, request: Request, response, spider):
+        if not self._enabled:
+            return response
+
+        if response.status not in self.ban_statuses:
+            return response
+
+        retry_request = get_retry_request(
+            request,
+            spider=spider,
+            reason=f"proxy_blocked_status_{response.status}",
+        )
+        if retry_request is None:
+            return response
+
+        old_proxy = request.meta.get("proxy")
+        new_proxy = self._choose_proxy(current_proxy=old_proxy)
+        if new_proxy:
+            retry_request.meta["proxy"] = new_proxy
+        return retry_request
+
+    def process_exception(self, request: Request, exception, spider):
+        if not self._enabled:
+            return None
+
+        exception_name = type(exception).__name__
+        if exception_name not in self.RETRY_EXCEPTIONS:
+            return None
+
+        retry_request = get_retry_request(
+            request,
+            spider=spider,
+            reason=f"proxy_exception_{exception_name}",
+        )
+        if retry_request is None:
+            return None
+
+        old_proxy = request.meta.get("proxy")
+        new_proxy = self._choose_proxy(current_proxy=old_proxy)
+        if new_proxy:
+            retry_request.meta["proxy"] = new_proxy
+        return retry_request
 
 
 class SautoSpiderMiddleware:
