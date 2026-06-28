@@ -1,0 +1,759 @@
+[
+  {
+    "additional_model_name": "TRACK PACK, Carbon Sedačky",
+    "category": {
+      "id": 838,
+      "name": "Osobní",
+      "seo_name": "osobni"
+    },
+    "create_date": "2026-05-18T08:28:26",
+    "custom_id": null,
+    "deal_type": "sale",
+    "edit_date": "2026-06-15T06:22:09",
+    "fuel_cb": {
+      "name": "Benzín",
+      "seo_name": "benzin",
+      "value": 1
+    },
+    "gearbox_cb": {
+      "name": "Automatická",
+      "seo_name": "automaticka",
+      "value": 3
+    },
+    "id": 210437768,
+    "images": [
+      {
+        "url": "//d19-a.sdn.cz/d_19/c_img_qB_B/kcHp2YdDtDgLT0BIMQGphLk2/9096.jpeg"
+      },
+      {
+        "url": "//d19-a.sdn.cz/d_19/c_img_qB_B/nCTUX1iX5CFdAHBVFNGphMcy/74bc.jpeg"
+      },
+      {
+        "url": "//d19-a.sdn.cz/d_19/c_img_qB_B/kcHp2YdDtDgLT0BINJGphMhp/d85c.jpeg"
+      }
+    ],
+    "images_total_count": 12,
+    "in_operation_date": "2025-01-01",
+    "is_cebia_smart_code_url_verified": false,
+    "locality": {
+      "address": "",
+      "address_id": 0,
+      "citypart": "",
+      "country_id": 112,
+      "district": "Hlavní město Praha",
+      "district_id": 47,
+      "district_seo_name": "hlavni-mesto-praha",
+      "entity_id": 3468,
+      "entity_type": "municipality",
+      "housenumber": "",
+      "municipality": "Praha",
+      "municipality_id": 3468,
+      "municipality_seo_name": "praha",
+      "quarter": "",
+      "quarter_id": 0,
+      "region": "Hlavní město Praha",
+      "region_id": 10,
+      "region_seo_name": "hlavni-mesto-praha",
+      "source": "regionserver",
+      "street": "",
+      "street_id": 0,
+      "streetnumber": "",
+      "ward": "",
+      "ward_id": 0,
+      "zip": ""
+    },
+    "manufacturer_cb": {
+      "name": "BMW",
+      "seo_name": "bmw",
+      "value": 5
+    },
+    "model_cb": {
+      "name": "M2",
+      "seo_name": "m2",
+      "value": 7585
+    },
+    "name": "BMW M2, TRACK PACK, Carbon Sedačky",
+    "old_id": null,
+    "premise": null,
+    "price": 1929000,
+    "price_by_agreement": false,
+    "sorting_date": "2026-06-15T06:22:09",
+    "source": "web_source",
+    "tachometer": 16000,
+    "topped": false,
+    "user": {
+      "id": 7568382
+    },
+    "manufacturer_name": "BMW",
+    "model_name": "M2",
+    "seller_type": "soukromy",
+    "url": "https://www.sauto.cz/osobni/detail/bmw/m2/210437768",
+    "detail_fetch_ok": true,
+    "detail_raw": {
+      "result": {
+        "additional_model_name": "TRACK PACK, Carbon Sedačky",
+        "approval_admin": "unchecked",
+        "category": {
+          "id": 838,
+          "name": "Osobní",
+          "seo_name": "osobni"
+        },
+        "color_cb": {
+          "name": "Žlutá",
+          "value": 2
+        },
+        "condition_cb": {
+          "name": "Ojeté",
+          "value": 2
+        },
+        "country_of_origin_cb": {
+          "name": "Německo",
+          "value": 5
+        },
+        "crashed_in_past": false,
+        "create_date": "2026-05-18T08:28:26",
+        "custom_id": null,
+        "deactivation_reason": null,
+        "deal_type": "sale",
+        "description": "Facelift.\nTrack pack - Carbon střecha, Mdrivers Package, M-Carbon sedadla; Harman Kardon, HeadUp displej, adaptivní M-podvozek, vyhřívaný volant, komfortní přistup, adaptivní tempomat, ...\n\nVozidlo nebylo v minulosti havarováno, všude původní hodnoty laku. \nInteriér i exteriér ve stavu nového. \n\nTovární záruka do 02/2028 !!!",
+        "dont_show_phone": false,
+        "drive_cb": {
+          "name": "Pohon zadních kol",
+          "value": 10
+        },
+        "edit_date": "2026-06-15T06:22:09",
+        "engine_power": 353,
+        "engine_volume": 2993,
+        "equipment_cb": [
+          {
+            "equipment_category": "safety",
+            "name": "ABS",
+            "value": 8
+          },
+          {
+            "equipment_category": "drive",
+            "name": "Adaptivní regulace podvozku",
+            "value": 310
+          },
+          {
+            "equipment_category": "assist",
+            "name": "Adaptivní tempomat",
+            "value": 232
+          },
+          {
+            "equipment_category": "security",
+            "name": "Alarm",
+            "value": 22
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Ambientní LED osvětlení interiéru",
+            "value": 276
+          },
+          {
+            "equipment_category": "systems",
+            "name": "Android Auto",
+            "value": 277
+          },
+          {
+            "equipment_category": "systems",
+            "name": "Apple Car Play",
+            "value": 278
+          },
+          {
+            "equipment_category": "assist",
+            "name": "Asistent rozjezdu do kopce",
+            "value": 213
+          },
+          {
+            "equipment_category": "lights",
+            "name": "Automatické přepínání dálkových světel",
+            "value": 312
+          },
+          {
+            "equipment_category": "lights",
+            "name": "Automatické svícení",
+            "value": 248
+          },
+          {
+            "equipment_category": "systems",
+            "name": "Autorádio",
+            "value": 28
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Bezklíčkové ovládání",
+            "value": 218
+          },
+          {
+            "equipment_category": "security",
+            "name": "Centrální zamykání",
+            "value": 7
+          },
+          {
+            "equipment_category": "security",
+            "name": "Dálkové centrální zamykání",
+            "value": 24
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Deaktivace airbagu spolujezdce",
+            "value": 226
+          },
+          {
+            "equipment_category": "seats",
+            "name": "Dělená zadní sedadla",
+            "value": 221
+          },
+          {
+            "equipment_category": "systems",
+            "name": "Digitální příjem rádia (DAB)",
+            "value": 283
+          },
+          {
+            "equipment_category": "systems",
+            "name": "Digitální přístrojový štít",
+            "value": 284
+          },
+          {
+            "equipment_category": "systems",
+            "name": "Dotykové ovládání palubního počítače",
+            "value": 286
+          },
+          {
+            "equipment_category": "interior",
+            "name": "El. ovládání oken",
+            "value": 51
+          },
+          {
+            "equipment_category": "interior",
+            "name": "El. ovládání zrcátek",
+            "value": 13
+          },
+          {
+            "equipment_category": "interior",
+            "name": "El. parkovací brzda",
+            "value": 287
+          },
+          {
+            "equipment_category": "interior",
+            "name": "El. sklopná zrcátka",
+            "value": 245
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Elektrochromatické vnitřní zpětné zrcátko",
+            "value": 264
+          },
+          {
+            "equipment_category": "safety",
+            "name": "Elektronická uzávěrka diferenciálu (EDS)",
+            "value": 106
+          },
+          {
+            "equipment_category": "safety",
+            "name": "ESP",
+            "value": 15
+          },
+          {
+            "equipment_category": "systems",
+            "name": "Head-up display",
+            "value": 289
+          },
+          {
+            "equipment_category": "systems",
+            "name": "Hlasové ovládání palubního počítače",
+            "value": 290
+          },
+          {
+            "equipment_category": "seats",
+            "name": "Isofix",
+            "value": 215
+          },
+          {
+            "equipment_category": "seats",
+            "name": "Kožená sedadla",
+            "value": 227
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Kožené čalounění",
+            "value": 3
+          },
+          {
+            "equipment_category": "seats",
+            "name": "Kožené potahy",
+            "value": 98
+          },
+          {
+            "equipment_category": "lights",
+            "name": "LED adaptivní světlomety",
+            "value": 292
+          },
+          {
+            "equipment_category": "lights",
+            "name": "LED světlomety plnohodnotné",
+            "value": 238
+          },
+          {
+            "equipment_category": "exterior",
+            "name": "Litá kola",
+            "value": 16
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Multifunkční volant",
+            "value": 27
+          },
+          {
+            "equipment_category": "seats",
+            "name": "Nastavitelná sedadla",
+            "value": 36
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Nastavitelný volant",
+            "value": 37
+          },
+          {
+            "equipment_category": "safety",
+            "name": "Nouzové brždění",
+            "value": 252
+          },
+          {
+            "equipment_category": "systems",
+            "name": "Originální autorádio",
+            "value": 220
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Pádla řazení na volantu",
+            "value": 296
+          },
+          {
+            "equipment_category": "systems",
+            "name": "Palubní počítač",
+            "value": 30
+          },
+          {
+            "equipment_category": "seats",
+            "name": "Paměť nastavení sedadla řidiče",
+            "value": 297
+          },
+          {
+            "equipment_category": "assist",
+            "name": "Parkovací asistent",
+            "value": 31
+          },
+          {
+            "equipment_category": "assist",
+            "name": "Parkovací kamera",
+            "value": 231
+          },
+          {
+            "equipment_category": "assist",
+            "name": "Parkovací senzory",
+            "value": 214
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Posilovač řízení",
+            "value": 32
+          },
+          {
+            "equipment_category": "systems",
+            "name": "Premiový audiosystém",
+            "value": 271
+          },
+          {
+            "equipment_category": "seats",
+            "name": "Příprava pro isofix",
+            "value": 90
+          },
+          {
+            "equipment_category": "systems",
+            "name": "Přístrojová deska s barevným displejem",
+            "value": 270
+          },
+          {
+            "equipment_category": "safety",
+            "name": "Protiprokluzový systém kol (ASR)",
+            "value": 142
+          },
+          {
+            "equipment_category": "assist",
+            "name": "Rozpoznávání dopravních značek",
+            "value": 261
+          },
+          {
+            "equipment_category": "systems",
+            "name": "Satelitní navigace",
+            "value": 103
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Senzor stěračů",
+            "value": 108
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Senzor tlaku v pneumatikách",
+            "value": 257
+          },
+          {
+            "equipment_category": "safety",
+            "name": "Sledování jízdního pruhu",
+            "value": 251
+          },
+          {
+            "equipment_category": "drive",
+            "name": "Sportovní podvozek",
+            "value": 119
+          },
+          {
+            "equipment_category": "seats",
+            "name": "Sportovní sedadla",
+            "value": 92
+          },
+          {
+            "equipment_category": "drive",
+            "name": "Start/Stop systém",
+            "value": 212
+          },
+          {
+            "equipment_category": "systems",
+            "name": "Telefon",
+            "value": 64
+          },
+          {
+            "equipment_category": "assist",
+            "name": "Tempomat",
+            "value": 17
+          },
+          {
+            "equipment_category": "drive",
+            "name": "Volba jízdního režimu",
+            "value": 300
+          },
+          {
+            "equipment_category": "seats",
+            "name": "Vyhřívaná sedadla",
+            "value": 42
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Vyhřívaná zrcátka",
+            "value": 40
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Vyhřívaný volant",
+            "value": 241
+          },
+          {
+            "equipment_category": "seats",
+            "name": "Výškově nastavitelná sedadla",
+            "value": 94
+          },
+          {
+            "equipment_category": "other",
+            "name": "Záruka",
+            "value": 18
+          },
+          {
+            "equipment_category": "exterior",
+            "name": "Zatmavená zadní skla",
+            "value": 265
+          },
+          {
+            "equipment_category": "assist",
+            "name": "Parkovací senzory přední",
+            "value": 281
+          },
+          {
+            "equipment_category": "assist",
+            "name": "Parkovací senzory zadní",
+            "value": 282
+          },
+          {
+            "equipment_category": "systems",
+            "name": "Digitální přístrojová deska",
+            "value": 317
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Příplatkový audiosystém",
+            "value": 327
+          },
+          {
+            "equipment_category": "other",
+            "name": "Sportovní paket",
+            "value": 329
+          }
+        ],
+        "first_owner": true,
+        "fuel_cb": {
+          "name": "Benzín",
+          "seo_name": "benzin",
+          "value": 1
+        },
+        "gearbox_cb": {
+          "name": "Automatická",
+          "value": 3
+        },
+        "gearbox_levels_cb": {
+          "name": "8 stupňová a více",
+          "value": 8
+        },
+        "guarantee_date": "2028-01-01",
+        "id": 210437768,
+        "images": [
+          {
+            "id": 1373496158,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_qB_B/kcHp2YdDtDgLT0BIMQGphLk2/9096.jpeg"
+          },
+          {
+            "id": 1373496974,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_qB_B/nCTUX1iX5CFdAHBVFNGphMcy/74bc.jpeg"
+          },
+          {
+            "id": 1373497058,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_qB_B/kcHp2YdDtDgLT0BINJGphMhp/d85c.jpeg"
+          },
+          {
+            "id": 1373497226,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_qB_B/nCTUX1iX5Do9kXBUiKGphM0U/8229.jpeg"
+          },
+          {
+            "id": 1373497124,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_qB_B/kcHp2YdDtBM3KVBHF1GphMq4/5a42.jpeg"
+          },
+          {
+            "id": 1373496197,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_qB_B/kcHp2YdDtBRc2UJpLGphLpS/4ea8.jpeg"
+          },
+          {
+            "id": 1373496143,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_qB_B/kcHp2YdDtEDuRmOkqGphLia/e4b5.jpeg"
+          },
+          {
+            "id": 1373496254,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_qB_B/nCTUX1iX5DwDWzBuzmGphLuE/ac03.jpeg"
+          },
+          {
+            "id": 1373496188,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_qB_B/kcHp2YdDtzYqGBJT4GphLnd/1f95.jpeg"
+          },
+          {
+            "id": 1373496572,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_qB_B/kcHp2YdDtEDuRmOgcGphMDc/6e8a.jpeg"
+          },
+          {
+            "id": 1373496893,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_qB_B/nCTUX1iX5DwDWzBuxJGphMWa/7617.jpeg"
+          },
+          {
+            "id": 1373500805,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_qB_B/nCTUX1iX5BWZuTBUM6GphUxK/c22b.jpeg"
+          }
+        ],
+        "in_operation_date": "2025-01-01",
+        "locality": {
+          "address": "",
+          "address_id": 0,
+          "citypart": "",
+          "country_id": 112,
+          "district": "Hlavní město Praha",
+          "district_id": 47,
+          "district_seo_name": "hlavni-mesto-praha",
+          "entity_id": 3468,
+          "entity_type": "municipality",
+          "housenumber": "",
+          "municipality": "Praha",
+          "municipality_id": 3468,
+          "municipality_seo_name": "praha",
+          "quarter": "",
+          "quarter_id": 0,
+          "region": "Hlavní město Praha",
+          "region_id": 10,
+          "region_seo_name": "hlavni-mesto-praha",
+          "source": "regionserver",
+          "street": "",
+          "street_id": 0,
+          "streetnumber": "",
+          "ward": "",
+          "ward_id": 0,
+          "zip": ""
+        },
+        "manufacturer_cb": {
+          "name": "BMW",
+          "seo_name": "bmw",
+          "value": 5
+        },
+        "mirroring_id": null,
+        "model_cb": {
+          "name": "M2",
+          "seo_name": "m2",
+          "value": 7585
+        },
+        "name": "BMW M2, TRACK PACK, Carbon Sedačky",
+        "old_id": null,
+        "operating_lease_intended_for_cb": [],
+        "other_localities": [],
+        "phone": "+420777126241",
+        "preferred_offer": false,
+        "price": 1929000,
+        "price_is_vat_deductible": true,
+        "price_is_without_vat": null,
+        "price_leasing": null,
+        "price_note": null,
+        "price_original": 1929000,
+        "price_payment": null,
+        "price_payment_count": null,
+        "price_without_vat": 1594215,
+        "seo_name": "210437768-bmw-m2-track-pack-carbon-sedacky",
+        "service_book": true,
+        "sorting_date": "2026-06-15T06:22:09",
+        "source": "web_source",
+        "status": "active",
+        "tachometer": 16000,
+        "topped": false,
+        "tuning": false,
+        "user": {
+          "bankid_status": "unverified",
+          "enabled": true,
+          "id": 7568382,
+          "portrait_url": "https://i.im.cz/ac/HeynX8nuz-ZCpuHxpCkBghvvREftQ7fkDjGsKQ1E09w",
+          "ubox_created_date": "2005-05-06",
+          "user_service": {
+            "created_date": "1970-01-01",
+            "service_enabled": true,
+            "service_name": "sauto",
+            "shop_description": "",
+            "shop_name": "",
+            "shop_url": null
+          }
+        },
+        "valid_to": "2026-06-29T11:08:17",
+        "vehicle_body_cb": {
+          "name": "Kupé",
+          "seo_name": "kupe",
+          "value": 5
+        },
+        "videos": [],
+        "vin": "WBS21DM0008F11468"
+      },
+      "status_code": 200,
+      "status_message": "OK"
+    },
+    "offer_metrics": {
+      "price_per_kw": 5464.59,
+      "price_per_km": 120.5625,
+      "km_per_year": 1067,
+      "age_years": 15,
+      "gearbox_type": "automatic",
+      "drive_type": "rwd",
+      "brand_tier": "premium",
+      "listing_age_days": 41,
+      "months_to_stk": null,
+      "euro_value": 0,
+      "annual_fuel_cost": 4720,
+      "annual_insurance": 11060,
+      "annual_maintenance": 31754,
+      "annual_total_cost": 47534,
+      "estimated_consumption_per_100km": 11.2,
+      "model_family_key": "bmw:m2",
+      "first_owner": true,
+      "service_book": true,
+      "tuning": false,
+      "equipment_list": [
+        "abs",
+        "adaptivní regulace podvozku",
+        "adaptivní tempomat",
+        "alarm",
+        "ambientní led osvětlení interiéru",
+        "android auto",
+        "apple car play",
+        "asistent rozjezdu do kopce",
+        "automatické přepínání dálkových světel",
+        "automatické svícení",
+        "autorádio",
+        "bezklíčkové ovládání",
+        "centrální zamykání",
+        "dálkové centrální zamykání",
+        "deaktivace airbagu spolujezdce",
+        "dělená zadní sedadla",
+        "digitální příjem rádia (dab)",
+        "digitální přístrojový štít",
+        "dotykové ovládání palubního počítače",
+        "el. ovládání oken",
+        "el. ovládání zrcátek",
+        "el. parkovací brzda",
+        "el. sklopná zrcátka",
+        "elektrochromatické vnitřní zpětné zrcátko",
+        "elektronická uzávěrka diferenciálu (eds)",
+        "esp",
+        "head-up display",
+        "hlasové ovládání palubního počítače",
+        "isofix",
+        "kožená sedadla",
+        "kožené čalounění",
+        "kožené potahy",
+        "led adaptivní světlomety",
+        "led světlomety plnohodnotné",
+        "litá kola",
+        "multifunkční volant",
+        "nastavitelná sedadla",
+        "nastavitelný volant",
+        "nouzové brždění",
+        "originální autorádio",
+        "pádla řazení na volantu",
+        "palubní počítač",
+        "paměť nastavení sedadla řidiče",
+        "parkovací asistent",
+        "parkovací kamera",
+        "parkovací senzory",
+        "posilovač řízení",
+        "premiový audiosystém",
+        "příprava pro isofix",
+        "přístrojová deska s barevným displejem",
+        "protiprokluzový systém kol (asr)",
+        "rozpoznávání dopravních značek",
+        "satelitní navigace",
+        "senzor stěračů",
+        "senzor tlaku v pneumatikách",
+        "sledování jízdního pruhu",
+        "sportovní podvozek",
+        "sportovní sedadla",
+        "start/stop systém",
+        "telefon",
+        "tempomat",
+        "volba jízdního režimu",
+        "vyhřívaná sedadla",
+        "vyhřívaná zrcátka",
+        "vyhřívaný volant",
+        "výškově nastavitelná sedadla",
+        "záruka",
+        "zatmavená zadní skla",
+        "parkovací senzory přední",
+        "parkovací senzory zadní",
+        "digitální přístrojová deska",
+        "příplatkový audiosystém",
+        "sportovní paket"
+      ],
+      "images_count": 12
+    }
+  }
+]

@@ -92,6 +92,7 @@ export default function ProjectSetup({
   equipmentOptions,
   modelsByBrand,
   loadingModelsByBrand,
+  modelLoadErrorsByBrand,
   onUpdateConfig,
   onUpdateProject,
   onRun,
@@ -195,7 +196,7 @@ export default function ProjectSetup({
       {/* Brand / Model / Body / Equipment – první řádek vedle sebe */}
       <div className="catalog-multi-wrap catalog-horizontal">
         <BrandSelector brands={brandOptions} selected={selectedBrands} excluded={excludedBrands} onToggle={toggleBrand} filterText={brandFilterText} onFilterChange={setBrandFilterText} />
-        <ModelSelector selectedBrands={selectedBrands} modelsByBrand={modelsByBrand} loadingModelsByBrand={loadingModelsByBrand} selected={selectedModels} excluded={excludedModels} onToggle={toggleModel} filterText={modelFilterText} onFilterChange={setModelFilterText} />
+        <ModelSelector selectedBrands={selectedBrands} modelsByBrand={modelsByBrand} loadingModelsByBrand={loadingModelsByBrand} modelLoadErrorsByBrand={modelLoadErrorsByBrand} selected={selectedModels} excluded={excludedModels} onToggle={toggleModel} filterText={modelFilterText} onFilterChange={setModelFilterText} />
         <BodySelector bodies={bodyOptions} selected={selectedBodies} excluded={excludedBodies} onToggle={toggleBody} filterText={bodyFilterText} onFilterChange={setBodyFilterText} />
         <EquipmentSelector equipment={equipmentOptions} selected={selectedEquipment} excluded={excludedEquipment} onToggle={toggleEquipment} filterText={equipmentFilterText} onFilterChange={setEquipmentFilterText} />
         <div className="catalog-selected-note catalog-selected-full">

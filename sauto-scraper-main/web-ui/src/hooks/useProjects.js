@@ -547,8 +547,8 @@ export function useProjects(brandOptions, modelsByBrand) {
       if (project?.resultsPath) {
         try {
           const data = await fetchResults(project.resultsPath);
-          latestItems = data.items || latestItems;
-          latestMarked = data.marked_ids || latestMarked;
+          latestItems = Array.isArray(data?.items) ? data.items : latestItems;
+          latestMarked = Array.isArray(data?.marked_ids) ? data.marked_ids : latestMarked;
         } catch {
           // keep current in-memory results if fetch fails
         }

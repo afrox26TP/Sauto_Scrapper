@@ -96,6 +96,24 @@ export async function fetchModels(brand) {
   return Array.isArray(data.items) ? data.items : [];
 }
 
+export async function fetchModelCounts(brand, config = null) {
+  if (config && typeof config === "object") {
+    const data = await request("POST", "/api/catalog/model-counts", { brand, config });
+    return Array.isArray(data.items) ? data.items : [];
+  }
+  const data = await request("GET", "/api/catalog/model-counts", null, { brand });
+  return Array.isArray(data.items) ? data.items : [];
+}
+
+export async function fetchCatalogEstimate(config) {
+  const data = await request("POST", "/api/catalog/estimate", { config: config || {} });
+  return {
+    count: Number(data?.count || 0),
+    note: String(data?.note || ""),
+    params: data?.params || {},
+  };
+}
+
 export async function fetchEquipment() {
   const data = await request("GET", "/api/catalog/equipment");
   return Array.isArray(data.items) ? data.items : [];

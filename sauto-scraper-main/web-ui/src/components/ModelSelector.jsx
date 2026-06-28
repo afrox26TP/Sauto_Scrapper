@@ -4,6 +4,7 @@ export default function ModelSelector({
   selectedBrands,
   modelsByBrand,
   loadingModelsByBrand,
+  modelLoadErrorsByBrand,
   selected,
   excluded,
   onToggle,
@@ -35,6 +36,8 @@ export default function ModelSelector({
         {selectedBrands.flatMap((brand) => {
           const models = modelsByBrand[brand] || [];
           const loadingModels = loadingModelsByBrand[brand];
+          const loadError = modelLoadErrorsByBrand?.[brand];
+
           if (loadingModels) {
             return [
               <div key={`loading-${brand}`} className="catalog-subhead">
@@ -42,17 +45,42 @@ export default function ModelSelector({
               </div>,
             ];
           }
+
+          if (loadError) {
+            return [
+              <div key={`head-${brand}`} className="catalog-subhead">
+                {brand}
+              </div>,
+              <div key={`error-${brand}`} className="catalog-placeholder">
+                Nepodařilo se načíst modely. Zkus značku odkliknout a vybrat znovu.
+              </div>,
+            ];
+          }
+
           const filtered = models.filter(
             (m) =>
               m.label.toLowerCase().includes(filterText.toLowerCase()) ||
               m.value.toLowerCase().includes(filterText.toLowerCase())
           );
+
+          if (filtered.length === 0) {
+            return [
+              <div key={`head-${brand}`} className="catalog-subhead">
+                {brand}
+              </div>,
+              <div key={`empty-${brand}`} className="catalog-placeholder">
+                Pro tuto značku teď nejsou k dispozici žádné modely.
+              </div>,
+            ];
+          }
+
           return [
             <div key={`head-${brand}`} className="catalog-subhead">
               {brand}
             </div>,
             ...filtered.map((m) => {
               const isExcluded = excluded.includes(m.value);
+              const hasCount = Number.isFinite(Number(m.count));
               return (
                 <div
                   key={`${brand}-${m.value}`}
@@ -75,6 +103,7 @@ export default function ModelSelector({
                     {selected.includes(m.value) ? "✓" : isExcluded ? "✕" : ""}
                   </span>
                   <span>{m.label}</span>
+                  {hasCount ? <span className="catalog-item-count">{Number(m.count)}</span> : null}
                 </div>
               );
             }),

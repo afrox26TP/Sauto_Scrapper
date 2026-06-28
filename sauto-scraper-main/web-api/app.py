@@ -13,6 +13,7 @@ from collections import deque
 from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import urlencode
+from urllib.error import HTTPError
 from urllib.request import urlopen
 
 from fastapi import FastAPI, HTTPException, Request
@@ -29,12 +30,14 @@ PARAMS_PATH = ROOT_DIR / "params.json"
 API_VERSION = "1.0.0"
 API_START_TIME = time.time()
 DEFAULT_RESULTS_PATH = ROOT_DIR / "data" / "sauto_interesting.json"
-RAW_OUTPUT_PATH = ROOT_DIR / "data" / "sauto_raw.json"
+RAW_OUTPUT_PATH = ROOT_DIR / "data" / "sauto_raw.jl"
+RAW_OUTPUT_JSON_PATH = ROOT_DIR / "data" / "sauto_raw.json"
 MARKED_IDS_PATH = ROOT_DIR / "marked_ids.json"
 CATALOG_CACHE_PATH = ROOT_DIR / "data" / "sauto_catalog_cache.json"
 BILLING_LEDGER_PATH = ROOT_DIR / "data" / "billing_usage.json"
 CATALOG_CACHE_TTL_S = 24 * 60 * 60
 SAUTO_SEARCH_API = "https://www.sauto.cz/api/v1/items/search"
+SAUTO_ITEM_DETAIL_API = "https://www.sauto.cz/api/v1/items/{}"
 LOCKED_SEARCH_DEFAULTS = {
     "category_id": "838",
     "limit": "100",
@@ -45,6 +48,13 @@ RESULT_TEXT_REJECT_PATTERNS = (
     re.compile(r"na\s*spl[aá]tk|spl[aá]tk(y|a|ove)|u[vě]r", re.IGNORECASE),
     re.compile(r"leasing|operativn[ií]\s*leasing", re.IGNORECASE),
 )
+EXCLUDED_MODEL_BODY_TYPES = {
+    "silnicni",
+    "enduro",
+    "chopper",
+    "ctyrkolka",
+    "elektromotorka",
+}
 WRITE_HTTP_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 API_KEYS = {
     token.strip()
@@ -92,6 +102,15 @@ class CustomPresetPayload(BaseModel):
 class ResultMarkPayload(BaseModel):
     ids: list[str] = Field(default_factory=list)
     marked: bool = True
+
+
+class ModelCountsPayload(BaseModel):
+    brand: str = ""
+    config: dict[str, Any] = Field(default_factory=dict)
+
+
+class CatalogEstimatePayload(BaseModel):
+    config: dict[str, Any] = Field(default_factory=dict)
 
 
 class ScraperRunner:
@@ -397,6 +416,27 @@ class ScraperRunner:
         except Exception:
             return False
 
+    def _persist_partial_output(self, output_file: str) -> int:
+        try:
+            rel_path = str(output_file or "").strip() or "data/sauto_interesting.json"
+            result_path = (ROOT_DIR / rel_path).resolve()
+            if ROOT_DIR not in result_path.parents and result_path != ROOT_DIR:
+                return 0
+
+            # If target already has data, keep it as source of truth.
+            existing_items = load_item_records(result_path)
+            if existing_items:
+                return 0
+
+            raw_items = load_item_records(RAW_OUTPUT_PATH)
+            if not raw_items:
+                return 0
+
+            dump_json(result_path, raw_items)
+            return len(raw_items)
+        except Exception:
+            return 0
+
     def pause(self) -> dict[str, Any]:
         with self.lock:
             if self.process is None or self.process.poll() is not None:
@@ -433,6 +473,7 @@ class ScraperRunner:
                 raise RuntimeError("No running scraper process to stop.")
             process = self.process
             was_paused = self.paused
+            output_file = self.last_output_file
 
         # Process may be paused; resume before terminate so shutdown can complete.
         if was_paused:
@@ -449,12 +490,16 @@ class ScraperRunner:
             except Exception:
                 process.kill()
 
+        restored_count = self._persist_partial_output(output_file)
+
         with self.lock:
             self.paused = False
             if graceful:
                 self.log_lines.append("[web-api] Scraper byl ukončen uživatelem (graceful stop).")
             else:
                 self.log_lines.append("[web-api] Scraper byl ukončen uživatelem (force stop).")
+            if restored_count > 0:
+                self.log_lines.append(f"[web-api] Obnoveno {restored_count} průběžných výsledků z raw exportu.")
             return self._status_unlocked()
 
 
@@ -823,35 +868,69 @@ def _should_exclude_result_item(item: dict[str, Any]) -> bool:
 
 
 def load_result_items(result_path: Path) -> list[dict[str, Any]]:
-    if not result_path.exists():
-        return []
-    try:
-        with result_path.open("r", encoding="utf-8") as fh:
-            raw = fh.read().strip()
-    except OSError:
-        return []
-    if not raw:
-        return []
-    # Robust parser: trim trailing garbage until we get valid JSON
-    attempt = raw
-    for _ in range(30):
-        try:
-            data = json.loads(attempt)
-            break
-        except json.JSONDecodeError as exc:
-            if "Extra data" in str(exc):
-                attempt = attempt[: exc.pos].rstrip()
-            else:
-                return []
-    else:
-        return []
-    if not isinstance(data, list):
+    data = load_item_records(result_path)
+    if not data:
         return []
     return [
         item
         for item in data
         if isinstance(item, dict) and not _should_exclude_result_item(item)
     ]
+
+
+def load_item_records(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+
+    try:
+        with path.open("r", encoding="utf-8") as fh:
+            raw = fh.read()
+    except OSError:
+        return []
+
+    raw = raw.strip()
+    if not raw:
+        return []
+
+    # 1) Try regular JSON list first.
+    try:
+        data = json.loads(raw)
+        if isinstance(data, list):
+            return [item for item in data if isinstance(item, dict)]
+        if isinstance(data, dict):
+            return [data]
+    except json.JSONDecodeError:
+        pass
+
+    # 2) Salvage leading valid JSON in case of trailing garbage.
+    attempt = raw
+    for _ in range(30):
+        try:
+            data = json.loads(attempt)
+            if isinstance(data, list):
+                return [item for item in data if isinstance(item, dict)]
+            if isinstance(data, dict):
+                return [data]
+            return []
+        except json.JSONDecodeError as exc:
+            if "Extra data" in str(exc):
+                attempt = attempt[: exc.pos].rstrip()
+            else:
+                break
+
+    # 3) JSONL fallback (robust for partial force-stopped exports).
+    items: list[dict[str, Any]] = []
+    for line in raw.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(row, dict):
+            items.append(row)
+    return items
 
 
 def _load_catalog_cache() -> dict[str, Any]:
@@ -874,13 +953,43 @@ def _is_fresh(ts: float | int | None, ttl_s: int = CATALOG_CACHE_TTL_S) -> bool:
         return False
 
 
-def _fetch_sauto_results(params: dict[str, Any]) -> list[dict[str, Any]]:
+def _fetch_sauto_page(params: dict[str, Any]) -> tuple[list[dict[str, Any]], int | None]:
     query = urlencode(params)
     url = f"{SAUTO_SEARCH_API}?{query}"
+    try:
+        with urlopen(url, timeout=15) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except HTTPError as exc:
+        # Sauto returns 422 for too large offsets. Treat as end of pagination.
+        if exc.code == 422:
+            return [], None
+        raise
+    results = payload.get("results", []) if isinstance(payload, dict) else []
+    pagination = payload.get("pagination", {}) if isinstance(payload, dict) else {}
+    total = pagination.get("total") if isinstance(pagination, dict) else None
+    try:
+        total_count = int(total) if total is not None else None
+    except (TypeError, ValueError):
+        total_count = None
+    return [item for item in results if isinstance(item, dict)], total_count
+
+
+def _fetch_sauto_results(params: dict[str, Any]) -> list[dict[str, Any]]:
+    results, _ = _fetch_sauto_page(params)
+    return results
+
+
+def _fetch_sauto_item_detail(item_id: int | str) -> dict[str, Any]:
+    try:
+        item_id_int = int(item_id)
+    except (TypeError, ValueError):
+        return {}
+
+    url = SAUTO_ITEM_DETAIL_API.format(item_id_int)
     with urlopen(url, timeout=15) as response:
         payload = json.loads(response.read().decode("utf-8"))
-    results = payload.get("results", []) if isinstance(payload, dict) else []
-    return [item for item in results if isinstance(item, dict)]
+    result = payload.get("result", {}) if isinstance(payload, dict) else {}
+    return result if isinstance(result, dict) else {}
 
 
 def _collect_brands(max_pages: int = 25, page_size: int = 200) -> list[dict[str, str]]:
@@ -899,31 +1008,220 @@ def _collect_brands(max_pages: int = 25, page_size: int = 200) -> list[dict[str,
     return [{"value": key, "label": brands[key]} for key in sorted(brands.keys())]
 
 
-def _collect_models_for_brand(brand: str, max_pages: int = 8, page_size: int = 150) -> list[dict[str, str]]:
-    models: dict[str, str] = {}
-    for page in range(max_pages):
-        offset = page * page_size
-        batch = _fetch_sauto_results(
-            {
-                "category_id": 838,
-                "manufacturer_seo_name": brand,
-                "limit": page_size,
-                "offset": offset,
-            }
-        )
-        if not batch:
-            break
-        for item in batch:
+def _collect_models_for_brand(
+    brand: str,
+    max_pages: int = 50,
+    page_size: int = 200,
+    include_counts: bool = True,
+) -> list[dict[str, Any]]:
+    models: dict[str, dict[str, Any]] = {}
+    selected_brand = (brand or "").strip().lower()
+    if not selected_brand:
+        return []
+
+    def _extract_brand_model_and_body(item: dict[str, Any]) -> tuple[str, str, str, str]:
+        """Return (manufacturer_seo, model_seo, model_name, body_seo) from mixed payload formats."""
+        if not isinstance(item, dict):
+            return "", "", "", ""
+
+        manufacturer_seo = str(item.get("manufacturer_seo") or "").strip().lower()
+        model_seo = str(item.get("model_seo") or "").strip()
+        model_name = str(item.get("model_name") or "").strip()
+        body_seo = str(item.get("body_seo") or "").strip().lower()
+
+        if not manufacturer_seo:
             manufacturer = item.get("manufacturer_cb") or {}
             manufacturer_seo = str(manufacturer.get("seo_name") or "").strip().lower()
-            if manufacturer_seo != brand:
-                continue
+
+        if not model_seo:
             model = item.get("model_cb") or {}
-            seo_name = str(model.get("seo_name") or "").strip()
-            name = str(model.get("name") or seo_name).strip()
-            if seo_name:
-                models[seo_name] = name
-    return [{"value": key, "label": models[key]} for key in sorted(models.keys())]
+            model_seo = str(model.get("seo_name") or "").strip()
+            if not model_name:
+                model_name = str(model.get("name") or "").strip()
+        if not body_seo:
+            body = item.get("body_cb") or {}
+            body_seo = str(body.get("seo_name") or "").strip().lower()
+
+        detail_result = (item.get("detail_raw") or {}).get("result") or {}
+        if not manufacturer_seo:
+            manufacturer = detail_result.get("manufacturer_cb") or {}
+            manufacturer_seo = str(manufacturer.get("seo_name") or "").strip().lower()
+        if not model_seo:
+            model = detail_result.get("model_cb") or {}
+            model_seo = str(model.get("seo_name") or "").strip()
+            if not model_name:
+                model_name = str(model.get("name") or "").strip()
+        if not body_seo:
+            body = detail_result.get("body_cb") or {}
+            body_seo = str(body.get("seo_name") or "").strip().lower()
+
+        if not model_name:
+            model_name = model_seo
+
+        return manufacturer_seo, model_seo, model_name, body_seo
+
+    def _is_valid_model_row(item: dict[str, Any]) -> tuple[bool, str, str]:
+        manufacturer_seo, model_seo, model_name, body_seo = _extract_brand_model_and_body(item)
+        if manufacturer_seo != selected_brand or not model_seo:
+            return False, "", ""
+        if body_seo and body_seo in EXCLUDED_MODEL_BODY_TYPES:
+            return False, "", ""
+        return True, model_seo, (model_name or model_seo)
+
+    # Collect from live API (global catalog pages), then keep only selected brand.
+    # The upstream API can ignore manufacturer filters, so we enforce brand match locally.
+    total_rows: int | None = None
+    stale_pages = 0
+    for page in range(max_pages):
+        offset = page * page_size
+        batch, page_total = _fetch_sauto_page({"category_id": 838, "limit": page_size, "offset": offset})
+        if page_total is not None:
+            total_rows = page_total
+        if not batch:
+            break
+        added_in_page = 0
+        for item in batch:
+            ok, model_seo, model_name = _is_valid_model_row(item)
+            if not ok:
+                continue
+            if model_seo not in models:
+                models[model_seo] = {"label": model_name or model_seo, "count": 0}
+                added_in_page += 1
+            if include_counts:
+                models[model_seo]["count"] = int(models[model_seo].get("count", 0)) + 1
+
+        if not include_counts:
+            if added_in_page == 0:
+                stale_pages += 1
+                if stale_pages >= 4:
+                    break
+            else:
+                stale_pages = 0
+            continue
+
+        if total_rows is not None and (offset + len(batch)) >= total_rows:
+            break
+
+    if not include_counts:
+        return [
+            {
+                "value": key,
+                "label": str(models[key].get("label") or key),
+            }
+            for key in sorted(models.keys())
+        ]
+
+    return [
+        {
+            "value": key,
+            "label": str(models[key].get("label") or key),
+            "count": int(models[key].get("count") or 0),
+        }
+        for key in sorted(models.keys())
+        if int(models[key].get("count") or 0) > 0
+    ]
+
+
+def _split_csv_values(raw: Any) -> list[str]:
+    return [part.strip().lower() for part in str(raw or "").split(",") if part and part.strip()]
+
+
+def _collect_model_counts_for_brand_with_config(
+    brand: str,
+    config: dict[str, Any] | None,
+    max_pages: int = 80,
+    page_size: int = 200,
+) -> list[dict[str, Any]]:
+    selected_brand = (brand or "").strip().lower()
+    if not selected_brand:
+        return []
+
+    cfg = config if isinstance(config, dict) else {}
+    selected_models = _split_csv_values(cfg.get("model_seo_name"))
+    excluded_models = set(_split_csv_values(cfg.get("exclude_model_seo_name")))
+    excluded_bodies = set(_split_csv_values(cfg.get("exclude_body_seo")))
+
+    pairs = [f"{selected_brand}:{m}" for m in selected_models if m and m not in excluded_models]
+    manufacturer_model_seo = "|".join(pairs) if pairs else selected_brand
+
+    params: dict[str, Any] = {
+        "category_id": 838,
+        "limit": page_size,
+        "offset": 0,
+        "manufacturer_model_seo": manufacturer_model_seo,
+    }
+
+    body_seo = ",".join([b for b in _split_csv_values(cfg.get("body_seo")) if b not in excluded_bodies])
+    if body_seo:
+        params["vehicle_body_seo"] = body_seo
+
+    fuel_seo = str(cfg.get("fuel_seo") or "").strip().lower()
+    if fuel_seo:
+        params["fuel_seo"] = fuel_seo
+
+    condition_seo = str(cfg.get("condition_seo") or "").strip().lower()
+    if condition_seo:
+        params["condition_seo"] = condition_seo
+
+    gearbox = str(cfg.get("gearbox_filter") or "").strip().lower()
+    if gearbox:
+        params["gearbox_seo"] = gearbox
+
+    drive = str(cfg.get("drive_filter") or "").strip().lower()
+    if drive:
+        params["drive_seo"] = drive
+
+    for src_key, dst_key in (("price_from", "price_from"), ("price_to", "price_to"), ("tachometer_from", "tachometer_from"), ("tachometer_to", "tachometer_to")):
+        value = str(cfg.get(src_key) or "").strip()
+        if value:
+            params[dst_key] = value
+
+    counts: dict[str, dict[str, Any]] = {}
+    total_rows: int | None = None
+    for page in range(max_pages):
+        query = dict(params)
+        query["offset"] = page * page_size
+        batch, page_total = _fetch_sauto_page(query)
+        if page_total is not None:
+            total_rows = page_total
+        if not batch:
+            break
+
+        for item in batch:
+            manufacturer = item.get("manufacturer_cb") or {}
+            model = item.get("model_cb") or {}
+            body = item.get("body_cb") or item.get("vehicle_body_cb") or {}
+
+            manufacturer_seo = str(manufacturer.get("seo_name") or "").strip().lower()
+            model_seo = str(model.get("seo_name") or "").strip().lower()
+            model_name = str(model.get("name") or model_seo).strip()
+            body_seo_item = str(body.get("seo_name") or item.get("body_seo") or "").strip().lower()
+
+            if manufacturer_seo != selected_brand or not model_seo:
+                continue
+            if model_seo in excluded_models:
+                continue
+            if selected_models and model_seo not in selected_models:
+                continue
+            if body_seo_item and (body_seo_item in EXCLUDED_MODEL_BODY_TYPES or body_seo_item in excluded_bodies):
+                continue
+
+            if model_seo not in counts:
+                counts[model_seo] = {"label": model_name or model_seo, "count": 0}
+            counts[model_seo]["count"] = int(counts[model_seo].get("count") or 0) + 1
+
+        if total_rows is not None and ((page * page_size) + len(batch)) >= total_rows:
+            break
+
+    return [
+        {
+            "value": key,
+            "label": str(counts[key].get("label") or key),
+            "count": int(counts[key].get("count") or 0),
+        }
+        for key in sorted(counts.keys())
+        if int(counts[key].get("count") or 0) > 0
+    ]
 
 
 def _collect_equipment(max_pages: int = 20, page_size: int = 200) -> list[dict[str, str]]:
@@ -932,7 +1230,7 @@ def _collect_equipment(max_pages: int = 20, page_size: int = 200) -> list[dict[s
     for data_path in [RAW_OUTPUT_PATH, DEFAULT_RESULTS_PATH]:
         if data_path.exists():
             try:
-                data = load_json(data_path, [])
+                data = load_item_records(data_path)
                 if isinstance(data, list):
                     for item in data:
                         if isinstance(item, dict):
@@ -1210,13 +1508,13 @@ def get_catalog_models(brand: str, force_refresh: bool = False) -> dict[str, Any
     cached_collector_version = brand_cache.get("collector_version") if isinstance(brand_cache, dict) else None
 
     # Per-brand cache gate to avoid serving stale entries from older buggy collector logic.
-    cache_ok = cached_collector_version == 2
+    cache_ok = cached_collector_version == 6
 
     if not force_refresh and cache_ok and _is_fresh(cached_ts) and isinstance(cached_items, list):
         return {"brand": selected_brand, "items": cached_items, "cached": True, "updated_at": cached_ts}
 
     try:
-        items = _collect_models_for_brand(selected_brand)
+        items = _collect_models_for_brand(selected_brand, include_counts=False)
     except Exception as exc:
         if isinstance(cached_items, list) and cached_items:
             return {
@@ -1236,11 +1534,118 @@ def get_catalog_models(brand: str, force_refresh: bool = False) -> dict[str, Any
     cache["models"][selected_brand] = {
         "updated_at": now,
         "items": items,
-        "collector_version": 2,
+        "collector_version": 6,
     }
     _save_catalog_cache(cache)
 
     return {"brand": selected_brand, "items": items, "cached": False, "updated_at": now}
+
+
+@app.get("/api/catalog/model-counts")
+def get_catalog_model_counts(brand: str, force_refresh: bool = False) -> dict[str, Any]:
+    selected_brand = (brand or "").strip().lower()
+    if not selected_brand:
+        return {"brand": "", "items": [], "cached": True, "updated_at": None}
+
+    cache = _load_catalog_cache()
+    counts_cache = cache.get("model_counts", {}) if isinstance(cache, dict) else {}
+    brand_cache = counts_cache.get(selected_brand, {}) if isinstance(counts_cache, dict) else {}
+    cached_items = brand_cache.get("items", []) if isinstance(brand_cache, dict) else []
+    cached_ts = brand_cache.get("updated_at") if isinstance(brand_cache, dict) else None
+
+    if not force_refresh and _is_fresh(cached_ts) and isinstance(cached_items, list) and cached_items:
+        return {"brand": selected_brand, "items": cached_items, "cached": True, "updated_at": cached_ts}
+
+    try:
+        items = _collect_models_for_brand(selected_brand, include_counts=True)
+    except Exception as exc:
+        if isinstance(cached_items, list) and cached_items:
+            return {
+                "brand": selected_brand,
+                "items": cached_items,
+                "cached": True,
+                "updated_at": cached_ts,
+                "warning": f"Using cache: {exc}",
+            }
+        raise HTTPException(status_code=502, detail=f"Unable to fetch Sauto model counts for '{selected_brand}': {exc}") from exc
+
+    now = int(time.time())
+    if not isinstance(cache, dict):
+        cache = {}
+    if not isinstance(cache.get("model_counts"), dict):
+        cache["model_counts"] = {}
+    cache["model_counts"][selected_brand] = {
+        "updated_at": now,
+        "items": items,
+    }
+    _save_catalog_cache(cache)
+
+    return {"brand": selected_brand, "items": items, "cached": False, "updated_at": now}
+
+
+@app.post("/api/catalog/model-counts")
+def get_catalog_model_counts_with_config(payload: ModelCountsPayload) -> dict[str, Any]:
+    selected_brand = (payload.brand or "").strip().lower()
+    if not selected_brand:
+        return {"brand": "", "items": [], "cached": False, "updated_at": int(time.time())}
+
+    try:
+        items = _collect_model_counts_for_brand_with_config(selected_brand, payload.config)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Unable to fetch Sauto model counts for '{selected_brand}' with config: {exc}") from exc
+
+    return {
+        "brand": selected_brand,
+        "items": items,
+        "cached": False,
+        "updated_at": int(time.time()),
+    }
+@app.post("/api/catalog/estimate")
+def get_catalog_estimate(payload: CatalogEstimatePayload) -> dict[str, Any]:
+    cfg = payload.config if isinstance(payload.config, dict) else {}
+
+    def _csv_set(key: str) -> set[str]:
+        raw = str(cfg.get(key) or "")
+        return {part.strip().lower() for part in raw.split(",") if part.strip()}
+
+    selected_brands = _csv_set("manufacturer_seo_name")
+    excluded_brands = _csv_set("exclude_manufacturer_seo_name")
+    selected_models = _csv_set("model_seo_name")
+    excluded_models = _csv_set("exclude_model_seo_name")
+
+    brands = [b for b in selected_brands if b and b not in excluded_brands]
+    if not brands:
+        return {
+            "count": 0,
+            "note": "No selected brands. Count is based on live active-ad model catalog.",
+            "brands": [],
+        }
+
+    try:
+        total_count = 0
+        by_brand: dict[str, int] = {}
+        for brand in sorted(brands):
+            items = _collect_models_for_brand(brand)
+            brand_count = 0
+            for item in items:
+                model_value = str(item.get("value") or "").strip().lower()
+                if not model_value:
+                    continue
+                if selected_models and model_value not in selected_models:
+                    continue
+                if model_value in excluded_models:
+                    continue
+                brand_count += int(item.get("count") or 0)
+            by_brand[brand] = brand_count
+            total_count += brand_count
+
+        return {
+            "count": int(total_count),
+            "by_brand": by_brand,
+            "note": "Count is based on live active ads from Sauto model catalog (brand/model filters supported; other filters are not provided by Sauto catalog API).",
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Unable to estimate Sauto ad count: {exc}") from exc
 
 
 @app.get("/api/catalog/equipment")
@@ -1298,34 +1703,78 @@ def get_catalog_bodies(force_refresh: bool = False) -> dict[str, Any]:
     if not force_refresh and _is_fresh(cached_ts) and isinstance(cached_items, list) and cached_items:
         return {"items": cached_items, "cached": True, "updated_at": cached_ts}
 
-    # Collect unique body types from locally scraped data and search API
+    # Collect unique body types strictly from Sauto category_id=838 (automobily).
+    # Search endpoint does not include body fields reliably, so we resolve bodies
+    # from item detail endpoint for ids returned by category-filtered search.
     bodies: dict[str, str] = {}
-    # From local data
-    for data_path in [RAW_OUTPUT_PATH, DEFAULT_RESULTS_PATH]:
-        if data_path.exists():
-            try:
-                data = load_json(data_path, [])
-                if isinstance(data, list):
-                    for item in data:
-                        if isinstance(item, dict):
-                            body = str(item.get("body_seo") or "").strip()
-                            if body and len(body) > 1:
-                                label = body[0].upper() + body[1:]
-                                bodies[body] = label
-            except Exception:
-                pass
-    # From Sauto search API
-    if len(bodies) < 3:
+    item_ids: list[int] = []
+
+    max_pages = 35
+    page_size = 200
+    total_rows: int | None = None
+    for page in range(max_pages):
+        offset = page * page_size
         try:
-            batch = _fetch_sauto_results({"category_id": 838, "limit": 200, "offset": 0})
-            for item in batch:
-                body_cb = item.get("vehicle_body_cb") or {}
-                seo = str(body_cb.get("seo_name") or "").strip()
-                name = str(body_cb.get("name") or seo).strip()
-                if seo:
-                    bodies[seo] = name
+            batch, page_total = _fetch_sauto_page({"category_id": 838, "limit": page_size, "offset": offset})
         except Exception:
-            pass
+            break
+        if page_total is not None:
+            total_rows = page_total
+        if not batch:
+            break
+
+        for item in batch:
+            if not isinstance(item, dict):
+                continue
+            category = item.get("category") or {}
+            try:
+                category_id = int(category.get("id")) if isinstance(category, dict) else 838
+            except (TypeError, ValueError):
+                category_id = 838
+            if category_id != 838:
+                continue
+
+            try:
+                item_id = int(item.get("id"))
+            except (TypeError, ValueError):
+                continue
+            item_ids.append(item_id)
+
+        # Hard limit so body refresh remains responsive.
+        if len(item_ids) >= 800:
+            break
+
+        if total_rows is not None and (offset + len(batch)) >= total_rows:
+            break
+
+    # Deduplicate while keeping order.
+    seen_ids: set[int] = set()
+    unique_item_ids: list[int] = []
+    for item_id in item_ids:
+        if item_id in seen_ids:
+            continue
+        seen_ids.add(item_id)
+        unique_item_ids.append(item_id)
+
+    for item_id in unique_item_ids:
+        try:
+            detail = _fetch_sauto_item_detail(item_id)
+        except Exception:
+            continue
+
+        category = detail.get("category") or {}
+        try:
+            detail_category_id = int(category.get("id")) if isinstance(category, dict) else None
+        except (TypeError, ValueError):
+            detail_category_id = None
+        if detail_category_id is not None and detail_category_id != 838:
+            continue
+
+        body_cb = detail.get("vehicle_body_cb") or {}
+        seo = str(body_cb.get("seo_name") or "").strip().lower()
+        name = str(body_cb.get("name") or seo).strip()
+        if seo:
+            bodies[seo] = name or seo
 
     items = [{"value": key, "label": bodies[key]} for key in sorted(bodies.keys())]
 

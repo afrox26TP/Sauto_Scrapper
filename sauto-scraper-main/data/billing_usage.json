@@ -1,5 +1,5 @@
 {
-  "updated_at": 1782329960.8191996,
+  "updated_at": 1782648430.7038286,
   "rates": {
     "run_base_czk": 5.0,
     "item_czk": 0.02,
@@ -102,6 +102,54 @@
       },
       "total_czk": 5.0,
       "last_event_at": 1782329960.8191903
+    },
+    "proj_mqxkglnn_anrcfl": {
+      "project_id": "proj_mqxkglnn_anrcfl",
+      "runs_total": 1,
+      "runs_success": 0,
+      "runs_failed": 1,
+      "items_total": 0,
+      "api_calls": 0,
+      "costs": {
+        "runs_czk": 5.0,
+        "items_czk": 0.0,
+        "api_calls_czk": 0.0,
+        "proxy_czk": 0.0
+      },
+      "total_czk": 5.0,
+      "last_event_at": 1782637763.7870994
+    },
+    "proj_mqxmmc7g_ogt5at": {
+      "project_id": "proj_mqxmmc7g_ogt5at",
+      "runs_total": 1,
+      "runs_success": 0,
+      "runs_failed": 1,
+      "items_total": 10,
+      "api_calls": 0,
+      "costs": {
+        "runs_czk": 5.0,
+        "items_czk": 0.2,
+        "api_calls_czk": 0.0,
+        "proxy_czk": 0.0
+      },
+      "total_czk": 5.2,
+      "last_event_at": 1782646385.3139884
+    },
+    "proj_mqxqtg9u_pxil1g": {
+      "project_id": "proj_mqxqtg9u_pxil1g",
+      "runs_total": 1,
+      "runs_success": 0,
+      "runs_failed": 1,
+      "items_total": 10,
+      "api_calls": 0,
+      "costs": {
+        "runs_czk": 5.0,
+        "items_czk": 0.2,
+        "api_calls_czk": 0.0,
+        "proxy_czk": 0.0
+      },
+      "total_czk": 5.2,
+      "last_event_at": 1782648430.7038221
     }
   },
   "events": [
@@ -180,6 +228,45 @@
       "charges": {
         "run_base_czk": 5.0,
         "items_czk": 0.0,
+        "proxy_czk": 0.0
+      }
+    },
+    {
+      "type": "run_usage",
+      "at": 1782637763.7870994,
+      "project_id": "proj_mqxkglnn_anrcfl",
+      "job_id": "job_37d566908289",
+      "exit_code": -1,
+      "item_count": 0,
+      "charges": {
+        "run_base_czk": 5.0,
+        "items_czk": 0.0,
+        "proxy_czk": 0.0
+      }
+    },
+    {
+      "type": "run_usage",
+      "at": 1782646385.3139884,
+      "project_id": "proj_mqxmmc7g_ogt5at",
+      "job_id": "job_7cd01667dec9",
+      "exit_code": -1,
+      "item_count": 10,
+      "charges": {
+        "run_base_czk": 5.0,
+        "items_czk": 0.2,
+        "proxy_czk": 0.0
+      }
+    },
+    {
+      "type": "run_usage",
+      "at": 1782648430.7038221,
+      "project_id": "proj_mqxqtg9u_pxil1g",
+      "job_id": "job_b535d1a3a097",
+      "exit_code": -1,
+      "item_count": 10,
+      "charges": {
+        "run_base_czk": 5.0,
+        "items_czk": 0.2,
         "proxy_czk": 0.0
       }
     }

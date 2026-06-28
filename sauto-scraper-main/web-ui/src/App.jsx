@@ -8,7 +8,7 @@ import ProjectQueued from "./components/ProjectQueued";
 import ProjectResults from "./components/ProjectResults";
 import TerminalBar from "./components/TerminalBar";
 import { useProjects } from "./hooks/useProjects";
-import { fetchBillingRates, fetchBrands, fetchBodies, fetchModels, fetchResults, fetchEquipment } from "./utils/api";
+import { fetchBillingRates, fetchBrands, fetchBodies, fetchModels, fetchModelCounts, fetchResults, fetchEquipment } from "./utils/api";
 import { csvToArray, uniq } from "./utils/scoring";
 
 export default function App() {
@@ -26,9 +26,12 @@ export default function App() {
   const [equipmentOptions, setEquipmentOptions] = useState([]);
   const [modelsByBrand, setModelsByBrand] = useState({});
   const [loadingModelsByBrand, setLoadingModelsByBrand] = useState({});
+  const [loadingModelCountsByBrand, setLoadingModelCountsByBrand] = useState({});
+  const [modelLoadErrorsByBrand, setModelLoadErrorsByBrand] = useState({});
   const [tickerStep, setTickerStep] = useState(0);
   const [showLogsModal, setShowLogsModal] = useState(false);
   const [popupLog, setPopupLog] = useState(null);
+  const [showStopConfirmModal, setShowStopConfirmModal] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState("");
   const toastTimer = useRef(null);
@@ -215,6 +218,7 @@ export default function App() {
 
   const handleStop = useCallback(async () => {
     if (!currentProject) return;
+    setShowStopConfirmModal(false);
     try {
       await stopRunningProject(currentProject.id);
       showToast("Scraper se ukončuje...", "info");
@@ -223,23 +227,71 @@ export default function App() {
     }
   }, [currentProject, stopRunningProject]);
 
+  const requestStopConfirmation = useCallback(() => {
+    if (!currentProject) return;
+    setShowStopConfirmModal(true);
+  }, [currentProject]);
+
   useEffect(() => {
     selectedBrands.forEach((brand) => {
       const b = String(brand || "").trim();
-      if (!b || modelsByBrand[b] || loadingModelsByBrand[b]) return;
+      const hasLoadedModels = Object.prototype.hasOwnProperty.call(modelsByBrand, b);
+      if (!b || hasLoadedModels || loadingModelsByBrand[b]) return;
+
       setLoadingModelsByBrand((prev) => ({ ...prev, [b]: true }));
       fetchModels(b)
         .then((items) => {
           setModelsByBrand((prev) => ({ ...prev, [b]: items }));
+          setModelLoadErrorsByBrand((prev) => {
+            if (!prev[b]) return prev;
+            const next = { ...prev };
+            delete next[b];
+            return next;
+          });
         })
-        .catch(() => {
-          setModelsByBrand((prev) => ({ ...prev, [b]: [] }));
+        .catch((err) => {
+          setModelLoadErrorsByBrand((prev) => ({
+            ...prev,
+            [b]: err?.message || "Nepodařilo se načíst modely.",
+          }));
         })
         .finally(() => {
           setLoadingModelsByBrand((prev) => ({ ...prev, [b]: false }));
         });
     });
-  }, [selectedBrands]);
+  }, [selectedBrands, modelsByBrand]);
+
+  useEffect(() => {
+    selectedBrands.forEach((brand) => {
+      const b = String(brand || "").trim();
+      const models = modelsByBrand[b];
+      if (!b || !Array.isArray(models) || models.length === 0 || loadingModelCountsByBrand[b]) return;
+
+      const missingCounts = models.some((m) => !Number.isFinite(Number(m?.count)));
+      if (!missingCounts) return;
+
+      setLoadingModelCountsByBrand((prev) => ({ ...prev, [b]: true }));
+      fetchModelCounts(b, currentProject?.config || {})
+        .then((items) => {
+          const countMap = new Map((items || []).map((x) => [String(x.value || ""), Number(x.count || 0)]));
+          setModelsByBrand((prev) => {
+            const current = prev[b] || [];
+            const merged = current
+              .map((m) => {
+              const key = String(m?.value || "");
+              if (!countMap.has(key)) return m;
+              return { ...m, count: countMap.get(key) };
+              })
+              .filter((m) => Number.isFinite(Number(m?.count)) ? Number(m.count) > 0 : false);
+            return { ...prev, [b]: merged };
+          });
+        })
+        .catch(() => {})
+        .finally(() => {
+          setLoadingModelCountsByBrand((prev) => ({ ...prev, [b]: false }));
+        });
+    });
+  }, [selectedBrands, modelsByBrand, loadingModelCountsByBrand, currentProject?.id, currentProject?.config]);
 
   // Refresh project results
   const refreshProjectResults = useCallback(async () => {
@@ -425,6 +477,7 @@ export default function App() {
             equipmentOptions={equipmentOptions}
             modelsByBrand={modelsByBrand}
             loadingModelsByBrand={loadingModelsByBrand}
+            modelLoadErrorsByBrand={modelLoadErrorsByBrand}
             onUpdateConfig={updateActiveProjectConfig}
             onUpdateProject={updateActiveProject}
             onRun={runProject}
@@ -441,7 +494,7 @@ export default function App() {
             estimatedTotalSec={estimatedTotalRunSec}
             onPause={handlePause}
             onResume={handleResume}
-            onStop={handleStop}
+            onStop={requestStopConfirmation}
           />
         );
       case "queued":
@@ -604,6 +657,35 @@ export default function App() {
               </button>
               <button className="btn-sm secondary" onClick={() => setPopupLog(null)}>
                 Zavřít
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showStopConfirmModal && currentProject?.phase === "running" && (
+        <div className="log-popup-overlay" onClick={() => setShowStopConfirmModal(false)}>
+          <div className="log-popup stop-confirm-popup" onClick={(e) => e.stopPropagation()}>
+            <div className="log-popup-head">
+              <strong>Opravdu ukončit scraping?</strong>
+              <button className="debug-modal-close" onClick={() => setShowStopConfirmModal(false)}>
+                <X className="ui-icon" aria-hidden="true" />
+              </button>
+            </div>
+            <div className="stop-confirm-body">
+              <p>
+                Po full stopu se ztratí většina průběžně scrapnutých výsledků tohoto běhu.
+              </p>
+              <p className="stop-confirm-warning">
+                Refund získáte jen za hodnotu té části běhu, která se ještě neprotočila přes proxy.
+              </p>
+            </div>
+            <div className="log-popup-foot">
+              <button className="btn-sm secondary" onClick={() => setShowStopConfirmModal(false)}>
+                Zpět
+              </button>
+              <button className="btn-sm danger" onClick={handleStop}>
+                Full stop
               </button>
             </div>
           </div>

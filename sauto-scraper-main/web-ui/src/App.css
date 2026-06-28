@@ -716,6 +716,8 @@ button:disabled {
   max-height: 200px;
   overflow: auto;
   display: grid;
+  align-content: start;
+  grid-auto-rows: min-content;
   gap: 3px;
   padding-right: 4px;
 }
@@ -783,6 +785,16 @@ button:disabled {
 
 .catalog-item:hover { background: var(--surface-solid); }
 .catalog-item.model { padding-left: 16px; }
+
+.catalog-item-count {
+  margin-left: auto;
+  min-width: 32px;
+  text-align: right;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
 
 .catalog-placeholder {
   padding: 16px 8px;
@@ -1669,6 +1681,27 @@ tr.row-selected.row-score-lo td { background: rgba(220, 38, 38, 0.07); border-bo
 .debug-empty { padding: 24px; color: #687487; }
 .log-popup-body { overflow: auto; padding: 14px; margin: 0; flex: 1; }
 
+.stop-confirm-popup {
+  width: min(560px, 100%);
+}
+
+.stop-confirm-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 14px;
+  color: #c3ccd6;
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+
+.stop-confirm-warning {
+  padding: 10px 12px;
+  border: 1px solid color-mix(in oklab, var(--danger) 40%, #374253 60%);
+  background: color-mix(in oklab, var(--danger-soft) 65%, #111928 35%);
+  color: #ffd7d7;
+}
+
 .btn-sm {
   padding: 7px 12px;
   background: var(--accent);
@@ -1679,6 +1712,11 @@ tr.row-selected.row-score-lo td { background: rgba(220, 38, 38, 0.07); border-bo
   background: transparent;
   border: 1px solid #374253;
   color: #c3ccd6;
+}
+
+.btn-sm.danger {
+  background: var(--danger);
+  color: #fff;
 }
 
 /* ── Toast ── */
