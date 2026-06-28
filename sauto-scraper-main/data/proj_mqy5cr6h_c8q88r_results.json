@@ -104,7 +104,7 @@
     "model_price_sample": 0,
     "valuation_label": "disabled",
     "is_undervalued": false,
-    "is_new": false
+    "is_new": true
   },
   {
     "ad_id": "210654593",
@@ -167,7 +167,7 @@
     "model_price_sample": 0,
     "valuation_label": "disabled",
     "is_undervalued": false,
-    "is_new": false
+    "is_new": true
   },
   {
     "ad_id": "210567308",
@@ -386,6 +386,6 @@
     "model_price_sample": 0,
     "valuation_label": "disabled",
     "is_undervalued": false,
-    "is_new": false
+    "is_new": true
   }
 ]

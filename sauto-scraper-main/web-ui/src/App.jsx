@@ -8,10 +8,19 @@ import ProjectQueued from "./components/ProjectQueued";
 import ProjectResults from "./components/ProjectResults";
 import TerminalBar from "./components/TerminalBar";
 import { useProjects } from "./hooks/useProjects";
-import { fetchBillingRates, fetchBrands, fetchBodies, fetchModels, fetchModelCounts, fetchResults, fetchEquipment } from "./utils/api";
+import { clearAuthToken, fetchBillingRates, fetchBrands, fetchBodies, fetchCurrentUser, fetchModels, fetchModelCounts, fetchResults, fetchEquipment, getAuthToken, login, signup } from "./utils/api";
 import { csvToArray, uniq } from "./utils/scoring";
 
 export default function App() {
+  const [authToken, setAuthToken] = useState(() => getAuthToken());
+  const [authUser, setAuthUser] = useState(null);
+  const [authBooting, setAuthBooting] = useState(true);
+  const [authMode, setAuthMode] = useState("login");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [authBusy, setAuthBusy] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(() =>
     window.location.pathname.startsWith("/pricing") ? "pricing" : "dashboard"
   );
@@ -42,6 +51,8 @@ export default function App() {
   const switchRafRef = useRef(null);
   const switchTokenRef = useRef(0);
 
+  const isAuthenticated = !!authToken && !!authUser;
+
   const {
     projects,
     scraperRunning,
@@ -58,7 +69,7 @@ export default function App() {
     resumeRunningProject,
     stopRunningProject,
     setProjects,
-  } = useProjects(brandOptions, modelsByBrand);
+  } = useProjects(brandOptions, modelsByBrand, { enabled: true });
 
   const [uiActiveProjectId, setUiActiveProjectId] = useState(null);
   const [displayProjectId, setDisplayProjectId] = useState(null);
@@ -86,6 +97,67 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const token = getAuthToken();
+    setAuthToken(token);
+    if (!token) {
+      setAuthUser(null);
+      setAuthBooting(false);
+      return;
+    }
+
+    setAuthBooting(true);
+    fetchCurrentUser()
+      .then((user) => {
+        if (!user) {
+          clearAuthToken();
+          setAuthToken("");
+          setAuthUser(null);
+          return;
+        }
+        setAuthUser(user);
+      })
+      .catch(() => {
+        clearAuthToken();
+        setAuthToken("");
+        setAuthUser(null);
+      })
+      .finally(() => {
+        setAuthBooting(false);
+      });
+  }, []);
+
+  const handleAuthSubmit = useCallback(async (event) => {
+    event.preventDefault();
+    if (authBusy) return;
+    setAuthBusy(true);
+    setAuthError("");
+    try {
+      const response = authMode === "signup"
+        ? await signup(authEmail, authPassword)
+        : await login(authEmail, authPassword);
+      setAuthToken(String(response?.token || ""));
+      setAuthUser(response?.user || null);
+      setAuthPassword("");
+      setShowAuthModal(false);
+    } catch (err) {
+      setAuthError(err?.message || "Přihlášení selhalo.");
+    } finally {
+      setAuthBusy(false);
+      setAuthBooting(false);
+    }
+  }, [authBusy, authEmail, authMode, authPassword]);
+
+  const handleLogout = useCallback(() => {
+    clearAuthToken();
+    setAuthToken("");
+    setAuthUser(null);
+    setAuthPassword("");
+    setAuthError("");
+    setShowAuthModal(false);
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
     if (currentPage !== "pricing") return;
     fetchBillingRates()
       .then((rates) => {
@@ -101,7 +173,7 @@ export default function App() {
         });
         setBillingRatesError("Sazby z API teď nejsou dostupné, používám výchozí sazby.");
       });
-  }, [currentPage]);
+  }, [currentPage, isAuthenticated]);
 
   useEffect(() => {
     if (projects.length === 0) {
@@ -183,6 +255,19 @@ export default function App() {
     return [...projectLogs, ...liveLogs].slice(-200);
   }, [currentProject]);
 
+  useEffect(() => {
+    if (isAuthenticated) return;
+    if (!currentProject?.id || !currentProject?.resultsPath) return;
+    fetchResults(currentProject.resultsPath)
+      .then((data) => {
+        updateProject(currentProject.id, {
+          results: data.items || [],
+          markedIds: data.marked_ids || [],
+        });
+      })
+      .catch(() => {});
+  }, [isAuthenticated, currentProject?.id, currentProject?.resultsPath, updateProject]);
+
   const estimatedTotalRunSec = useMemo(() => {
     const projectSpecific = Number(currentProject?.lastRunDurationSec || 0);
     if (Number.isFinite(projectSpecific) && projectSpecific > 0) {
@@ -238,6 +323,16 @@ export default function App() {
     if (!currentProject) return;
     setShowStopConfirmModal(true);
   }, [currentProject]);
+
+  const handleRunProject = useCallback((projectId) => {
+    if (!isAuthenticated) {
+      setAuthMode("login");
+      setAuthError("Pro spuštění scraperu se nejdřív přihlas.");
+      setShowAuthModal(true);
+      return;
+    }
+    runProject(projectId);
+  }, [isAuthenticated, runProject]);
 
   useEffect(() => {
     selectedBrands.forEach((brand) => {
@@ -499,7 +594,7 @@ export default function App() {
             modelLoadErrorsByBrand={modelLoadErrorsByBrand}
             onUpdateConfig={updateActiveProjectConfig}
             onUpdateProject={updateActiveProject}
-            onRun={runProject}
+            onRun={handleRunProject}
             isRunning={scraperRunning}
           />
         );
@@ -587,6 +682,27 @@ export default function App() {
               </>
             )}
           </button>
+          {authBooting ? <span className="auth-user-chip">Auth...</span> : null}
+          {!authBooting && isAuthenticated ? <span className="auth-user-chip">{authUser?.email || "user"}</span> : null}
+          {!authBooting && isAuthenticated ? (
+            <button type="button" className="theme-toggle" onClick={handleLogout} title="Odhlásit">
+              Logout
+            </button>
+          ) : null}
+          {!authBooting && !isAuthenticated ? (
+            <button
+              type="button"
+              className="theme-toggle"
+              onClick={() => {
+                setAuthMode("login");
+                setAuthError("");
+                setShowAuthModal(true);
+              }}
+              title="Přihlášení"
+            >
+              Login
+            </button>
+          ) : null}
         </div>
 
         {/* Tab bar */}
@@ -603,6 +719,23 @@ export default function App() {
 
         {/* Main content */}
         <div className="main-content">
+          {currentPage === "dashboard" && !isAuthenticated ? (
+            <div className="auth-dashboard-cta">
+              <h2>Přihlášení je potřeba</h2>
+              <p>Nastavení projektu můžeš dělat i bez loginu, ale pro spuštění scraperu se musíš přihlásit.</p>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => {
+                  setAuthMode("login");
+                  setAuthError("");
+                  setShowAuthModal(true);
+                }}
+              >
+                Otevřít login
+              </button>
+            </div>
+          ) : null}
           {currentPage === "pricing" ? renderPricingPage() : renderProjectContent()}
         </div>
 
@@ -623,6 +756,60 @@ export default function App() {
           />
         ) : null}
       </div>
+
+      {showAuthModal && (
+        <div className="auth-modal-overlay" onClick={() => setShowAuthModal(false)}>
+          <form className="auth-card auth-modal-card" onSubmit={handleAuthSubmit} onClick={(e) => e.stopPropagation()}>
+            <div className="auth-modal-head">
+              <h2>Sauto Scraper</h2>
+              <button type="button" className="debug-modal-close" onClick={() => setShowAuthModal(false)}>
+                <X className="ui-icon" aria-hidden="true" />
+              </button>
+            </div>
+            <p>{authMode === "signup" ? "Vytvoř účet" : "Přihlas se"}</p>
+
+            <label className="auth-label">
+              Email
+              <input
+                type="email"
+                value={authEmail}
+                onChange={(e) => setAuthEmail(e.target.value)}
+                required
+                autoComplete="email"
+              />
+            </label>
+
+            <label className="auth-label">
+              Heslo
+              <input
+                type="password"
+                value={authPassword}
+                onChange={(e) => setAuthPassword(e.target.value)}
+                required
+                minLength={6}
+                autoComplete={authMode === "signup" ? "new-password" : "current-password"}
+              />
+            </label>
+
+            {authError ? <div className="auth-error">{authError}</div> : null}
+
+            <button className="btn-primary auth-submit" type="submit" disabled={authBusy || authBooting}>
+              {authBusy ? "Prosím čekej..." : authMode === "signup" ? "Sign up" : "Login"}
+            </button>
+
+            <button
+              type="button"
+              className="auth-switch"
+              onClick={() => {
+                setAuthMode((prev) => (prev === "signup" ? "login" : "signup"));
+                setAuthError("");
+              }}
+            >
+              {authMode === "signup" ? "Máš účet? Přihlas se" : "Nemáš účet? Vytvoř ho"}
+            </button>
+          </form>
+        </div>
+      )}
 
       {/* Logs Modal */}
       {showLogsModal && (

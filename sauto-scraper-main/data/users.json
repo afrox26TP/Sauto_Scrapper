@@ -1,0 +1,51 @@
+[
+  {
+    "id": "usr_efc437069d80",
+    "email": "testauth@example.com",
+    "password_hash": "4cc71b96b30864c9d742188ed3d469b911ae83af3f10fed5be9033cf08c5d580",
+    "password_salt": "7642f8a9f9beee4271ac9b392a4b7f81",
+    "created_at": 1782671235.8915453
+  },
+  {
+    "id": "usr_b624dcd29074",
+    "email": "tomaspycha10@gmail.com",
+    "password_hash": "747b53f453513e7ec42f0db3574ee9011188c0bb2d3347ce9d074dd37ba08295",
+    "password_salt": "b84db1c4c4db494c16d8f48d5af87fb8",
+    "created_at": 1782672256.3848002
+  },
+  {
+    "id": "usr_66e9479d0f37",
+    "email": "runcheck@example.com",
+    "password_hash": "f4d39d31ba2a77ca554865b76e4fb19ceeea105003b2b348ef50629daf010818",
+    "password_salt": "4561be614b7f2aa330e3689db48d8824",
+    "created_at": 1782672505.3832014
+  },
+  {
+    "id": "usr_eff33df6d647",
+    "email": "qa96681@test.local",
+    "password_hash": "ed41c95b79c60b2ea1facd0896f243148bff0d8e8cd15c18529397725c666d9d",
+    "password_salt": "39132304c83420226eb1503dddc6e520",
+    "created_at": 1782672825.609488
+  },
+  {
+    "id": "usr_a3b7418f2ab6",
+    "email": "dbg352266@test.local",
+    "password_hash": "9d2e057ff8b84c87fe299222119e40755259fa747a19ca378bb5232264abd56d",
+    "password_salt": "de8edd206f99ac85aae91f4e529ab840",
+    "created_at": 1782672829.8073719
+  },
+  {
+    "id": "usr_087148df5392",
+    "email": "ok404800@test.local",
+    "password_hash": "095e8e66574464a6dd64bc69e1c2f3605d4f52577b229358a8eb230659df617e",
+    "password_salt": "f1d93a113201e329c414a087cb008383",
+    "created_at": 1782673025.3928437
+  },
+  {
+    "id": "usr_7231de034a7f",
+    "email": "ok734862@test.local",
+    "password_hash": "5b75fe4cae285d41c0c69371d92a15af9eaef4f842fc81fa81e5aabc54bfb28c",
+    "password_salt": "c9a78b3cec92d1faf273495be62a6419",
+    "created_at": 1782673029.352868
+  }
+]

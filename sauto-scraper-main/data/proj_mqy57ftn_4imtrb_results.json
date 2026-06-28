@@ -1,0 +1,883 @@
+[
+  {
+    "additional_model_name": "1,3 DIG-T MHEV Business Tažné",
+    "category": {
+      "id": 838,
+      "name": "Osobní",
+      "seo_name": "osobni"
+    },
+    "create_date": "2025-06-11T18:03:00",
+    "custom_id": "VA251936",
+    "deal_type": "sale",
+    "edit_date": "2026-06-28T20:09:07",
+    "fuel_cb": {
+      "name": "Benzín",
+      "seo_name": "benzin",
+      "value": 1
+    },
+    "gearbox_cb": {
+      "name": "Manuální",
+      "seo_name": "manualni",
+      "value": 1
+    },
+    "home_delivery": true,
+    "id": 208623641,
+    "images": [
+      {
+        "url": "//d19-a.sdn.cz/d_19/c_img_ob_B/kBj94XhVwDuD8OeuD0YwHE/2615.jpeg"
+      },
+      {
+        "url": "//d19-a.sdn.cz/d_19/c_img_ob_B/kBj94XhVwxTWxcrD0YwKR/8800.jpeg"
+      },
+      {
+        "url": "//d19-a.sdn.cz/d_19/c_img_ob_B/kBj94XhVwIQIufcD0YwNj/adab.jpeg"
+      }
+    ],
+    "images_total_count": 24,
+    "in_operation_date": "2022-01-03",
+    "is_cebia_smart_code_url_verified": true,
+    "locality": {
+      "address": "",
+      "address_id": 0,
+      "citypart": "",
+      "country_id": 112,
+      "district": "Benešov",
+      "district_id": 48,
+      "district_seo_name": "benesov",
+      "entity_id": 48,
+      "entity_type": "district",
+      "housenumber": "",
+      "municipality": "",
+      "municipality_id": 0,
+      "municipality_seo_name": "",
+      "quarter": "",
+      "quarter_id": 0,
+      "region": "Středočeský kraj",
+      "region_id": 11,
+      "region_seo_name": "stredocesky-kraj",
+      "source": "regionserver",
+      "street": "",
+      "street_id": 0,
+      "streetnumber": "",
+      "ward": "",
+      "ward_id": 0,
+      "zip": ""
+    },
+    "manufacturer_cb": {
+      "name": "Nissan",
+      "seo_name": "nissan",
+      "value": 62
+    },
+    "manufacturing_date": "2022-01-01",
+    "model_cb": {
+      "name": "Qashqai",
+      "seo_name": "qashqai",
+      "value": 1340
+    },
+    "name": "Nissan Qashqai, 1,3 DIG-T MHEV Business Tažné",
+    "old_id": null,
+    "premise": {
+      "external_id": 9341,
+      "id": 2008262,
+      "logo": "https://d48-a.sdn.cz/d_48/c_img_p8_A/nPVpfd5QLLEA4WVCovFy5MsE/341c.png",
+      "name": "DAVO CAR"
+    },
+    "price": 314999,
+    "price_by_agreement": false,
+    "sorting_date": "2026-06-28T20:09:07",
+    "source": "import_source",
+    "tachometer": 188959,
+    "topped": true,
+    "user": null,
+    "manufacturer_name": "Nissan",
+    "model_name": "Qashqai",
+    "seller_type": "bazar",
+    "url": "https://www.sauto.cz/osobni/detail/nissan/qashqai/208623641",
+    "detail_fetch_ok": true,
+    "detail_raw": {
+      "result": {
+        "additional_model_name": "1,3 DIG-T MHEV Business Tažné",
+        "adjustments_for_handicapped": false,
+        "airbags": 6,
+        "aircondition_cb": {
+          "name": "Automatická",
+          "value": 3
+        },
+        "approval_admin": "unchecked",
+        "average_gas_mileage": 0.0,
+        "capacity": 5,
+        "category": {
+          "id": 838,
+          "name": "Osobní",
+          "seo_name": "osobni"
+        },
+        "cebia_smart_code_url": "https://cz.cebia.com/smartCode/FXokooAhLJwoF1aLloDzKfna7Hmz1LaompcEoBjuvsj0la5g7FjxfoK77ut2h7wgja0csf9fwag7Hf7o0B7QKaafftnU-fp72oIZp2oBfuXp3D?utm_source=Smart_kod&utm_medium=tlacitko&utm_content=L989&utm_campaign=sauto_ZV",
+        "color_cb": {
+          "name": "Šedá",
+          "value": 11
+        },
+        "color_type_cb": {
+          "name": "Metalíza",
+          "value": 2
+        },
+        "condition_cb": {
+          "name": "Ojeté",
+          "value": 2
+        },
+        "country_of_origin_cb": {
+          "name": "Jiná",
+          "value": 10
+        },
+        "create_date": "2025-06-11T18:03:00",
+        "custom_id": "VA251936",
+        "deactivation_reason": null,
+        "deal_type": "sale",
+        "description": "Úvěr možný, 251936. Tento atraktivní Nissan Qashqai typu SUV v udržovaném  stavu představuje ideální kombinaci moderní techniky a vysokého komfortu. Vůz je po 1. majiteli a nabízí možnost odpočtu DPH. Bohatá výbava Business zahrnuje adaptivní tempomat, hlídání mrtvého úhlu i jízdního pruhu, LED světlomety, parkovací kameru a senzory, bezklíčové ovládání, dvouzónovou klimatizaci a moderní konektivitu Apple CarPlay či Android Auto. Praktickým doplňkem je tažné zařízení.  Samozřejmostí je možnost financování, úvěr je možný a záruka v minimální hodnotě 10.000 Kč je zahrnutá v ceně vozidla. Tato všestranná karoserie SUV v šedé metalíze s úsporným mild-hybridním motorem a manuální převodovkou je připravena na každodenní dobrodružství i rodinné výlety. Kvalitní zpracování a pokročilé asistenční systémy vám zajistí maximální bezpečí a pohodlí na cestách. Nechte se zlákat kvalitou a nadstandardní výbavou tohoto výjimečného vozu.",
+        "dont_show_phone": false,
+        "doors": 5,
+        "drive_cb": {
+          "name": "Pohon předních kol",
+          "value": 9
+        },
+        "edit_date": "2026-06-28T20:09:07",
+        "engine_power": 103,
+        "engine_volume": 1332,
+        "equipment_cb": [
+          {
+            "equipment_category": "safety",
+            "name": "ABS",
+            "value": 8
+          },
+          {
+            "equipment_category": "assist",
+            "name": "Adaptivní tempomat",
+            "value": 232
+          },
+          {
+            "equipment_category": "systems",
+            "name": "Android Auto",
+            "value": 277
+          },
+          {
+            "equipment_category": "systems",
+            "name": "Apple Car Play",
+            "value": 278
+          },
+          {
+            "equipment_category": "assist",
+            "name": "Asistent pro vedení vozu v jízdních pruzích",
+            "value": 280
+          },
+          {
+            "equipment_category": "assist",
+            "name": "Asistent změny jízdního pruhu",
+            "value": 311
+          },
+          {
+            "equipment_category": "lights",
+            "name": "Automatické přepínání dálkových světel",
+            "value": 312
+          },
+          {
+            "equipment_category": "systems",
+            "name": "Bezdrátová nabíječka mobilních telefonů (Qi)",
+            "value": 266
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Bezklíčkové ovládání",
+            "value": 218
+          },
+          {
+            "equipment_category": "systems",
+            "name": "Bluetooth",
+            "value": 244
+          },
+          {
+            "equipment_category": "security",
+            "name": "Centrální zamykání",
+            "value": 7
+          },
+          {
+            "equipment_category": "security",
+            "name": "Dálkové centrální zamykání",
+            "value": 24
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Deaktivace airbagu spolujezdce",
+            "value": 226
+          },
+          {
+            "equipment_category": "seats",
+            "name": "Dělená zadní sedadla",
+            "value": 221
+          },
+          {
+            "equipment_category": "systems",
+            "name": "Digitální příjem rádia (DAB)",
+            "value": 283
+          },
+          {
+            "equipment_category": "systems",
+            "name": "Dotykové ovládání palubního počítače",
+            "value": 286
+          },
+          {
+            "equipment_category": "interior",
+            "name": "El. ovládání oken",
+            "value": 51
+          },
+          {
+            "equipment_category": "interior",
+            "name": "El. ovládání zrcátek",
+            "value": 13
+          },
+          {
+            "equipment_category": "interior",
+            "name": "El. sklopná zrcátka",
+            "value": 245
+          },
+          {
+            "equipment_category": "safety",
+            "name": "ESP",
+            "value": 15
+          },
+          {
+            "equipment_category": "safety",
+            "name": "Hlídání mrtvého úhlu",
+            "value": 250
+          },
+          {
+            "equipment_category": "security",
+            "name": "Imobilizér",
+            "value": 4
+          },
+          {
+            "equipment_category": "seats",
+            "name": "Isofix",
+            "value": 215
+          },
+          {
+            "equipment_category": "seats",
+            "name": "Kožená sedadla",
+            "value": 227
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Kožené čalounění",
+            "value": 3
+          },
+          {
+            "equipment_category": "lights",
+            "name": "LED denní svícení",
+            "value": 228
+          },
+          {
+            "equipment_category": "lights",
+            "name": "LED světlomety plnohodnotné",
+            "value": 238
+          },
+          {
+            "equipment_category": "exterior",
+            "name": "Litá kola",
+            "value": 16
+          },
+          {
+            "equipment_category": "lights",
+            "name": "Mlhovky",
+            "value": 187
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Multifunkční volant",
+            "value": 27
+          },
+          {
+            "equipment_category": "seats",
+            "name": "Nastavitelná sedadla",
+            "value": 36
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Nastavitelný volant",
+            "value": 37
+          },
+          {
+            "equipment_category": "safety",
+            "name": "Nouzové brždění",
+            "value": 252
+          },
+          {
+            "equipment_category": "systems",
+            "name": "Originální autorádio",
+            "value": 220
+          },
+          {
+            "equipment_category": "systems",
+            "name": "Palubní počítač",
+            "value": 30
+          },
+          {
+            "equipment_category": "assist",
+            "name": "Parkovací asistent",
+            "value": 31
+          },
+          {
+            "equipment_category": "assist",
+            "name": "Parkovací kamera",
+            "value": 231
+          },
+          {
+            "equipment_category": "assist",
+            "name": "Parkovací senzory",
+            "value": 214
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Posilovač řízení",
+            "value": 32
+          },
+          {
+            "equipment_category": "safety",
+            "name": "Protiprokluzový systém kol (ASR)",
+            "value": 142
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Senzor stěračů",
+            "value": 108
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Senzor tlaku v pneumatikách",
+            "value": 257
+          },
+          {
+            "equipment_category": "safety",
+            "name": "Sledování jízdního pruhu",
+            "value": 251
+          },
+          {
+            "equipment_category": "drive",
+            "name": "Start/Stop systém",
+            "value": 212
+          },
+          {
+            "equipment_category": "exterior",
+            "name": "Tažné zařízení",
+            "value": 105
+          },
+          {
+            "equipment_category": "assist",
+            "name": "Tempomat",
+            "value": 17
+          },
+          {
+            "equipment_category": "exterior",
+            "name": "Tónovaná skla",
+            "value": 39
+          },
+          {
+            "equipment_category": "safety",
+            "name": "Upozornění na přijíždějící vozidla při couvání (RCTA)",
+            "value": 262
+          },
+          {
+            "equipment_category": "systems",
+            "name": "USB",
+            "value": 243
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Venkovní teploměr",
+            "value": 146
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Vyhřívaná zrcátka",
+            "value": 40
+          },
+          {
+            "equipment_category": "seats",
+            "name": "Výškově nastavitelná sedadla",
+            "value": 94
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Zadní loketní opěrka",
+            "value": 302
+          },
+          {
+            "equipment_category": "exterior",
+            "name": "Zadní stěrač",
+            "value": 79
+          },
+          {
+            "equipment_category": "assist",
+            "name": "Parkovací senzory zadní",
+            "value": 282
+          }
+        ],
+        "first_owner": true,
+        "fuel_cb": {
+          "name": "Benzín",
+          "seo_name": "benzin",
+          "value": 1
+        },
+        "gearbox_cb": {
+          "name": "Manuální",
+          "value": 1
+        },
+        "gearbox_levels_cb": {
+          "name": "6 stupňová",
+          "value": 6
+        },
+        "id": 208623641,
+        "images": [
+          {
+            "id": 1350212075,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_ob_B/kBj94XhVwDuD8OeuD0YwHE/2615.jpeg"
+          },
+          {
+            "id": 1350212084,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_ob_B/kBj94XhVwxTWxcrD0YwKR/8800.jpeg"
+          },
+          {
+            "id": 1350212099,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_ob_B/kBj94XhVwIQIufcD0YwNj/adab.jpeg"
+          },
+          {
+            "id": 1350212105,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_ob_B/kBj94XhVwCk8nVf8D0YwRI/c31f.jpeg"
+          },
+          {
+            "id": 1350212114,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_ob_B/kBj94XhVwO1LYb0D0YwUM/12fa.jpeg"
+          },
+          {
+            "id": 1350212120,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_ob_B/kBj94XhVwCk8nVf8D0YwXY/726a.jpeg"
+          },
+          {
+            "id": 1350212138,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_ob_B/kBj94XhVwIQIue3D0YwaL/3a69.jpeg"
+          },
+          {
+            "id": 1350212150,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_ob_B/kBj94XhVwB3TlOdkD0Ywd1/a3b6.jpeg"
+          },
+          {
+            "id": 1350212159,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_ob_B/kBj94XhVwCk8nVfyD0YwhT/7056.jpeg"
+          },
+          {
+            "id": 1350212162,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_ob_B/kBj94XhVwB3TlOdlD0YwrU/13b9.jpeg"
+          },
+          {
+            "id": 1350212174,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_ob_B/kBj94XhVwB3TlOdRD0Ywyc/d9a4.jpeg"
+          },
+          {
+            "id": 1350212189,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_ob_B/kBj94XhVwDuD8Of1D0Yw2A/c238.jpeg"
+          },
+          {
+            "id": 1350212198,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_ob_B/kBj94XhVwB3TlOdaD0Yw5U/234c.jpeg"
+          },
+          {
+            "id": 1350212204,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_ob_B/kBj94XhVwEA37VbqD0Yw8k/11be.jpeg"
+          },
+          {
+            "id": 1350212210,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_ob_B/kBj94XhVwCIfQLdID0YxFE/8ad0.jpeg"
+          },
+          {
+            "id": 1350212222,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_ob_B/kBj94XhVwDuD8Of1D0YxIO/27c0.jpeg"
+          },
+          {
+            "id": 1350212237,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_ob_B/kBj94XhVwO1LYdJD0YxSe/6531.jpeg"
+          },
+          {
+            "id": 1350212243,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_ob_B/kBj94XhVwIQIufCD0YxVj/340d.jpeg"
+          },
+          {
+            "id": 1350212249,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_ob_B/kBj94XhVwCk8nVf7D0YxYy/f6e0.jpeg"
+          },
+          {
+            "id": 1350212252,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_ob_B/kBj94XhVwCGuyegID0YxcD/708a.jpeg"
+          },
+          {
+            "id": 1350212258,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_ob_B/kBj94XhVwxTWxcaD0Yxi0/8210.jpeg"
+          },
+          {
+            "id": 1350212270,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_ob_B/kBj94XhVwDuD8OgAD0YxmK/8cc7.jpeg"
+          },
+          {
+            "id": 1350212279,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_ob_B/kBj94XhVwIQIufcD0YxpW/9be0.jpeg"
+          },
+          {
+            "id": 1350212291,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_oa_A/kOeDqKABdsDqAndU9DcXKxt/d44a.jpeg"
+          }
+        ],
+        "in_operation_date": "2022-01-03",
+        "locality": {
+          "address": "",
+          "address_id": 0,
+          "citypart": "",
+          "country_id": 112,
+          "district": "Benešov",
+          "district_id": 48,
+          "district_seo_name": "benesov",
+          "entity_id": 48,
+          "entity_type": "district",
+          "gps_lat": 49.71692706809927,
+          "gps_lon": 14.776750513195749,
+          "housenumber": "",
+          "municipality": "",
+          "municipality_id": 0,
+          "municipality_seo_name": "",
+          "quarter": "",
+          "quarter_id": 0,
+          "region": "Středočeský kraj",
+          "region_id": 11,
+          "region_seo_name": "stredocesky-kraj",
+          "source": "regionserver",
+          "street": "",
+          "street_id": 0,
+          "streetnumber": "",
+          "ward": "",
+          "ward_id": 0,
+          "zip": ""
+        },
+        "manufacturer_cb": {
+          "name": "Nissan",
+          "seo_name": "nissan",
+          "value": 62
+        },
+        "manufacturing_date": "2022-01-01",
+        "mirroring_id": null,
+        "model_cb": {
+          "name": "Qashqai",
+          "seo_name": "qashqai",
+          "value": 1340
+        },
+        "name": "Nissan Qashqai, 1,3 DIG-T MHEV Business Tažné",
+        "old_id": null,
+        "other_localities": [],
+        "phone": "+420739343434",
+        "preferred_offer": false,
+        "premise": {
+          "description": "Na prodejní ploše autocentra o rozloze 80. 000 m2 nabízíme až 1 400 vozů s financováním od 0% akontace. Vykupujeme vozy všech značek, peníze vyplácíme ihned a v hotovosti. Poskytujeme garanci na původ vozu a stav tachometru.",
+          "emails": [
+            {
+              "default": true,
+              "email": "info@davocar.cz",
+              "id": 7323962,
+              "name": "E-mail"
+            }
+          ],
+          "external_id": 9341,
+          "home_delivery": true,
+          "id": 2008262,
+          "locality": {
+            "address": "203",
+            "address_id": 11383000,
+            "citypart": "Olbramovice Ves",
+            "country_id": 112,
+            "district": "Benešov",
+            "district_id": 48,
+            "district_seo_name": "benesov",
+            "entity_id": 11383000,
+            "entity_type": "address",
+            "gps_lat": 49.67078850806873,
+            "gps_lon": 14.638236010772626,
+            "housenumber": "203",
+            "municipality": "Olbramovice",
+            "municipality_id": 3530,
+            "municipality_seo_name": "olbramovice",
+            "quarter": "",
+            "quarter_id": 0,
+            "region": "Středočeský kraj",
+            "region_id": 11,
+            "region_seo_name": "stredocesky-kraj",
+            "source": "regionserver",
+            "street": "",
+            "street_id": 0,
+            "streetnumber": "",
+            "ward": "Olbramovice Ves",
+            "ward_id": 7712,
+            "zip": "259 01"
+          },
+          "logo": "https://d48-a.sdn.cz/d_48/c_img_p8_A/nPVpfd5QLLEA4WVCovFy5MsE/341c.png",
+          "name": "DAVO CAR",
+          "old_id": 9341,
+          "opening_hours": {
+            "opening_time_additional_info": "",
+            "opening_time_description": "Otevírací hodiny",
+            "opening_time_holiday_info": "",
+            "opening_time_st": [
+              {
+                "amEnd": {
+                  "hour": 21,
+                  "minute": 0
+                },
+                "amStart": {
+                  "hour": 9,
+                  "minute": 0
+                },
+                "specification_id": "open"
+              },
+              {
+                "amEnd": {
+                  "hour": 21,
+                  "minute": 0
+                },
+                "amStart": {
+                  "hour": 9,
+                  "minute": 0
+                },
+                "specification_id": "open"
+              },
+              {
+                "amEnd": {
+                  "hour": 21,
+                  "minute": 0
+                },
+                "amStart": {
+                  "hour": 9,
+                  "minute": 0
+                },
+                "specification_id": "open"
+              },
+              {
+                "amEnd": {
+                  "hour": 21,
+                  "minute": 0
+                },
+                "amStart": {
+                  "hour": 9,
+                  "minute": 0
+                },
+                "specification_id": "open"
+              },
+              {
+                "amEnd": {
+                  "hour": 21,
+                  "minute": 0
+                },
+                "amStart": {
+                  "hour": 9,
+                  "minute": 0
+                },
+                "specification_id": "open"
+              },
+              {
+                "amEnd": {
+                  "hour": 21,
+                  "minute": 0
+                },
+                "amStart": {
+                  "hour": 9,
+                  "minute": 0
+                },
+                "specification_id": "open"
+              },
+              {
+                "amEnd": {
+                  "hour": 21,
+                  "minute": 0
+                },
+                "amStart": {
+                  "hour": 9,
+                  "minute": 0
+                },
+                "specification_id": "open"
+              }
+            ],
+            "opening_time_visible": true
+          },
+          "phones": [
+            {
+              "default": true,
+              "id": 10566112,
+              "name": "Telefon",
+              "phone": "+420739343434"
+            }
+          ],
+          "retargeting_id": 41393,
+          "reviews": {
+            "count": 1002,
+            "stars": 4.0
+          },
+          "seo_name": "davo-car",
+          "social_networks": null,
+          "software_keys": [
+            {
+              "id": 3
+            },
+            {
+              "id": 6
+            },
+            {
+              "id": 7
+            },
+            {
+              "id": 147
+            }
+          ],
+          "subject": {
+            "ico": 27934799,
+            "id": 2606512
+          },
+          "url_detail_firmy": "https://www.firmy.cz/detail/2008262-davo-car-olbramovice-ves.html",
+          "use_advert_locality": false,
+          "web": "http://www.davocar.cz"
+        },
+        "price": 314999,
+        "price_is_vat_deductible": true,
+        "price_is_without_vat": false,
+        "price_leasing": 284999,
+        "price_note": "Sleva 30.000 kč při využití financovaní s vybranými partnery",
+        "price_original": 314999,
+        "price_payment": 0,
+        "price_payment_count": 0,
+        "price_without_vat": 260330,
+        "seo_name": "208623641-nissan-qashqai-13-dig-t-mhev-business-tazne",
+        "service_book": true,
+        "sorting_date": "2026-06-28T20:09:07",
+        "source": "import_source",
+        "status": "active",
+        "stk_date": "2027-07-01",
+        "tachometer": 188959,
+        "topped": true,
+        "user": null,
+        "valid_to": "2025-06-11T18:03:00",
+        "vehicle_body_cb": {
+          "name": "SUV",
+          "seo_name": "suv",
+          "value": 9
+        },
+        "videos": [],
+        "vin": "SJNTAAJ12U1033362"
+      },
+      "status_code": 200,
+      "status_message": "OK"
+    },
+    "offer_metrics": {
+      "price_per_kw": 3058.24,
+      "price_per_km": 1.667,
+      "km_per_year": 47240,
+      "age_years": 4,
+      "gearbox_type": "manual",
+      "drive_type": "fwd",
+      "brand_tier": "mainstream",
+      "listing_age_days": 382,
+      "months_to_stk": 12,
+      "euro_value": 0,
+      "annual_fuel_cost": 127073,
+      "annual_insurance": 6245,
+      "annual_maintenance": 11794,
+      "annual_total_cost": 145112,
+      "estimated_consumption_per_100km": 6.81,
+      "model_family_key": "nissan:qashqai",
+      "first_owner": true,
+      "service_book": true,
+      "tuning": false,
+      "equipment_list": [
+        "abs",
+        "adaptivní tempomat",
+        "android auto",
+        "apple car play",
+        "asistent pro vedení vozu v jízdních pruzích",
+        "asistent změny jízdního pruhu",
+        "automatické přepínání dálkových světel",
+        "bezdrátová nabíječka mobilních telefonů (qi)",
+        "bezklíčkové ovládání",
+        "bluetooth",
+        "centrální zamykání",
+        "dálkové centrální zamykání",
+        "deaktivace airbagu spolujezdce",
+        "dělená zadní sedadla",
+        "digitální příjem rádia (dab)",
+        "dotykové ovládání palubního počítače",
+        "el. ovládání oken",
+        "el. ovládání zrcátek",
+        "el. sklopná zrcátka",
+        "esp",
+        "hlídání mrtvého úhlu",
+        "imobilizér",
+        "isofix",
+        "kožená sedadla",
+        "kožené čalounění",
+        "led denní svícení",
+        "led světlomety plnohodnotné",
+        "litá kola",
+        "mlhovky",
+        "multifunkční volant",
+        "nastavitelná sedadla",
+        "nastavitelný volant",
+        "nouzové brždění",
+        "originální autorádio",
+        "palubní počítač",
+        "parkovací asistent",
+        "parkovací kamera",
+        "parkovací senzory",
+        "posilovač řízení",
+        "protiprokluzový systém kol (asr)",
+        "senzor stěračů",
+        "senzor tlaku v pneumatikách",
+        "sledování jízdního pruhu",
+        "start/stop systém",
+        "tažné zařízení",
+        "tempomat",
+        "tónovaná skla",
+        "upozornění na přijíždějící vozidla při couvání (rcta)",
+        "usb",
+        "venkovní teploměr",
+        "vyhřívaná zrcátka",
+        "výškově nastavitelná sedadla",
+        "zadní loketní opěrka",
+        "zadní stěrač",
+        "parkovací senzory zadní"
+      ],
+      "images_count": 24
+    }
+  }
+]

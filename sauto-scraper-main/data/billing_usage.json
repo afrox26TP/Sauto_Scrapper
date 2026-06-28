@@ -1,5 +1,5 @@
 {
-  "updated_at": 1782669103.0998282,
+  "updated_at": 1782673084.1430337,
   "rates": {
     "run_base_czk": 5.0,
     "item_czk": 0.02,
@@ -9,19 +9,19 @@
   "projects": {
     "default": {
       "project_id": "default",
-      "runs_total": 1,
+      "runs_total": 4,
       "runs_success": 0,
-      "runs_failed": 1,
-      "items_total": 9,
+      "runs_failed": 4,
+      "items_total": 17,
       "api_calls": 0,
       "costs": {
-        "runs_czk": 5.0,
-        "items_czk": 0.18,
+        "runs_czk": 20.0,
+        "items_czk": 0.34,
         "api_calls_czk": 0.0,
         "proxy_czk": 0.0
       },
-      "total_czk": 5.18,
-      "last_event_at": 1782323408.887078
+      "total_czk": 20.34,
+      "last_event_at": 1782673043.667705
     },
     "proj_mqsdv4s7_34ok86": {
       "project_id": "proj_mqsdv4s7_34ok86",
@@ -166,6 +166,70 @@
       },
       "total_czk": 5.0,
       "last_event_at": 1782669103.099821
+    },
+    "auth-test": {
+      "project_id": "auth-test",
+      "runs_total": 1,
+      "runs_success": 0,
+      "runs_failed": 1,
+      "items_total": 13,
+      "api_calls": 0,
+      "costs": {
+        "runs_czk": 5.0,
+        "items_czk": 0.26,
+        "api_calls_czk": 0.0,
+        "proxy_czk": 0.0
+      },
+      "total_czk": 5.26,
+      "last_event_at": 1782672536.7817602
+    },
+    "proj_mqy57ftn_0oh54y": {
+      "project_id": "proj_mqy57ftn_0oh54y",
+      "runs_total": 1,
+      "runs_success": 0,
+      "runs_failed": 1,
+      "items_total": 0,
+      "api_calls": 0,
+      "costs": {
+        "runs_czk": 5.0,
+        "items_czk": 0.0,
+        "api_calls_czk": 0.0,
+        "proxy_czk": 0.0
+      },
+      "total_czk": 5.0,
+      "last_event_at": 1782672784.3543923
+    },
+    "proj_mqy5cr6h_r66cs6": {
+      "project_id": "proj_mqy5cr6h_r66cs6",
+      "runs_total": 1,
+      "runs_success": 0,
+      "runs_failed": 1,
+      "items_total": 4,
+      "api_calls": 0,
+      "costs": {
+        "runs_czk": 5.0,
+        "items_czk": 0.08,
+        "api_calls_czk": 0.0,
+        "proxy_czk": 0.0
+      },
+      "total_czk": 5.08,
+      "last_event_at": 1782672816.0003257
+    },
+    "proj_mqy5irv0_xgp3oi": {
+      "project_id": "proj_mqy5irv0_xgp3oi",
+      "runs_total": 1,
+      "runs_success": 0,
+      "runs_failed": 1,
+      "items_total": 0,
+      "api_calls": 0,
+      "costs": {
+        "runs_czk": 5.0,
+        "items_czk": 0.0,
+        "api_calls_czk": 0.0,
+        "proxy_czk": 0.0
+      },
+      "total_czk": 5.0,
+      "last_event_at": 1782673084.1430268
     }
   },
   "events": [
@@ -291,6 +355,97 @@
       "at": 1782669103.099821,
       "project_id": "proj_mqy2j9o8_vetyqg",
       "job_id": "job_a89425f14220",
+      "exit_code": -1,
+      "item_count": 0,
+      "charges": {
+        "run_base_czk": 5.0,
+        "items_czk": 0.0,
+        "proxy_czk": 0.0
+      }
+    },
+    {
+      "type": "run_usage",
+      "at": 1782672536.7817602,
+      "project_id": "auth-test",
+      "job_id": "job_e2496df11c9a",
+      "exit_code": -1,
+      "item_count": 13,
+      "charges": {
+        "run_base_czk": 5.0,
+        "items_czk": 0.26,
+        "proxy_czk": 0.0
+      }
+    },
+    {
+      "type": "run_usage",
+      "at": 1782672784.3543923,
+      "project_id": "proj_mqy57ftn_0oh54y",
+      "job_id": "job_16dbbf7ec00e",
+      "exit_code": -1,
+      "item_count": 0,
+      "charges": {
+        "run_base_czk": 5.0,
+        "items_czk": 0.0,
+        "proxy_czk": 0.0
+      }
+    },
+    {
+      "type": "run_usage",
+      "at": 1782672816.0003257,
+      "project_id": "proj_mqy5cr6h_r66cs6",
+      "job_id": "job_7b12d819df3e",
+      "exit_code": -1,
+      "item_count": 4,
+      "charges": {
+        "run_base_czk": 5.0,
+        "items_czk": 0.08,
+        "proxy_czk": 0.0
+      }
+    },
+    {
+      "type": "run_usage",
+      "at": 1782672838.6172047,
+      "project_id": "default",
+      "job_id": "job_a2fdf0223c47",
+      "exit_code": -1,
+      "item_count": 0,
+      "charges": {
+        "run_base_czk": 5.0,
+        "items_czk": 0.0,
+        "proxy_czk": 0.0
+      }
+    },
+    {
+      "type": "run_usage",
+      "at": 1782672849.772734,
+      "project_id": "default",
+      "job_id": "job_c8a305e1f9f2",
+      "exit_code": -1,
+      "item_count": 4,
+      "charges": {
+        "run_base_czk": 5.0,
+        "items_czk": 0.08,
+        "proxy_czk": 0.0
+      }
+    },
+    {
+      "type": "run_usage",
+      "at": 1782673043.667705,
+      "project_id": "default",
+      "job_id": "job_181762b0e177",
+      "exit_code": -1,
+      "item_count": 4,
+      "charges": {
+        "run_base_czk": 5.0,
+        "items_czk": 0.08,
+        "proxy_czk": 0.0
+      }
+    },
+    {
+      "type": "run_usage",
+      "at": 1782673084.1430268,
+      "project_id": "proj_mqy5irv0_xgp3oi",
+      "job_id": "job_76a117e8b7b8",
       "exit_code": -1,
       "item_count": 0,
       "charges": {

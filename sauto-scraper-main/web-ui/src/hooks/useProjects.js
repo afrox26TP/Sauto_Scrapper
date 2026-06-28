@@ -19,7 +19,8 @@ import {
   fetchParams,
 } from "../utils/api";
 
-export function useProjects(brandOptions, modelsByBrand) {
+export function useProjects(brandOptions, modelsByBrand, options = {}) {
+  const enabled = options.enabled !== false;
   const [projects, setProjects] = useState(() => loadProjects());
   const [activeProjectId, setActiveProjectId] = useState(() => {
     const loaded = loadProjects();
@@ -49,6 +50,7 @@ export function useProjects(brandOptions, modelsByBrand) {
 
   // ── Migrate: import existing params.json + sauto_interesting.json into first project ──
   useEffect(() => {
+    if (!enabled) return;
     if (migrated) return;
     const loaded = loadProjects();
     if (loaded.length > 0) {
@@ -86,16 +88,18 @@ export function useProjects(brandOptions, modelsByBrand) {
       setActiveProjectId(fresh.id);
       setMigrated(true);
     });
-  }, [migrated]);
+  }, [enabled, migrated]);
 
   // ── Persist (skip until migration done) ──
   useEffect(() => {
+    if (!enabled) return;
     if (!migrated) return;
     saveProjects(projects);
-  }, [projects, migrated]);
+  }, [enabled, projects, migrated]);
 
   // ── Reload results for done projects from API on page refresh ──
   useEffect(() => {
+    if (!enabled) return;
     if (!migrated) return;
     projects.forEach((p) => {
       if (p.phase === "done" && p.resultsPath) {
@@ -112,10 +116,18 @@ export function useProjects(brandOptions, modelsByBrand) {
           .catch(() => {});
       }
     });
-  }, [migrated]);
+  }, [enabled, migrated]);
 
   // ── Fetch global scraper status ──
   useEffect(() => {
+    if (!enabled) {
+      setStatusReady(true);
+      setScraperRunning(false);
+      setScraperPaused(false);
+      setScraperStartedAt(null);
+      setRunnerPid(null);
+      return;
+    }
     const poll = async () => {
       try {
         const status = await fetchStatus();
@@ -135,9 +147,10 @@ export function useProjects(brandOptions, modelsByBrand) {
     poll();
     statusInterval.current = setInterval(poll, 2000);
     return () => clearInterval(statusInterval.current);
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
+    if (!enabled) return;
     const loadRates = async () => {
       try {
         const rates = await fetchBillingRates();
@@ -151,10 +164,14 @@ export function useProjects(brandOptions, modelsByBrand) {
     loadRates();
     const t = setInterval(loadRates, 30000);
     return () => clearInterval(t);
-  }, []);
+  }, [enabled]);
 
   // ── Fetch global logs ──
   useEffect(() => {
+    if (!enabled) {
+      setGlobalLogs([]);
+      return;
+    }
     const poll = async () => {
       try {
         const lines = await fetchLogs(160);
@@ -175,10 +192,11 @@ export function useProjects(brandOptions, modelsByBrand) {
     poll();
     logsInterval.current = setInterval(poll, 1500);
     return () => clearInterval(logsInterval.current);
-  }, []);
+  }, [enabled]);
 
   // ── Update running project results ──
   useEffect(() => {
+    if (!enabled) return;
     if (!scraperRunning) return;
     const poll = async () => {
       setProjects((prev) => {
@@ -206,10 +224,11 @@ export function useProjects(brandOptions, modelsByBrand) {
     poll();
     const t = setInterval(poll, 3000);
     return () => clearInterval(t);
-  }, [scraperRunning]);
+  }, [enabled, scraperRunning]);
 
   // ── Auto-transition running → done when scraper stops ──
   useEffect(() => {
+    if (!enabled) return;
     if (!statusReady) return;
     if (scraperRunning) return;
     // Scraper stopped – check if any project was running
@@ -285,7 +304,7 @@ export function useProjects(brandOptions, modelsByBrand) {
         return p;
       });
     });
-  }, [scraperRunning, statusReady, scraperStartedAt]);
+  }, [enabled, scraperRunning, statusReady, scraperStartedAt]);
 
   // ── Start queued scrape helper (no deps on closures) ──
   function startQueuedScrape(projectId) {

@@ -9,6 +9,10 @@ import sys
 import threading
 import time
 import uuid
+import base64
+import hashlib
+import hmac
+import secrets
 from collections import deque
 from pathlib import Path
 from typing import Any, Callable
@@ -35,9 +39,31 @@ RAW_OUTPUT_JSON_PATH = ROOT_DIR / "data" / "sauto_raw.json"
 MARKED_IDS_PATH = ROOT_DIR / "marked_ids.json"
 CATALOG_CACHE_PATH = ROOT_DIR / "data" / "sauto_catalog_cache.json"
 BILLING_LEDGER_PATH = ROOT_DIR / "data" / "billing_usage.json"
+USERS_DB_PATH = ROOT_DIR / "data" / "users.json"
 CATALOG_CACHE_TTL_S = 24 * 60 * 60
 SAUTO_SEARCH_API = "https://www.sauto.cz/api/v1/items/search"
 SAUTO_ITEM_DETAIL_API = "https://www.sauto.cz/api/v1/items/{}"
+AUTH_TOKEN_TTL_S = int(os.getenv("AUTH_TOKEN_TTL_S", "604800"))
+AUTH_SECRET = (os.getenv("AUTH_SECRET") or "dev-only-change-me").strip() or "dev-only-change-me"
+PUBLIC_API_PATHS = {
+    "/api/health",
+    "/api/auth/signup",
+    "/api/auth/login",
+    "/api/results",
+    "/api/results/export",
+    "/api/catalog/brands",
+    "/api/catalog/models",
+    "/api/catalog/model-counts",
+    "/api/catalog/estimate",
+    "/api/catalog/equipment",
+    "/api/catalog/bodies",
+}
+AUTH_REQUIRED_PATHS = {
+    "/api/run",
+    "/api/pause",
+    "/api/resume",
+    "/api/stop",
+}
 LOCKED_SEARCH_DEFAULTS = {
     "category_id": "838",
     "limit": "100",
@@ -111,6 +137,16 @@ class ModelCountsPayload(BaseModel):
 
 class CatalogEstimatePayload(BaseModel):
     config: dict[str, Any] = Field(default_factory=dict)
+
+
+class SignupPayload(BaseModel):
+    email: str = ""
+    password: str = ""
+
+
+class LoginPayload(BaseModel):
+    email: str = ""
+    password: str = ""
 
 
 class ScraperRunner:
@@ -804,6 +840,105 @@ def dump_json(path: Path, data: Any) -> None:
         json.dump(data, file, ensure_ascii=False, indent=2)
 
 
+def _b64url_encode(raw: bytes) -> str:
+    return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+
+
+def _b64url_decode(text: str) -> bytes:
+    pad = "=" * ((4 - (len(text) % 4)) % 4)
+    return base64.urlsafe_b64decode((text + pad).encode("ascii"))
+
+
+def _auth_sign(message: str) -> str:
+    digest = hmac.new(AUTH_SECRET.encode("utf-8"), message.encode("utf-8"), hashlib.sha256).digest()
+    return _b64url_encode(digest)
+
+
+def _issue_auth_token(user: dict[str, Any]) -> str:
+    now = int(time.time())
+    payload = {
+        "sub": str(user.get("id") or ""),
+        "email": str(user.get("email") or "").lower(),
+        "iat": now,
+        "exp": now + max(60, AUTH_TOKEN_TTL_S),
+    }
+    header = {"alg": "HS256", "typ": "JWT"}
+    header_b64 = _b64url_encode(json.dumps(header, separators=(",", ":")).encode("utf-8"))
+    payload_b64 = _b64url_encode(json.dumps(payload, separators=(",", ":")).encode("utf-8"))
+    signing_input = f"{header_b64}.{payload_b64}"
+    signature = _auth_sign(signing_input)
+    return f"{signing_input}.{signature}"
+
+
+def _decode_auth_token(token: str) -> dict[str, Any] | None:
+    token = str(token or "").strip()
+    if not token:
+        return None
+    parts = token.split(".")
+    if len(parts) != 3:
+        return None
+    header_b64, payload_b64, signature = parts
+    signing_input = f"{header_b64}.{payload_b64}"
+    expected_signature = _auth_sign(signing_input)
+    if not hmac.compare_digest(signature, expected_signature):
+        return None
+    try:
+        payload_raw = _b64url_decode(payload_b64).decode("utf-8")
+        payload = json.loads(payload_raw)
+    except Exception:
+        return None
+    if not isinstance(payload, dict):
+        return None
+    try:
+        exp = int(payload.get("exp") or 0)
+    except (TypeError, ValueError):
+        return None
+    if exp <= int(time.time()):
+        return None
+    return payload
+
+
+def _hash_password(password: str, salt_hex: str) -> str:
+    salt = bytes.fromhex(salt_hex)
+    digest = hashlib.pbkdf2_hmac(
+        "sha256",
+        str(password or "").encode("utf-8"),
+        salt,
+        120000,
+    )
+    return digest.hex()
+
+
+def _load_users() -> list[dict[str, Any]]:
+    data = load_json(USERS_DB_PATH, [])
+    if not isinstance(data, list):
+        return []
+    return [row for row in data if isinstance(row, dict)]
+
+
+def _save_users(users: list[dict[str, Any]]) -> None:
+    dump_json(USERS_DB_PATH, users)
+
+
+def _find_user_by_email(email: str) -> dict[str, Any] | None:
+    target = str(email or "").strip().lower()
+    if not target:
+        return None
+    users = _load_users()
+    for user in users:
+        if str(user.get("email") or "").strip().lower() == target:
+            return user
+    return None
+
+
+def _auth_user_public(user: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": str(user.get("id") or ""),
+        "email": str(user.get("email") or "").lower(),
+        "created_at": user.get("created_at"),
+    }
+
+
 def normalize_relative_path(path: str | None, fallback: str = "data/sauto_interesting.json") -> str:
     rel_path = (path or fallback).strip() or fallback
     if os.path.isabs(rel_path):
@@ -1298,13 +1433,37 @@ async def api_key_guard(request: Request, call_next):
     method = request.method.upper()
     api_key = request.headers.get("x-api-key", "").strip()
     project_header = request.headers.get("x-project-id", "").strip()
+    auth_header = request.headers.get("authorization", "")
+
+    def _cors_json(status_code: int, content: dict[str, Any]) -> JSONResponse:
+        # Ensure browser clients receive auth errors as normal HTTP responses
+        # instead of opaque CORS failures.
+        return JSONResponse(
+            status_code=status_code,
+            content=content,
+            headers={"Access-Control-Allow-Origin": "*"},
+        )
+
+    # Let CORS middleware handle preflight requests. Blocking OPTIONS here
+    # causes browser-side "Failed to fetch" before the actual API call.
+    if method == "OPTIONS":
+        return await call_next(request)
+
+    if path in AUTH_REQUIRED_PATHS:
+        token = ""
+        if auth_header.lower().startswith("bearer "):
+            token = auth_header[7:].strip()
+        claims = _decode_auth_token(token)
+        if claims is None:
+            return _cors_json(401, {"detail": "Missing or invalid auth token."})
+        request.state.auth_user = claims
 
     if not API_KEYS:
         response = await call_next(request)
     else:
         if path.startswith("/api/") and method in WRITE_HTTP_METHODS:
             if api_key not in API_KEYS:
-                return JSONResponse(status_code=401, content={"detail": "Missing or invalid API key."})
+                return _cors_json(401, {"detail": "Missing or invalid API key."})
         response = await call_next(request)
 
     # Bill only integration traffic: requests that carry x-api-key.
@@ -1333,6 +1492,70 @@ def health() -> dict[str, Any]:
         "version": API_VERSION,
         "uptime_s": uptime_s,
         "python": sys.version.split()[0],
+    }
+
+
+@app.post("/api/auth/signup")
+def auth_signup(payload: SignupPayload) -> dict[str, Any]:
+    email = str(payload.email or "").strip().lower()
+    password = str(payload.password or "")
+    if not email or "@" not in email:
+        raise HTTPException(status_code=400, detail="Valid email is required.")
+    if len(password) < 6:
+        raise HTTPException(status_code=400, detail="Password must have at least 6 characters.")
+
+    existing = _find_user_by_email(email)
+    if existing is not None:
+        raise HTTPException(status_code=409, detail="User with this email already exists.")
+
+    salt_hex = secrets.token_hex(16)
+    user = {
+        "id": f"usr_{uuid.uuid4().hex[:12]}",
+        "email": email,
+        "password_hash": _hash_password(password, salt_hex),
+        "password_salt": salt_hex,
+        "created_at": time.time(),
+    }
+
+    users = _load_users()
+    users.append(user)
+    _save_users(users)
+
+    token = _issue_auth_token(user)
+    return {"token": token, "user": _auth_user_public(user)}
+
+
+@app.post("/api/auth/login")
+def auth_login(payload: LoginPayload) -> dict[str, Any]:
+    email = str(payload.email or "").strip().lower()
+    password = str(payload.password or "")
+    user = _find_user_by_email(email)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Invalid email or password.")
+
+    salt_hex = str(user.get("password_salt") or "")
+    expected_hash = str(user.get("password_hash") or "")
+    if not salt_hex or not expected_hash:
+        raise HTTPException(status_code=401, detail="Invalid email or password.")
+
+    candidate_hash = _hash_password(password, salt_hex)
+    if not hmac.compare_digest(candidate_hash, expected_hash):
+        raise HTTPException(status_code=401, detail="Invalid email or password.")
+
+    token = _issue_auth_token(user)
+    return {"token": token, "user": _auth_user_public(user)}
+
+
+@app.get("/api/auth/me")
+def auth_me(request: Request) -> dict[str, Any]:
+    claims = getattr(request.state, "auth_user", None)
+    if not isinstance(claims, dict):
+        raise HTTPException(status_code=401, detail="Missing or invalid auth token.")
+    return {
+        "user": {
+            "id": str(claims.get("sub") or ""),
+            "email": str(claims.get("email") or "").lower(),
+        }
     }
 
 

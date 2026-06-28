@@ -1,5 +1,23 @@
 // ── API wrapper ──
 const API_BASE = "http://localhost:8000";
+const AUTH_TOKEN_KEY = "sauto_auth_token";
+
+export function getAuthToken() {
+  return window.localStorage.getItem(AUTH_TOKEN_KEY) || "";
+}
+
+export function setAuthToken(token) {
+  const value = String(token || "").trim();
+  if (!value) {
+    window.localStorage.removeItem(AUTH_TOKEN_KEY);
+    return;
+  }
+  window.localStorage.setItem(AUTH_TOKEN_KEY, value);
+}
+
+export function clearAuthToken() {
+  window.localStorage.removeItem(AUTH_TOKEN_KEY);
+}
 
 function apiUrl(path, query = {}) {
   const url = new URL(`${API_BASE}${path}`);
@@ -10,9 +28,14 @@ function apiUrl(path, query = {}) {
 }
 
 async function request(method, path, body = null, query = {}) {
+  const token = getAuthToken();
+  const headers = {};
+  if (body) headers["Content-Type"] = "application/json";
+  if (token) headers.Authorization = `Bearer ${token}`;
+
   const opts = {
     method,
-    headers: body ? { "Content-Type": "application/json" } : undefined,
+    headers: Object.keys(headers).length > 0 ? headers : undefined,
   };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(apiUrl(path, query), opts);
@@ -22,6 +45,23 @@ async function request(method, path, body = null, query = {}) {
     throw Object.assign(new Error(detail), { status: res.status, data: err });
   }
   return res.json();
+}
+
+export async function signup(email, password) {
+  const data = await request("POST", "/api/auth/signup", { email, password });
+  if (data?.token) setAuthToken(data.token);
+  return data;
+}
+
+export async function login(email, password) {
+  const data = await request("POST", "/api/auth/login", { email, password });
+  if (data?.token) setAuthToken(data.token);
+  return data;
+}
+
+export async function fetchCurrentUser() {
+  const data = await request("GET", "/api/auth/me");
+  return data?.user || null;
 }
 
 export async function fetchParams() {

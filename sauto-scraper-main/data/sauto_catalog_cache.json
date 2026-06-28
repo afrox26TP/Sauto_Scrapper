@@ -1,252 +1,7 @@
 {
-  "brands": {
-    "updated_at": 1782641586,
-    "items": [
-      {
-        "value": "alfa-romeo",
-        "label": "Alfa Romeo"
-      },
-      {
-        "value": "alpina",
-        "label": "Alpina"
-      },
-      {
-        "value": "audi",
-        "label": "Audi"
-      },
-      {
-        "value": "baic",
-        "label": "BAIC"
-      },
-      {
-        "value": "bentley",
-        "label": "Bentley"
-      },
-      {
-        "value": "bmw",
-        "label": "BMW"
-      },
-      {
-        "value": "byd",
-        "label": "BYD"
-      },
-      {
-        "value": "cadillac",
-        "label": "Cadillac"
-      },
-      {
-        "value": "chery",
-        "label": "Chery"
-      },
-      {
-        "value": "chevrolet",
-        "label": "Chevrolet"
-      },
-      {
-        "value": "chrysler",
-        "label": "Chrysler"
-      },
-      {
-        "value": "citroen",
-        "label": "Citroën"
-      },
-      {
-        "value": "cupra",
-        "label": "Cupra"
-      },
-      {
-        "value": "dacia",
-        "label": "Dacia"
-      },
-      {
-        "value": "daihatsu",
-        "label": "Daihatsu"
-      },
-      {
-        "value": "dodge",
-        "label": "Dodge"
-      },
-      {
-        "value": "dongfeng",
-        "label": "Dongfeng"
-      },
-      {
-        "value": "ds",
-        "label": "DS"
-      },
-      {
-        "value": "ferrari",
-        "label": "Ferrari"
-      },
-      {
-        "value": "fiat",
-        "label": "Fiat"
-      },
-      {
-        "value": "ford",
-        "label": "Ford"
-      },
-      {
-        "value": "foton",
-        "label": "FOTON"
-      },
-      {
-        "value": "genesis",
-        "label": "Genesis"
-      },
-      {
-        "value": "honda",
-        "label": "Honda"
-      },
-      {
-        "value": "hyundai",
-        "label": "Hyundai"
-      },
-      {
-        "value": "jaecoo",
-        "label": "Jaecoo"
-      },
-      {
-        "value": "jaguar",
-        "label": "Jaguar"
-      },
-      {
-        "value": "jeep",
-        "label": "Jeep"
-      },
-      {
-        "value": "kgm",
-        "label": "KGM"
-      },
-      {
-        "value": "kia",
-        "label": "Kia"
-      },
-      {
-        "value": "lamborghini",
-        "label": "Lamborghini"
-      },
-      {
-        "value": "land-rover",
-        "label": "Land Rover"
-      },
-      {
-        "value": "lexus",
-        "label": "Lexus"
-      },
-      {
-        "value": "maserati",
-        "label": "Maserati"
-      },
-      {
-        "value": "mazda",
-        "label": "Mazda"
-      },
-      {
-        "value": "mclaren",
-        "label": "McLaren"
-      },
-      {
-        "value": "mercedes-benz",
-        "label": "Mercedes-Benz"
-      },
-      {
-        "value": "mg",
-        "label": "MG"
-      },
-      {
-        "value": "mini",
-        "label": "Mini"
-      },
-      {
-        "value": "mitsubishi",
-        "label": "Mitsubishi"
-      },
-      {
-        "value": "nissan",
-        "label": "Nissan"
-      },
-      {
-        "value": "omoda",
-        "label": "Omoda"
-      },
-      {
-        "value": "opel",
-        "label": "Opel"
-      },
-      {
-        "value": "peugeot",
-        "label": "Peugeot"
-      },
-      {
-        "value": "polestar",
-        "label": "Polestar"
-      },
-      {
-        "value": "porsche",
-        "label": "Porsche"
-      },
-      {
-        "value": "ram",
-        "label": "RAM"
-      },
-      {
-        "value": "renault",
-        "label": "Renault"
-      },
-      {
-        "value": "saab",
-        "label": "Saab"
-      },
-      {
-        "value": "seat",
-        "label": "Seat"
-      },
-      {
-        "value": "skoda",
-        "label": "Škoda"
-      },
-      {
-        "value": "smart",
-        "label": "Smart"
-      },
-      {
-        "value": "ssangyong",
-        "label": "SsangYong"
-      },
-      {
-        "value": "subaru",
-        "label": "Subaru"
-      },
-      {
-        "value": "suzuki",
-        "label": "Suzuki"
-      },
-      {
-        "value": "swm",
-        "label": "SWM"
-      },
-      {
-        "value": "tesla",
-        "label": "Tesla"
-      },
-      {
-        "value": "toyota",
-        "label": "Toyota"
-      },
-      {
-        "value": "volkswagen",
-        "label": "Volkswagen"
-      },
-      {
-        "value": "volvo",
-        "label": "Volvo"
-      }
-    ]
-  },
   "models": {
     "bmw": {
-      "updated_at": 1782668243,
+      "updated_at": 1782672228,
       "items": [
         {
           "value": "i3",
@@ -391,260 +146,8 @@
       ],
       "collector_version": 7
     },
-    "audi": {
-      "updated_at": 1782648392,
-      "items": [
-        {
-          "value": "80",
-          "label": "80"
-        },
-        {
-          "value": "a1",
-          "label": "A1"
-        },
-        {
-          "value": "a3",
-          "label": "A3"
-        },
-        {
-          "value": "a4",
-          "label": "A4"
-        },
-        {
-          "value": "a4-allroad",
-          "label": "A4 allroad"
-        },
-        {
-          "value": "a4-avant",
-          "label": "A4 Avant"
-        },
-        {
-          "value": "a5",
-          "label": "A5"
-        },
-        {
-          "value": "a6",
-          "label": "A6"
-        },
-        {
-          "value": "a6-allroad",
-          "label": "A6 allroad"
-        },
-        {
-          "value": "a6-avant",
-          "label": "A6 Avant"
-        },
-        {
-          "value": "a7",
-          "label": "A7"
-        },
-        {
-          "value": "a8",
-          "label": "A8"
-        },
-        {
-          "value": "e-tron",
-          "label": "e-tron"
-        },
-        {
-          "value": "e-tron-gt",
-          "label": "e-tron GT"
-        },
-        {
-          "value": "q2",
-          "label": "Q2"
-        },
-        {
-          "value": "q3",
-          "label": "Q3"
-        },
-        {
-          "value": "q4-e-tron",
-          "label": "Q4 e-tron"
-        },
-        {
-          "value": "q5",
-          "label": "Q5"
-        },
-        {
-          "value": "q6-e-tron",
-          "label": "Q6 e-tron"
-        },
-        {
-          "value": "q7",
-          "label": "Q7"
-        },
-        {
-          "value": "q8",
-          "label": "Q8"
-        },
-        {
-          "value": "q8-e-tron",
-          "label": "Q8 e-tron"
-        },
-        {
-          "value": "r8",
-          "label": "R8"
-        },
-        {
-          "value": "rs-q8",
-          "label": "RS Q8"
-        },
-        {
-          "value": "rs3",
-          "label": "RS3"
-        },
-        {
-          "value": "rs4",
-          "label": "RS4"
-        },
-        {
-          "value": "rs4-avant",
-          "label": "RS4 Avant"
-        },
-        {
-          "value": "rs5",
-          "label": "RS5"
-        },
-        {
-          "value": "rs6",
-          "label": "RS6"
-        },
-        {
-          "value": "rs7",
-          "label": "RS7"
-        },
-        {
-          "value": "s3",
-          "label": "S3"
-        },
-        {
-          "value": "s4",
-          "label": "S4"
-        },
-        {
-          "value": "s5",
-          "label": "S5"
-        },
-        {
-          "value": "s6",
-          "label": "S6"
-        },
-        {
-          "value": "s6-avant",
-          "label": "S6 Avant"
-        },
-        {
-          "value": "s7",
-          "label": "S7"
-        },
-        {
-          "value": "s8",
-          "label": "S8"
-        },
-        {
-          "value": "sq5",
-          "label": "SQ5"
-        },
-        {
-          "value": "sq7",
-          "label": "SQ7"
-        },
-        {
-          "value": "sq8",
-          "label": "SQ8"
-        },
-        {
-          "value": "tt",
-          "label": "TT"
-        }
-      ],
-      "collector_version": 6
-    },
-    "skoda": {
-      "updated_at": 1782641926,
-      "items": [
-        {
-          "value": "130",
-          "label": "130"
-        },
-        {
-          "value": "citigo",
-          "label": "Citigo"
-        },
-        {
-          "value": "elroq",
-          "label": "Elroq"
-        },
-        {
-          "value": "enyaq",
-          "label": "Enyaq"
-        },
-        {
-          "value": "enyaq-coupe",
-          "label": "Enyaq Coupé"
-        },
-        {
-          "value": "enyaq-iv",
-          "label": "Enyaq iV"
-        },
-        {
-          "value": "fabia",
-          "label": "Fabia"
-        },
-        {
-          "value": "favorit",
-          "label": "Favorit"
-        },
-        {
-          "value": "felicia",
-          "label": "Felicia"
-        },
-        {
-          "value": "kamiq",
-          "label": "Kamiq"
-        },
-        {
-          "value": "karoq",
-          "label": "Karoq"
-        },
-        {
-          "value": "kodiaq",
-          "label": "Kodiaq"
-        },
-        {
-          "value": "octavia",
-          "label": "Octavia"
-        },
-        {
-          "value": "ostatni",
-          "label": "ostatni"
-        },
-        {
-          "value": "rapid",
-          "label": "Rapid"
-        },
-        {
-          "value": "roomster",
-          "label": "Roomster"
-        },
-        {
-          "value": "scala",
-          "label": "Scala"
-        },
-        {
-          "value": "superb",
-          "label": "Superb"
-        },
-        {
-          "value": "yeti",
-          "label": "Yeti"
-        }
-      ],
-      "collector_version": 3
-    },
     "alfa-romeo": {
-      "updated_at": 1782668245,
+      "updated_at": 1782672237,
       "items": [
         {
           "value": "147",
@@ -716,1413 +219,235 @@
         }
       ],
       "collector_version": 7
-    },
-    "citroen": {
-      "updated_at": 1782641930,
-      "items": [
-        {
-          "value": "berlingo",
-          "label": "Berlingo"
-        },
-        {
-          "value": "c-elysee",
-          "label": "C-Elysée"
-        },
-        {
-          "value": "c1",
-          "label": "C1"
-        },
-        {
-          "value": "c3",
-          "label": "C3"
-        },
-        {
-          "value": "c3-aircross",
-          "label": "C3 Aircross"
-        },
-        {
-          "value": "c3-picasso",
-          "label": "C3 Picasso"
-        },
-        {
-          "value": "c4",
-          "label": "C4"
-        },
-        {
-          "value": "c4-cactus",
-          "label": "C4 Cactus"
-        },
-        {
-          "value": "c4-picasso",
-          "label": "C4 Picasso"
-        },
-        {
-          "value": "c4-spacetourer",
-          "label": "C4 SpaceTourer"
-        },
-        {
-          "value": "c5",
-          "label": "C5"
-        },
-        {
-          "value": "c5-aircross",
-          "label": "C5 Aircross"
-        },
-        {
-          "value": "c5-x",
-          "label": "C5 X"
-        },
-        {
-          "value": "c8",
-          "label": "C8"
-        },
-        {
-          "value": "ds3",
-          "label": "DS3"
-        },
-        {
-          "value": "grand-c4-picasso",
-          "label": "Grand C4 Picasso"
-        },
-        {
-          "value": "grand-c4-spacetourer",
-          "label": "Grand C4 SpaceTourer"
-        },
-        {
-          "value": "jumper",
-          "label": "Jumper"
-        },
-        {
-          "value": "jumpy",
-          "label": "Jumpy"
-        },
-        {
-          "value": "spacetourer",
-          "label": "SpaceTourer"
-        },
-        {
-          "value": "xantia",
-          "label": "Xantia"
-        },
-        {
-          "value": "xsara-picasso",
-          "label": "xsara-picasso"
-        }
-      ],
-      "collector_version": 3
-    },
-    "mazda": {
-      "updated_at": 1782641932,
-      "items": [
-        {
-          "value": "2",
-          "label": "2"
-        },
-        {
-          "value": "3",
-          "label": "3"
-        },
-        {
-          "value": "5",
-          "label": "5"
-        },
-        {
-          "value": "6",
-          "label": "6"
-        },
-        {
-          "value": "6e",
-          "label": "6e"
-        },
-        {
-          "value": "cx-3",
-          "label": "CX-3"
-        },
-        {
-          "value": "cx-30",
-          "label": "CX-30"
-        },
-        {
-          "value": "cx-5",
-          "label": "CX-5"
-        },
-        {
-          "value": "cx-60",
-          "label": "CX-60"
-        },
-        {
-          "value": "cx-7",
-          "label": "CX-7"
-        },
-        {
-          "value": "cx-80",
-          "label": "CX-80"
-        },
-        {
-          "value": "mx-30",
-          "label": "MX-30"
-        }
-      ],
-      "collector_version": 3
-    },
-    "bentley": {
-      "updated_at": 1782646800,
-      "items": [
-        {
-          "value": "continental-gt",
-          "label": "Continental GT",
-          "count": 2
-        },
-        {
-          "value": "continental-gtc",
-          "label": "Continental GTC",
-          "count": 2
-        }
-      ],
-      "collector_version": 5
-    },
-    "chrysler": {
-      "updated_at": 1782645361,
-      "items": [
-        {
-          "value": "grand-voyager",
-          "label": "Grand Voyager",
-          "count": 1
-        },
-        {
-          "value": "pacifica",
-          "label": "Pacifica",
-          "count": 2
-        },
-        {
-          "value": "pt-cruiser",
-          "label": "PT Cruiser",
-          "count": 1
-        },
-        {
-          "value": "town-country",
-          "label": "Town & Country",
-          "count": 1
-        }
-      ],
-      "collector_version": 5
-    },
-    "cupra": {
-      "updated_at": 1782642032,
-      "items": [
-        {
-          "value": "ateca",
-          "label": "Ateca"
-        },
-        {
-          "value": "formentor",
-          "label": "Formentor"
-        },
-        {
-          "value": "leon",
-          "label": "Leon"
-        },
-        {
-          "value": "terramar",
-          "label": "Terramar"
-        }
-      ],
-      "collector_version": 3
-    },
-    "alpina": {
-      "updated_at": 1782642035,
-      "items": [
-        {
-          "value": "ostatni",
-          "label": "Ostatní"
-        }
-      ],
-      "collector_version": 3
-    },
-    "dacia": {
-      "updated_at": 1782642042,
-      "items": [
-        {
-          "value": "bigster",
-          "label": "Bigster"
-        },
-        {
-          "value": "dokker",
-          "label": "Dokker"
-        },
-        {
-          "value": "duster",
-          "label": "Duster"
-        },
-        {
-          "value": "jogger",
-          "label": "Jogger"
-        },
-        {
-          "value": "lodgy",
-          "label": "Lodgy"
-        },
-        {
-          "value": "logan",
-          "label": "Logan"
-        },
-        {
-          "value": "sandero",
-          "label": "Sandero"
-        },
-        {
-          "value": "spring",
-          "label": "Spring"
-        }
-      ],
-      "collector_version": 3
-    },
-    "toyota": {
-      "updated_at": 1782644811,
-      "items": [
-        {
-          "value": "auris",
-          "label": "Auris",
-          "count": 6
-        },
-        {
-          "value": "avensis",
-          "label": "Avensis",
-          "count": 7
-        },
-        {
-          "value": "avensis-verso",
-          "label": "Avensis Verso",
-          "count": 1
-        },
-        {
-          "value": "aygo",
-          "label": "Aygo",
-          "count": 9
-        },
-        {
-          "value": "bz4x",
-          "label": "bZ4X",
-          "count": 8
-        },
-        {
-          "value": "c-hr",
-          "label": "C-HR",
-          "count": 20
-        },
-        {
-          "value": "camry",
-          "label": "Camry",
-          "count": 9
-        },
-        {
-          "value": "celica",
-          "label": "Celica",
-          "count": 2
-        },
-        {
-          "value": "corolla",
-          "label": "Corolla",
-          "count": 72
-        },
-        {
-          "value": "corolla-cross",
-          "label": "Corolla Cross",
-          "count": 2
-        },
-        {
-          "value": "gr-yaris",
-          "label": "GR Yaris",
-          "count": 2
-        },
-        {
-          "value": "gr86",
-          "label": "GR86",
-          "count": 1
-        },
-        {
-          "value": "highlander",
-          "label": "Highlander",
-          "count": 5
-        },
-        {
-          "value": "hilux",
-          "label": "Hilux",
-          "count": 6
-        },
-        {
-          "value": "land-cruiser",
-          "label": "Land Cruiser",
-          "count": 6
-        },
-        {
-          "value": "prius",
-          "label": "Prius",
-          "count": 4
-        },
-        {
-          "value": "proace",
-          "label": "Proace",
-          "count": 11
-        },
-        {
-          "value": "proace-city",
-          "label": "Proace City",
-          "count": 7
-        },
-        {
-          "value": "proace-city-verso",
-          "label": "Proace City Verso",
-          "count": 10
-        },
-        {
-          "value": "proace-verso",
-          "label": "Proace Verso",
-          "count": 22
-        },
-        {
-          "value": "rav4",
-          "label": "Rav4",
-          "count": 39
-        },
-        {
-          "value": "sienna",
-          "label": "Sienna",
-          "count": 2
-        },
-        {
-          "value": "supra",
-          "label": "Supra",
-          "count": 1
-        },
-        {
-          "value": "yaris",
-          "label": "Yaris",
-          "count": 42
-        },
-        {
-          "value": "yaris-cross",
-          "label": "Yaris Cross",
-          "count": 11
-        }
-      ],
-      "collector_version": 5
-    },
-    "hyundai": {
-      "updated_at": 1782646809,
-      "items": [
-        {
-          "value": "bayon",
-          "label": "Bayon",
-          "count": 14
-        },
-        {
-          "value": "elantra",
-          "label": "Elantra",
-          "count": 1
-        },
-        {
-          "value": "genesis",
-          "label": "Genesis",
-          "count": 2
-        },
-        {
-          "value": "getz",
-          "label": "Getz",
-          "count": 4
-        },
-        {
-          "value": "h-1",
-          "label": "H 1",
-          "count": 1
-        },
-        {
-          "value": "i10",
-          "label": "i10",
-          "count": 9
-        },
-        {
-          "value": "i20",
-          "label": "i20",
-          "count": 27
-        },
-        {
-          "value": "i30",
-          "label": "i30",
-          "count": 175
-        },
-        {
-          "value": "i40",
-          "label": "i40",
-          "count": 3
-        },
-        {
-          "value": "inster",
-          "label": "Inster",
-          "count": 4
-        },
-        {
-          "value": "ioniq-5",
-          "label": "Ioniq 5",
-          "count": 5
-        },
-        {
-          "value": "ioniq-6",
-          "label": "Ioniq 6",
-          "count": 1
-        },
-        {
-          "value": "ix20",
-          "label": "ix20",
-          "count": 13
-        },
-        {
-          "value": "ix35",
-          "label": "ix35",
-          "count": 24
-        },
-        {
-          "value": "ix55",
-          "label": "ix55",
-          "count": 1
-        },
-        {
-          "value": "kona",
-          "label": "Kona",
-          "count": 23
-        },
-        {
-          "value": "santa-fe",
-          "label": "Santa Fe",
-          "count": 16
-        },
-        {
-          "value": "staria",
-          "label": "Staria",
-          "count": 4
-        },
-        {
-          "value": "tucson",
-          "label": "Tucson",
-          "count": 141
-        },
-        {
-          "value": "veloster",
-          "label": "Veloster",
-          "count": 1
-        }
-      ],
-      "collector_version": 5
-    },
-    "mini": {
-      "updated_at": 1782646893,
-      "items": [
-        {
-          "value": "aceman",
-          "label": "Aceman",
-          "count": 1
-        },
-        {
-          "value": "clubman",
-          "label": "Clubman",
-          "count": 6
-        },
-        {
-          "value": "cooper",
-          "label": "Cooper",
-          "count": 16
-        },
-        {
-          "value": "cooper-s",
-          "label": "Cooper S",
-          "count": 6
-        },
-        {
-          "value": "countryman",
-          "label": "Countryman",
-          "count": 15
-        },
-        {
-          "value": "one",
-          "label": "One",
-          "count": 1
-        },
-        {
-          "value": "ostatni",
-          "label": "Ostatní",
-          "count": 3
-        }
-      ],
-      "collector_version": 5
-    },
-    "chevrolet": {
-      "updated_at": 1782648383,
-      "items": [
-        {
-          "value": "aveo",
-          "label": "Aveo"
-        },
-        {
-          "value": "camaro",
-          "label": "Camaro"
-        },
-        {
-          "value": "captiva",
-          "label": "Captiva"
-        },
-        {
-          "value": "corvette",
-          "label": "Corvette"
-        }
-      ],
-      "collector_version": 6
-    },
-    "mitsubishi": {
-      "updated_at": 1782667128,
-      "items": [
-        {
-          "value": "asx",
-          "label": "ASX"
-        },
-        {
-          "value": "eclipse-cross",
-          "label": "Eclipse Cross"
-        },
-        {
-          "value": "outlander",
-          "label": "Outlander"
-        }
-      ],
-      "collector_version": 6
     }
   },
-  "equipment": {
-    "updated_at": 1782641968,
+  "brands": {
+    "updated_at": 1782672540,
     "items": [
       {
-        "value": "1 monitor",
-        "label": "1 monitor"
+        "value": "alfa-romeo",
+        "label": "Alfa Romeo"
       },
       {
-        "value": "2 monitory",
-        "label": "2 monitory"
+        "value": "alpina",
+        "label": "Alpina"
       },
       {
-        "value": "360° monitorovací systém (avm)",
-        "label": "360° monitorovací systém (avm)"
+        "value": "audi",
+        "label": "Audi"
       },
       {
-        "value": "abs",
-        "label": "abs"
+        "value": "bentley",
+        "label": "Bentley"
       },
       {
-        "value": "adaptivní regulace podvozku",
-        "label": "adaptivní regulace podvozku"
+        "value": "bmw",
+        "label": "BMW"
       },
       {
-        "value": "adaptivní tempomat",
-        "label": "adaptivní tempomat"
+        "value": "byd",
+        "label": "BYD"
       },
       {
-        "value": "aktivní asistent řízení",
-        "label": "aktivní asistent řízení"
+        "value": "cadillac",
+        "label": "Cadillac"
       },
       {
-        "value": "aktivní kapota",
-        "label": "aktivní kapota"
+        "value": "chery",
+        "label": "Chery"
       },
       {
-        "value": "akustická skla",
-        "label": "akustická skla"
+        "value": "chevrolet",
+        "label": "Chevrolet"
       },
       {
-        "value": "akustická výstraha při couvání",
-        "label": "akustická výstraha při couvání"
+        "value": "chrysler",
+        "label": "Chrysler"
       },
       {
-        "value": "alarm",
-        "label": "alarm"
+        "value": "citroen",
+        "label": "Citroën"
       },
       {
-        "value": "alarm s dálkovým ovládáním",
-        "label": "alarm s dálkovým ovládáním"
+        "value": "cupra",
+        "label": "Cupra"
       },
       {
-        "value": "ambientní led osvětlení interiéru",
-        "label": "ambientní led osvětlení interiéru"
+        "value": "dacia",
+        "label": "Dacia"
       },
       {
-        "value": "android auto",
-        "label": "android auto"
+        "value": "dodge",
+        "label": "Dodge"
       },
       {
-        "value": "apple car play",
-        "label": "apple car play"
+        "value": "dongfeng",
+        "label": "Dongfeng"
       },
       {
-        "value": "asistent pro jízdu v koloně",
-        "label": "asistent pro jízdu v koloně"
+        "value": "ds",
+        "label": "DS"
       },
       {
-        "value": "asistent pro vedení vozu v jízdních pruzích",
-        "label": "asistent pro vedení vozu v jízdních pruzích"
+        "value": "ferrari",
+        "label": "Ferrari"
       },
       {
-        "value": "asistent při jízdě ze svahu",
-        "label": "asistent při jízdě ze svahu"
+        "value": "fiat",
+        "label": "Fiat"
       },
       {
-        "value": "asistent rozjezdu do kopce",
-        "label": "asistent rozjezdu do kopce"
+        "value": "ford",
+        "label": "Ford"
       },
       {
-        "value": "asistent stability přívěsu (tsa)",
-        "label": "asistent stability přívěsu (tsa)"
+        "value": "genesis",
+        "label": "Genesis"
       },
       {
-        "value": "asistent změny jízdního pruhu",
-        "label": "asistent změny jízdního pruhu"
+        "value": "honda",
+        "label": "Honda"
       },
       {
-        "value": "automatická uzávěrka diferenciálu",
-        "label": "automatická uzávěrka diferenciálu"
+        "value": "hummer",
+        "label": "Hummer"
       },
       {
-        "value": "automatické přepínání dálkových světel",
-        "label": "automatické přepínání dálkových světel"
+        "value": "hyundai",
+        "label": "Hyundai"
       },
       {
-        "value": "automatické svícení",
-        "label": "automatické svícení"
+        "value": "jaecoo",
+        "label": "Jaecoo"
       },
       {
-        "value": "autorádio",
-        "label": "autorádio"
+        "value": "jaguar",
+        "label": "Jaguar"
       },
       {
-        "value": "aux",
-        "label": "aux"
+        "value": "jeep",
+        "label": "Jeep"
       },
       {
-        "value": "bezdrátová nabíječka mobilních telefonů (qi)",
-        "label": "bezdrátová nabíječka mobilních telefonů (qi)"
+        "value": "kgm",
+        "label": "KGM"
       },
       {
-        "value": "bezklíčkové ovládání",
-        "label": "bezklíčkové ovládání"
+        "value": "kia",
+        "label": "Kia"
       },
       {
-        "value": "bezpečnostní pískování oken",
-        "label": "bezpečnostní pískování oken"
+        "value": "land-rover",
+        "label": "Land Rover"
       },
       {
-        "value": "bi-xenony",
-        "label": "bi-xenony"
+        "value": "lexus",
+        "label": "Lexus"
       },
       {
-        "value": "bluetooth",
-        "label": "bluetooth"
+        "value": "mazda",
+        "label": "Mazda"
       },
       {
-        "value": "boční nášlapy",
-        "label": "boční nášlapy"
+        "value": "mclaren",
+        "label": "McLaren"
       },
       {
-        "value": "brašny",
-        "label": "brašny"
+        "value": "mercedes-benz",
+        "label": "Mercedes-Benz"
       },
       {
-        "value": "brzděný",
-        "label": "brzděný"
+        "value": "mg",
+        "label": "MG"
       },
       {
-        "value": "cd měnič",
-        "label": "cd měnič"
+        "value": "mini",
+        "label": "Mini"
       },
       {
-        "value": "cd přehrávač",
-        "label": "cd přehrávač"
+        "value": "mitsubishi",
+        "label": "Mitsubishi"
       },
       {
-        "value": "centrální zamykání",
-        "label": "centrální zamykání"
+        "value": "nissan",
+        "label": "Nissan"
       },
       {
-        "value": "chladnička",
-        "label": "chladnička"
+        "value": "omoda",
+        "label": "Omoda"
       },
       {
-        "value": "deaktivace airbagu spolujezdce",
-        "label": "deaktivace airbagu spolujezdce"
+        "value": "opel",
+        "label": "Opel"
       },
       {
-        "value": "denní svícení",
-        "label": "denní svícení"
+        "value": "peugeot",
+        "label": "Peugeot"
       },
       {
-        "value": "digitální příjem rádia (dab)",
-        "label": "digitální příjem rádia (dab)"
+        "value": "polestar",
+        "label": "Polestar"
       },
       {
-        "value": "digitální přístrojová deska",
-        "label": "digitální přístrojová deska"
+        "value": "porsche",
+        "label": "Porsche"
       },
       {
-        "value": "digitální přístrojový štít",
-        "label": "digitální přístrojový štít"
+        "value": "renault",
+        "label": "Renault"
       },
       {
-        "value": "dojezdové rezervní kolo",
-        "label": "dojezdové rezervní kolo"
+        "value": "saab",
+        "label": "Saab"
       },
       {
-        "value": "dotykové ovládání palubního počítače",
-        "label": "dotykové ovládání palubního počítače"
+        "value": "seat",
+        "label": "Seat"
       },
       {
-        "value": "dvd přehrávač",
-        "label": "dvd přehrávač"
+        "value": "skoda",
+        "label": "Škoda"
       },
       {
-        "value": "dálkové centrální zamykání",
-        "label": "dálkové centrální zamykání"
+        "value": "smart",
+        "label": "Smart"
       },
       {
-        "value": "dělená zadní sedadla",
-        "label": "dělená zadní sedadla"
+        "value": "ssangyong",
+        "label": "SsangYong"
       },
       {
-        "value": "dřevěné obložení",
-        "label": "dřevěné obložení"
+        "value": "subaru",
+        "label": "Subaru"
       },
       {
-        "value": "el. nastavitelná zadní sedadla",
-        "label": "el. nastavitelná zadní sedadla"
+        "value": "suzuki",
+        "label": "Suzuki"
       },
       {
-        "value": "el. ovládaný kufr",
-        "label": "el. ovládaný kufr"
+        "value": "swm",
+        "label": "SWM"
       },
       {
-        "value": "el. ovládání oken",
-        "label": "el. ovládání oken"
+        "value": "tesla",
+        "label": "Tesla"
       },
       {
-        "value": "el. ovládání zrcátek",
-        "label": "el. ovládání zrcátek"
+        "value": "toyota",
+        "label": "Toyota"
       },
       {
-        "value": "el. parkovací brzda",
-        "label": "el. parkovací brzda"
+        "value": "volkswagen",
+        "label": "Volkswagen"
       },
       {
-        "value": "el. seřiditelná sedadla",
-        "label": "el. seřiditelná sedadla"
-      },
-      {
-        "value": "el. seřiditelné sedadlo řidiče",
-        "label": "el. seřiditelné sedadlo řidiče"
-      },
-      {
-        "value": "el. sklopná zrcátka",
-        "label": "el. sklopná zrcátka"
-      },
-      {
-        "value": "el. startér",
-        "label": "el. startér"
-      },
-      {
-        "value": "elektrické dovírání dveří",
-        "label": "elektrické dovírání dveří"
-      },
-      {
-        "value": "elektrické dovírání zavazadlového prostoru",
-        "label": "elektrické dovírání zavazadlového prostoru"
-      },
-      {
-        "value": "elektrické tažné zařízení",
-        "label": "elektrické tažné zařízení"
-      },
-      {
-        "value": "elektrochromatické vnitřní zpětné zrcátko",
-        "label": "elektrochromatické vnitřní zpětné zrcátko"
-      },
-      {
-        "value": "elektronická uzávěrka diferenciálu (eds)",
-        "label": "elektronická uzávěrka diferenciálu (eds)"
-      },
-      {
-        "value": "esp",
-        "label": "esp"
-      },
-      {
-        "value": "front assist",
-        "label": "front assist"
-      },
-      {
-        "value": "funkce plynulého dovírání dveří",
-        "label": "funkce plynulého dovírání dveří"
-      },
-      {
-        "value": "head-up display",
-        "label": "head-up display"
-      },
-      {
-        "value": "hlasové ovládání palubního počítače",
-        "label": "hlasové ovládání palubního počítače"
-      },
-      {
-        "value": "hliníkové bočnice",
-        "label": "hliníkové bočnice"
-      },
-      {
-        "value": "hlídání mrtvého úhlu",
-        "label": "hlídání mrtvého úhlu"
-      },
-      {
-        "value": "hydraulika pro sklápění",
-        "label": "hydraulika pro sklápění"
-      },
-      {
-        "value": "imobilizér",
-        "label": "imobilizér"
-      },
-      {
-        "value": "isofix",
-        "label": "isofix"
-      },
-      {
-        "value": "jednoduchá nádrž do 400 l nafty",
-        "label": "jednoduchá nádrž do 400 l nafty"
-      },
-      {
-        "value": "katalyzátor",
-        "label": "katalyzátor"
-      },
-      {
-        "value": "klimatizovaná přihrádka",
-        "label": "klimatizovaná přihrádka"
-      },
-      {
-        "value": "kotvící oka",
-        "label": "kotvící oka"
-      },
-      {
-        "value": "kožená sedadla",
-        "label": "kožená sedadla"
-      },
-      {
-        "value": "kožené potahy",
-        "label": "kožené potahy"
-      },
-      {
-        "value": "kožené čalounění",
-        "label": "kožené čalounění"
-      },
-      {
-        "value": "kufry",
-        "label": "kufry"
-      },
-      {
-        "value": "laděný výfuk",
-        "label": "laděný výfuk"
-      },
-      {
-        "value": "lane assist",
-        "label": "lane assist"
-      },
-      {
-        "value": "laserová světla",
-        "label": "laserová světla"
-      },
-      {
-        "value": "led adaptivní světlomety",
-        "label": "led adaptivní světlomety"
-      },
-      {
-        "value": "led denní svícení",
-        "label": "led denní svícení"
-      },
-      {
-        "value": "led matrixové světlomety",
-        "label": "led matrixové světlomety"
-      },
-      {
-        "value": "led světlomety plnohodnotné",
-        "label": "led světlomety plnohodnotné"
-      },
-      {
-        "value": "litá kola",
-        "label": "litá kola"
-      },
-      {
-        "value": "lpg v tp",
-        "label": "lpg v tp"
-      },
-      {
-        "value": "malý kožený paket",
-        "label": "malý kožený paket"
-      },
-      {
-        "value": "masážní sedadla",
-        "label": "masážní sedadla"
-      },
-      {
-        "value": "mlhovky",
-        "label": "mlhovky"
-      },
-      {
-        "value": "mobilní připojení",
-        "label": "mobilní připojení"
-      },
-      {
-        "value": "motorová brzda",
-        "label": "motorová brzda"
-      },
-      {
-        "value": "multifunkční volant",
-        "label": "multifunkční volant"
-      },
-      {
-        "value": "multimediální systém bez navigace",
-        "label": "multimediální systém bez navigace"
-      },
-      {
-        "value": "nastavitelná sedadla",
-        "label": "nastavitelná sedadla"
-      },
-      {
-        "value": "nastavitelný volant",
-        "label": "nastavitelný volant"
-      },
-      {
-        "value": "natáčecí světlomety",
-        "label": "natáčecí světlomety"
-      },
-      {
-        "value": "navigační systém",
-        "label": "navigační systém"
-      },
-      {
-        "value": "nezávislé topení",
-        "label": "nezávislé topení"
-      },
-      {
-        "value": "nezávislé topení s čas. předehřívačem",
-        "label": "nezávislé topení s čas. předehřívačem"
-      },
-      {
-        "value": "nouzové brždění",
-        "label": "nouzové brždění"
-      },
-      {
-        "value": "ochranné rámy",
-        "label": "ochranné rámy"
-      },
-      {
-        "value": "odvětrávání sedadel",
-        "label": "odvětrávání sedadel"
-      },
-      {
-        "value": "ohřívač vody",
-        "label": "ohřívač vody"
-      },
-      {
-        "value": "opěrné kolečko",
-        "label": "opěrné kolečko"
-      },
-      {
-        "value": "opěrné nohy",
-        "label": "opěrné nohy"
-      },
-      {
-        "value": "originál autorádio",
-        "label": "originál autorádio"
-      },
-      {
-        "value": "originální autorádio",
-        "label": "originální autorádio"
-      },
-      {
-        "value": "ostřikovače světlometů",
-        "label": "ostřikovače světlometů"
-      },
-      {
-        "value": "otevíratelná střecha",
-        "label": "otevíratelná střecha"
-      },
-      {
-        "value": "otáčkoměr",
-        "label": "otáčkoměr"
-      },
-      {
-        "value": "ovládání vybraných funkcí vozu gesty",
-        "label": "ovládání vybraných funkcí vozu gesty"
-      },
-      {
-        "value": "padáky",
-        "label": "padáky"
-      },
-      {
-        "value": "palubní počítač",
-        "label": "palubní počítač"
-      },
-      {
-        "value": "paměť nastavení sedadla řidiče",
-        "label": "paměť nastavení sedadla řidiče"
-      },
-      {
-        "value": "panoramatická střecha",
-        "label": "panoramatická střecha"
-      },
-      {
-        "value": "parkovací asistent",
-        "label": "parkovací asistent"
-      },
-      {
-        "value": "parkovací kamera",
-        "label": "parkovací kamera"
-      },
-      {
-        "value": "parkovací senzory",
-        "label": "parkovací senzory"
-      },
-      {
-        "value": "parkovací senzory přední",
-        "label": "parkovací senzory přední"
-      },
-      {
-        "value": "parkovací senzory zadní",
-        "label": "parkovací senzory zadní"
-      },
-      {
-        "value": "plachta",
-        "label": "plachta"
-      },
-      {
-        "value": "plexi štít",
-        "label": "plexi štít"
-      },
-      {
-        "value": "plnohodnotné rezervní kolo",
-        "label": "plnohodnotné rezervní kolo"
-      },
-      {
-        "value": "podélný posuv sedadel",
-        "label": "podélný posuv sedadel"
-      },
-      {
-        "value": "posilovač řízení",
-        "label": "posilovač řízení"
-      },
-      {
-        "value": "premiový audiosystém",
-        "label": "premiový audiosystém"
-      },
-      {
-        "value": "protiprokluzový systém kol (asr)",
-        "label": "protiprokluzový systém kol (asr)"
-      },
-      {
-        "value": "pádla řazení na volantu",
-        "label": "pádla řazení na volantu"
-      },
-      {
-        "value": "přehrávač videa",
-        "label": "přehrávač videa"
-      },
-      {
-        "value": "přídavná světla",
-        "label": "přídavná světla"
-      },
-      {
-        "value": "příplatkový audiosystém",
-        "label": "příplatkový audiosystém"
-      },
-      {
-        "value": "příprava pro autorádio",
-        "label": "příprava pro autorádio"
-      },
-      {
-        "value": "příprava pro isofix",
-        "label": "příprava pro isofix"
-      },
-      {
-        "value": "příprava pro telefon",
-        "label": "příprava pro telefon"
-      },
-      {
-        "value": "přístrojová deska s barevným displejem",
-        "label": "přístrojová deska s barevným displejem"
-      },
-      {
-        "value": "regulace tuhosti podvozku",
-        "label": "regulace tuhosti podvozku"
-      },
-      {
-        "value": "regulace výšky podvozku",
-        "label": "regulace výšky podvozku"
-      },
-      {
-        "value": "rezervní kolo",
-        "label": "rezervní kolo"
-      },
-      {
-        "value": "roletky na zadní okna",
-        "label": "roletky na zadní okna"
-      },
-      {
-        "value": "rozpoznávání dopravních značek",
-        "label": "rozpoznávání dopravních značek"
-      },
-      {
-        "value": "s couvacím světlem",
-        "label": "s couvacím světlem"
-      },
-      {
-        "value": "satelitní navigace",
-        "label": "satelitní navigace"
-      },
-      {
-        "value": "sedadla alcantara",
-        "label": "sedadla alcantara"
-      },
-      {
-        "value": "senzor opotřebení brzd. destiček",
-        "label": "senzor opotřebení brzd. destiček"
-      },
-      {
-        "value": "senzor stěračů",
-        "label": "senzor stěračů"
-      },
-      {
-        "value": "senzor tlaku v pneumatikách",
-        "label": "senzor tlaku v pneumatikách"
-      },
-      {
-        "value": "ski box",
-        "label": "ski box"
-      },
-      {
-        "value": "sledování jízdního pruhu",
-        "label": "sledování jízdního pruhu"
-      },
-      {
-        "value": "sledování únavy řidiče",
-        "label": "sledování únavy řidiče"
-      },
-      {
-        "value": "sportovní paket",
-        "label": "sportovní paket"
-      },
-      {
-        "value": "sportovní podvozek",
-        "label": "sportovní podvozek"
-      },
-      {
-        "value": "sportovní sedadla",
-        "label": "sportovní sedadla"
-      },
-      {
-        "value": "start/stop systém",
-        "label": "start/stop systém"
-      },
-      {
-        "value": "střešní nosič",
-        "label": "střešní nosič"
-      },
-      {
-        "value": "střešní okno",
-        "label": "střešní okno"
-      },
-      {
-        "value": "střešní spoiler",
-        "label": "střešní spoiler"
-      },
-      {
-        "value": "systém nouzového zastavení",
-        "label": "systém nouzového zastavení"
-      },
-      {
-        "value": "síťka mezistěny zavazadlového prostoru",
-        "label": "síťka mezistěny zavazadlového prostoru"
-      },
-      {
-        "value": "tachograf",
-        "label": "tachograf"
-      },
-      {
-        "value": "tažné zařízení",
-        "label": "tažné zařízení"
-      },
-      {
-        "value": "telefon",
-        "label": "telefon"
-      },
-      {
-        "value": "televize",
-        "label": "televize"
-      },
-      {
-        "value": "tempomat",
-        "label": "tempomat"
-      },
-      {
-        "value": "tepelné čerpadlo",
-        "label": "tepelné čerpadlo"
-      },
-      {
-        "value": "tónovaná skla",
-        "label": "tónovaná skla"
-      },
-      {
-        "value": "třetí řada sedadel",
-        "label": "třetí řada sedadel"
-      },
-      {
-        "value": "upozornění na přijíždějící vozidla při couvání (rcta)",
-        "label": "upozornění na přijíždějící vozidla při couvání (rcta)"
-      },
-      {
-        "value": "usb",
-        "label": "usb"
-      },
-      {
-        "value": "uzávěrka mezinápravového diferenciálu",
-        "label": "uzávěrka mezinápravového diferenciálu"
-      },
-      {
-        "value": "uzávěrka předního diferenciálu",
-        "label": "uzávěrka předního diferenciálu"
-      },
-      {
-        "value": "uzávěrka zadního diferenciálu",
-        "label": "uzávěrka zadního diferenciálu"
-      },
-      {
-        "value": "variátor",
-        "label": "variátor"
-      },
-      {
-        "value": "venkovní teploměr",
-        "label": "venkovní teploměr"
-      },
-      {
-        "value": "ventilovaná zadní sedadla",
-        "label": "ventilovaná zadní sedadla"
-      },
-      {
-        "value": "vidlice 13-pol",
-        "label": "vidlice 13-pol"
-      },
-      {
-        "value": "vnitřní teploměr",
-        "label": "vnitřní teploměr"
-      },
-      {
-        "value": "volba jízdního režimu",
-        "label": "volba jízdního režimu"
-      },
-      {
-        "value": "vstup paměťové karty",
-        "label": "vstup paměťové karty"
-      },
-      {
-        "value": "vyhřívaná sedadla",
-        "label": "vyhřívaná sedadla"
-      },
-      {
-        "value": "vyhřívaná zadní sedadla",
-        "label": "vyhřívaná zadní sedadla"
-      },
-      {
-        "value": "vyhřívaná zrcátka",
-        "label": "vyhřívaná zrcátka"
-      },
-      {
-        "value": "vyhřívané trysky ostřikovačů skla",
-        "label": "vyhřívané trysky ostřikovačů skla"
-      },
-      {
-        "value": "vyhřívané čelní sklo",
-        "label": "vyhřívané čelní sklo"
-      },
-      {
-        "value": "vyhřívaný volant",
-        "label": "vyhřívaný volant"
-      },
-      {
-        "value": "vyjímatelná zadní sedadla",
-        "label": "vyjímatelná zadní sedadla"
-      },
-      {
-        "value": "vzduchové odpružení",
-        "label": "vzduchové odpružení"
-      },
-      {
-        "value": "výsuvné opěrky hlav",
-        "label": "výsuvné opěrky hlav"
-      },
-      {
-        "value": "výškově nastavitelná sedadla",
-        "label": "výškově nastavitelná sedadla"
-      },
-      {
-        "value": "výškově nastavitelné sedadlo řidiče",
-        "label": "výškově nastavitelné sedadlo řidiče"
-      },
-      {
-        "value": "wifi hotspot",
-        "label": "wifi hotspot"
-      },
-      {
-        "value": "xenony",
-        "label": "xenony"
-      },
-      {
-        "value": "zadní loketní opěrka",
-        "label": "zadní loketní opěrka"
-      },
-      {
-        "value": "zadní mlhovka",
-        "label": "zadní mlhovka"
-      },
-      {
-        "value": "zadní stěrač",
-        "label": "zadní stěrač"
-      },
-      {
-        "value": "zakládací klíny",
-        "label": "zakládací klíny"
-      },
-      {
-        "value": "zaslepení zámků",
-        "label": "zaslepení zámků"
-      },
-      {
-        "value": "zatmavená zadní skla",
-        "label": "zatmavená zadní skla"
-      },
-      {
-        "value": "zámek řadící páky",
-        "label": "zámek řadící páky"
-      },
-      {
-        "value": "záruka",
-        "label": "záruka"
-      },
-      {
-        "value": "zásuvka na 220 v",
-        "label": "zásuvka na 220 v"
-      },
-      {
-        "value": "závěsné zařízení v tp",
-        "label": "závěsné zařízení v tp"
+        "value": "volvo",
+        "label": "Volvo"
       }
     ]
   },
   "bodies": {
-    "updated_at": 1782645347,
+    "updated_at": 1782672711,
     "items": [
       {
         "value": "hatchback",
@@ -2170,171 +495,413 @@
       }
     ]
   },
-  "model_counts": {
-    "bmw": {
-      "updated_at": 1782647444,
-      "items": [
-        {
-          "value": "i3",
-          "label": "i3",
-          "count": 8
-        },
-        {
-          "value": "i4",
-          "label": "i4",
-          "count": 9
-        },
-        {
-          "value": "i5",
-          "label": "i5",
-          "count": 5
-        },
-        {
-          "value": "i7",
-          "label": "i7",
-          "count": 1
-        },
-        {
-          "value": "i8",
-          "label": "i8",
-          "count": 1
-        },
-        {
-          "value": "ix",
-          "label": "iX",
-          "count": 6
-        },
-        {
-          "value": "ix1",
-          "label": "iX1",
-          "count": 3
-        },
-        {
-          "value": "ix3",
-          "label": "iX3",
-          "count": 2
-        },
-        {
-          "value": "m2",
-          "label": "M2",
-          "count": 10
-        },
-        {
-          "value": "m3",
-          "label": "M3",
-          "count": 11
-        },
-        {
-          "value": "m4",
-          "label": "M4",
-          "count": 7
-        },
-        {
-          "value": "m5",
-          "label": "M5",
-          "count": 8
-        },
-        {
-          "value": "m6",
-          "label": "M6",
-          "count": 1
-        },
-        {
-          "value": "m8",
-          "label": "M8",
-          "count": 2
-        },
-        {
-          "value": "ostatni",
-          "label": "Ostatní",
-          "count": 5
-        },
-        {
-          "value": "rada-1",
-          "label": "Řada 1",
-          "count": 19
-        },
-        {
-          "value": "rada-2",
-          "label": "Řada 2",
-          "count": 30
-        },
-        {
-          "value": "rada-3",
-          "label": "Řada 3",
-          "count": 131
-        },
-        {
-          "value": "rada-4",
-          "label": "Řada 4",
-          "count": 29
-        },
-        {
-          "value": "rada-5",
-          "label": "Řada 5",
-          "count": 127
-        },
-        {
-          "value": "rada-6",
-          "label": "Řada 6",
-          "count": 10
-        },
-        {
-          "value": "rada-7",
-          "label": "Řada 7",
-          "count": 13
-        },
-        {
-          "value": "rada-8",
-          "label": "Řada 8",
-          "count": 8
-        },
-        {
-          "value": "x1",
-          "label": "X1",
-          "count": 77
-        },
-        {
-          "value": "x2",
-          "label": "X2",
-          "count": 16
-        },
-        {
-          "value": "x3",
-          "label": "X3",
-          "count": 67
-        },
-        {
-          "value": "x4",
-          "label": "X4",
-          "count": 15
-        },
-        {
-          "value": "x5",
-          "label": "X5",
-          "count": 81
-        },
-        {
-          "value": "x6",
-          "label": "X6",
-          "count": 20
-        },
-        {
-          "value": "x7",
-          "label": "X7",
-          "count": 36
-        },
-        {
-          "value": "xm",
-          "label": "XM",
-          "count": 4
-        },
-        {
-          "value": "z4",
-          "label": "Z4",
-          "count": 6
-        }
-      ]
-    }
+  "equipment": {
+    "updated_at": 1782673105,
+    "items": [
+      {
+        "value": "abs",
+        "label": "abs"
+      },
+      {
+        "value": "adaptivní tempomat",
+        "label": "Adaptivní tempomat"
+      },
+      {
+        "value": "alarm",
+        "label": "alarm"
+      },
+      {
+        "value": "ambientní led osvětlení interiéru",
+        "label": "Ambientní LED osvětlení interiéru"
+      },
+      {
+        "value": "android auto",
+        "label": "android auto"
+      },
+      {
+        "value": "apple car play",
+        "label": "apple car play"
+      },
+      {
+        "value": "asistent pro vedení vozu v jízdních pruzích",
+        "label": "Asistent pro vedení vozu v jízdních pruzích"
+      },
+      {
+        "value": "asistent rozjezdu do kopce",
+        "label": "asistent rozjezdu do kopce"
+      },
+      {
+        "value": "asistent změny jízdního pruhu",
+        "label": "Asistent změny jízdního pruhu"
+      },
+      {
+        "value": "automatické přepínání dálkových světel",
+        "label": "Automatické přepínání dálkových světel"
+      },
+      {
+        "value": "automatické svícení",
+        "label": "automatické svícení"
+      },
+      {
+        "value": "autorádio",
+        "label": "autorádio"
+      },
+      {
+        "value": "aux",
+        "label": "aux"
+      },
+      {
+        "value": "bezklíčkové ovládání",
+        "label": "bezklíčkové ovládání"
+      },
+      {
+        "value": "bluetooth",
+        "label": "bluetooth"
+      },
+      {
+        "value": "cd přehrávač",
+        "label": "cd přehrávač"
+      },
+      {
+        "value": "centrální zamykání",
+        "label": "centrální zamykání"
+      },
+      {
+        "value": "deaktivace airbagu spolujezdce",
+        "label": "deaktivace airbagu spolujezdce"
+      },
+      {
+        "value": "denní svícení",
+        "label": "denní svícení"
+      },
+      {
+        "value": "digitální příjem rádia (dab)",
+        "label": "Digitální příjem rádia (DAB)"
+      },
+      {
+        "value": "digitální přístrojová deska",
+        "label": "Digitální přístrojová deska"
+      },
+      {
+        "value": "digitální přístrojový štít",
+        "label": "Digitální přístrojový štít"
+      },
+      {
+        "value": "dojezdové rezervní kolo",
+        "label": "Dojezdové rezervní kolo"
+      },
+      {
+        "value": "dotykové ovládání palubního počítače",
+        "label": "Dotykové ovládání palubního počítače"
+      },
+      {
+        "value": "dálkové centrální zamykání",
+        "label": "dálkové centrální zamykání"
+      },
+      {
+        "value": "dělená zadní sedadla",
+        "label": "Dělená zadní sedadla"
+      },
+      {
+        "value": "el. ovládaný kufr",
+        "label": "El. ovládaný kufr"
+      },
+      {
+        "value": "el. ovládání oken",
+        "label": "el. ovládání oken"
+      },
+      {
+        "value": "el. ovládání zrcátek",
+        "label": "el. ovládání zrcátek"
+      },
+      {
+        "value": "el. parkovací brzda",
+        "label": "El. parkovací brzda"
+      },
+      {
+        "value": "el. seřiditelná sedadla",
+        "label": "el. seřiditelná sedadla"
+      },
+      {
+        "value": "el. sklopná zrcátka",
+        "label": "el. sklopná zrcátka"
+      },
+      {
+        "value": "el. startér",
+        "label": "el. startér"
+      },
+      {
+        "value": "elektrochromatické vnitřní zpětné zrcátko",
+        "label": "elektrochromatické vnitřní zpětné zrcátko"
+      },
+      {
+        "value": "esp",
+        "label": "esp"
+      },
+      {
+        "value": "hlasové ovládání palubního počítače",
+        "label": "Hlasové ovládání palubního počítače"
+      },
+      {
+        "value": "hlídání mrtvého úhlu",
+        "label": "Hlídání mrtvého úhlu"
+      },
+      {
+        "value": "imobilizér",
+        "label": "imobilizér"
+      },
+      {
+        "value": "isofix",
+        "label": "isofix"
+      },
+      {
+        "value": "klimatizovaná přihrádka",
+        "label": "klimatizovaná přihrádka"
+      },
+      {
+        "value": "kožená sedadla",
+        "label": "kožená sedadla"
+      },
+      {
+        "value": "kožené potahy",
+        "label": "kožené potahy"
+      },
+      {
+        "value": "kožené čalounění",
+        "label": "kožené čalounění"
+      },
+      {
+        "value": "laděný výfuk",
+        "label": "laděný výfuk"
+      },
+      {
+        "value": "led adaptivní světlomety",
+        "label": "LED adaptivní světlomety"
+      },
+      {
+        "value": "led denní svícení",
+        "label": "LED denní svícení"
+      },
+      {
+        "value": "led matrixové světlomety",
+        "label": "LED matrixové světlomety"
+      },
+      {
+        "value": "led světlomety plnohodnotné",
+        "label": "LED světlomety plnohodnotné"
+      },
+      {
+        "value": "litá kola",
+        "label": "litá kola"
+      },
+      {
+        "value": "malý kožený paket",
+        "label": "malý kožený paket"
+      },
+      {
+        "value": "mlhovky",
+        "label": "mlhovky"
+      },
+      {
+        "value": "mobilní připojení",
+        "label": "mobilní připojení"
+      },
+      {
+        "value": "multifunkční volant",
+        "label": "multifunkční volant"
+      },
+      {
+        "value": "nastavitelná sedadla",
+        "label": "nastavitelná sedadla"
+      },
+      {
+        "value": "nastavitelný volant",
+        "label": "nastavitelný volant"
+      },
+      {
+        "value": "nouzové brždění",
+        "label": "Nouzové brždění"
+      },
+      {
+        "value": "originální autorádio",
+        "label": "originální autorádio"
+      },
+      {
+        "value": "ostřikovače světlometů",
+        "label": "ostřikovače světlometů"
+      },
+      {
+        "value": "otáčkoměr",
+        "label": "otáčkoměr"
+      },
+      {
+        "value": "palubní počítač",
+        "label": "palubní počítač"
+      },
+      {
+        "value": "panoramatická střecha",
+        "label": "panoramatická střecha"
+      },
+      {
+        "value": "parkovací asistent",
+        "label": "Parkovací asistent"
+      },
+      {
+        "value": "parkovací kamera",
+        "label": "parkovací kamera"
+      },
+      {
+        "value": "parkovací senzory",
+        "label": "parkovací senzory"
+      },
+      {
+        "value": "parkovací senzory přední",
+        "label": "Parkovací senzory přední"
+      },
+      {
+        "value": "parkovací senzory zadní",
+        "label": "parkovací senzory zadní"
+      },
+      {
+        "value": "podélný posuv sedadel",
+        "label": "podélný posuv sedadel"
+      },
+      {
+        "value": "posilovač řízení",
+        "label": "posilovač řízení"
+      },
+      {
+        "value": "premiový audiosystém",
+        "label": "premiový audiosystém"
+      },
+      {
+        "value": "protiprokluzový systém kol (asr)",
+        "label": "protiprokluzový systém kol (asr)"
+      },
+      {
+        "value": "pádla řazení na volantu",
+        "label": "pádla řazení na volantu"
+      },
+      {
+        "value": "příplatkový audiosystém",
+        "label": "příplatkový audiosystém"
+      },
+      {
+        "value": "rezervní kolo",
+        "label": "rezervní kolo"
+      },
+      {
+        "value": "satelitní navigace",
+        "label": "Satelitní navigace"
+      },
+      {
+        "value": "senzor opotřebení brzd. destiček",
+        "label": "senzor opotřebení brzd. destiček"
+      },
+      {
+        "value": "senzor stěračů",
+        "label": "senzor stěračů"
+      },
+      {
+        "value": "senzor tlaku v pneumatikách",
+        "label": "senzor tlaku v pneumatikách"
+      },
+      {
+        "value": "sledování jízdního pruhu",
+        "label": "Sledování jízdního pruhu"
+      },
+      {
+        "value": "sledování únavy řidiče",
+        "label": "Sledování únavy řidiče"
+      },
+      {
+        "value": "sportovní podvozek",
+        "label": "sportovní podvozek"
+      },
+      {
+        "value": "sportovní sedadla",
+        "label": "sportovní sedadla"
+      },
+      {
+        "value": "start/stop systém",
+        "label": "Start/Stop systém"
+      },
+      {
+        "value": "střešní okno",
+        "label": "střešní okno"
+      },
+      {
+        "value": "střešní spoiler",
+        "label": "střešní spoiler"
+      },
+      {
+        "value": "telefon",
+        "label": "telefon"
+      },
+      {
+        "value": "tempomat",
+        "label": "tempomat"
+      },
+      {
+        "value": "tónovaná skla",
+        "label": "tónovaná skla"
+      },
+      {
+        "value": "usb",
+        "label": "usb"
+      },
+      {
+        "value": "venkovní teploměr",
+        "label": "venkovní teploměr"
+      },
+      {
+        "value": "vnitřní teploměr",
+        "label": "vnitřní teploměr"
+      },
+      {
+        "value": "volba jízdního režimu",
+        "label": "Volba jízdního režimu"
+      },
+      {
+        "value": "vstup paměťové karty",
+        "label": "vstup paměťové karty"
+      },
+      {
+        "value": "vyhřívaná sedadla",
+        "label": "vyhřívaná sedadla"
+      },
+      {
+        "value": "vyhřívaná zrcátka",
+        "label": "vyhřívaná zrcátka"
+      },
+      {
+        "value": "vyhřívaný volant",
+        "label": "Vyhřívaný volant"
+      },
+      {
+        "value": "výškově nastavitelná sedadla",
+        "label": "výškově nastavitelná sedadla"
+      },
+      {
+        "value": "výškově nastavitelné sedadlo řidiče",
+        "label": "výškově nastavitelné sedadlo řidiče"
+      },
+      {
+        "value": "wifi hotspot",
+        "label": "wifi hotspot"
+      },
+      {
+        "value": "xenony",
+        "label": "xenony"
+      },
+      {
+        "value": "zadní loketní opěrka",
+        "label": "zadní loketní opěrka"
+      },
+      {
+        "value": "zadní stěrač",
+        "label": "zadní stěrač"
+      }
+    ]
   }
 }
