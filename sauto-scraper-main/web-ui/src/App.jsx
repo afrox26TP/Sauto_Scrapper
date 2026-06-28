@@ -27,6 +27,7 @@ export default function App() {
   const [modelsByBrand, setModelsByBrand] = useState({});
   const [loadingModelsByBrand, setLoadingModelsByBrand] = useState({});
   const [loadingModelCountsByBrand, setLoadingModelCountsByBrand] = useState({});
+  const [modelCountsKeyByBrand, setModelCountsKeyByBrand] = useState({});
   const [modelLoadErrorsByBrand, setModelLoadErrorsByBrand] = useState({});
   const [tickerStep, setTickerStep] = useState(0);
   const [showLogsModal, setShowLogsModal] = useState(false);
@@ -169,6 +170,12 @@ export default function App() {
     return uniq(csvToArray(currentProject.config?.manufacturer_seo_name));
   }, [currentProject?.config?.manufacturer_seo_name]);
 
+  const modelCountsRequestKey = useMemo(() => {
+    if (!currentProject) return "";
+    const cfg = currentProject.config || {};
+    return `${currentProject.id}|${JSON.stringify(cfg)}`;
+  }, [currentProject?.id, currentProject?.config]);
+
   const currentProjectLogs = useMemo(() => {
     if (!currentProject) return [];
     const projectLogs = currentProject.logs || [];
@@ -267,31 +274,43 @@ export default function App() {
       const models = modelsByBrand[b];
       if (!b || !Array.isArray(models) || models.length === 0 || loadingModelCountsByBrand[b]) return;
 
-      const missingCounts = models.some((m) => !Number.isFinite(Number(m?.count)));
-      if (!missingCounts) return;
+      if (modelCountsKeyByBrand[b] === modelCountsRequestKey) return;
 
       setLoadingModelCountsByBrand((prev) => ({ ...prev, [b]: true }));
       fetchModelCounts(b, currentProject?.config || {})
         .then((items) => {
           const countMap = new Map((items || []).map((x) => [String(x.value || ""), Number(x.count || 0)]));
+          const labelMap = new Map((items || []).map((x) => [String(x.value || ""), String(x.label || x.value || "")]));
           setModelsByBrand((prev) => {
             const current = prev[b] || [];
-            const merged = current
+            const mergedCurrent = current
               .map((m) => {
               const key = String(m?.value || "");
               if (!countMap.has(key)) return m;
               return { ...m, count: countMap.get(key) };
-              })
-              .filter((m) => Number.isFinite(Number(m?.count)) ? Number(m.count) > 0 : false);
+              });
+
+            const currentKeys = new Set(mergedCurrent.map((m) => String(m?.value || "")));
+            const addedFromCounts = [];
+            for (const [value, count] of countMap.entries()) {
+              if (currentKeys.has(value)) continue;
+              addedFromCounts.push({ value, label: labelMap.get(value) || value, count });
+            }
+
+            const merged = [...mergedCurrent, ...addedFromCounts]
+              .filter((m) => Number.isFinite(Number(m?.count)) ? Number(m.count) > 0 : false)
+              .sort((a, b) => String(a?.label || a?.value || "").localeCompare(String(b?.label || b?.value || "")));
+
             return { ...prev, [b]: merged };
           });
+          setModelCountsKeyByBrand((prev) => ({ ...prev, [b]: modelCountsRequestKey }));
         })
         .catch(() => {})
         .finally(() => {
           setLoadingModelCountsByBrand((prev) => ({ ...prev, [b]: false }));
         });
     });
-  }, [selectedBrands, modelsByBrand, loadingModelCountsByBrand, currentProject?.id, currentProject?.config]);
+  }, [selectedBrands, modelsByBrand, loadingModelCountsByBrand, modelCountsKeyByBrand, modelCountsRequestKey, currentProject?.config]);
 
   // Refresh project results
   const refreshProjectResults = useCallback(async () => {

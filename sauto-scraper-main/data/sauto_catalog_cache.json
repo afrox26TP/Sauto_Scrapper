@@ -246,7 +246,7 @@
   },
   "models": {
     "bmw": {
-      "updated_at": 1782647440,
+      "updated_at": 1782668243,
       "items": [
         {
           "value": "i3",
@@ -261,8 +261,28 @@
           "label": "i5"
         },
         {
+          "value": "i7",
+          "label": "i7"
+        },
+        {
+          "value": "i8",
+          "label": "i8"
+        },
+        {
           "value": "ix",
           "label": "iX"
+        },
+        {
+          "value": "ix1",
+          "label": "iX1"
+        },
+        {
+          "value": "ix2",
+          "label": "iX2"
+        },
+        {
+          "value": "ix3",
+          "label": "iX3"
         },
         {
           "value": "m2",
@@ -281,8 +301,16 @@
           "label": "M5"
         },
         {
+          "value": "m6",
+          "label": "M6"
+        },
+        {
           "value": "m8",
           "label": "M8"
+        },
+        {
+          "value": "ostatni",
+          "label": "Ostatní"
         },
         {
           "value": "rada-1",
@@ -349,11 +377,19 @@
           "label": "XM"
         },
         {
+          "value": "z1",
+          "label": "Z1"
+        },
+        {
+          "value": "z3",
+          "label": "Z3"
+        },
+        {
           "value": "z4",
           "label": "Z4"
         }
       ],
-      "collector_version": 6
+      "collector_version": 7
     },
     "audi": {
       "updated_at": 1782648392,
@@ -608,40 +644,78 @@
       "collector_version": 3
     },
     "alfa-romeo": {
-      "updated_at": 1782646192,
+      "updated_at": 1782668245,
       "items": [
         {
+          "value": "147",
+          "label": "147"
+        },
+        {
           "value": "156",
-          "label": "156",
-          "count": 1
+          "label": "156"
+        },
+        {
+          "value": "159",
+          "label": "159"
+        },
+        {
+          "value": "164",
+          "label": "164"
+        },
+        {
+          "value": "33",
+          "label": "33"
+        },
+        {
+          "value": "4c",
+          "label": "4C"
+        },
+        {
+          "value": "75",
+          "label": "75"
+        },
+        {
+          "value": "brera",
+          "label": "Brera"
         },
         {
           "value": "giulia",
-          "label": "Giulia",
-          "count": 11
+          "label": "Giulia"
         },
         {
           "value": "giulietta",
-          "label": "Giulietta",
-          "count": 4
+          "label": "Giulietta"
+        },
+        {
+          "value": "gtv",
+          "label": "GTV"
+        },
+        {
+          "value": "junior",
+          "label": "Junior"
         },
         {
           "value": "mito",
-          "label": "MiTo",
-          "count": 2
+          "label": "MiTo"
+        },
+        {
+          "value": "ostatni",
+          "label": "Ostatní"
         },
         {
           "value": "spider",
-          "label": "Spider",
-          "count": 2
+          "label": "Spider"
         },
         {
           "value": "stelvio",
-          "label": "Stelvio",
-          "count": 16
+          "label": "Stelvio"
+        },
+        {
+          "value": "tonale",
+          "label": "Tonale"
         }
       ],
-      "collector_version": 5
+      "collector_version": 7
     },
     "citroen": {
       "updated_at": 1782641930,
@@ -1199,6 +1273,24 @@
         {
           "value": "corvette",
           "label": "Corvette"
+        }
+      ],
+      "collector_version": 6
+    },
+    "mitsubishi": {
+      "updated_at": 1782667128,
+      "items": [
+        {
+          "value": "asx",
+          "label": "ASX"
+        },
+        {
+          "value": "eclipse-cross",
+          "label": "Eclipse Cross"
+        },
+        {
+          "value": "outlander",
+          "label": "Outlander"
         }
       ],
       "collector_version": 6

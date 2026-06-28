@@ -1,0 +1,696 @@
+[
+  {
+    "additional_model_name": "1,9 JTD multijet sport 2008",
+    "category": {
+      "id": 838,
+      "name": "Osobní",
+      "seo_name": "osobni"
+    },
+    "create_date": "2025-01-30T11:15:06",
+    "custom_id": null,
+    "deal_type": "sale",
+    "edit_date": "2026-04-24T09:20:03",
+    "fuel_cb": {
+      "name": "Nafta",
+      "seo_name": "nafta",
+      "value": 2
+    },
+    "gearbox_cb": {
+      "name": "Manuální",
+      "seo_name": "manualni",
+      "value": 1
+    },
+    "home_delivery": true,
+    "id": 207895726,
+    "images": [
+      {
+        "url": "//d19-a.sdn.cz/d_19/c_img_oV_A/nO1SBfAluiyaoUY1CNDMJO/351d.jpeg"
+      },
+      {
+        "url": "//d19-a.sdn.cz/d_19/c_img_oV_A/kObgaqJNMnB0yvGYoCNDMKB/4c32.jpeg"
+      },
+      {
+        "url": "//d19-a.sdn.cz/d_19/c_img_oV_A/nO1SBfAluiBJE31Y0CNDMKv/7064.jpeg"
+      }
+    ],
+    "images_total_count": 10,
+    "in_operation_date": "2008-07-01",
+    "is_cebia_smart_code_url_verified": false,
+    "locality": {
+      "address": "",
+      "address_id": 0,
+      "citypart": "Bezděkovské Předměstí",
+      "country_id": 112,
+      "district": "Domažlice",
+      "district_id": 8,
+      "district_seo_name": "domazlice",
+      "entity_id": 14105,
+      "entity_type": "ward",
+      "housenumber": "",
+      "municipality": "Domažlice",
+      "municipality_id": 1144,
+      "municipality_seo_name": "domazlice",
+      "quarter": "",
+      "quarter_id": 0,
+      "region": "Plzeňský kraj",
+      "region_id": 2,
+      "region_seo_name": "plzensky-kraj",
+      "source": "regionserver",
+      "street": "",
+      "street_id": 0,
+      "streetnumber": "",
+      "ward": "Bezděkovské Předměstí",
+      "ward_id": 14105,
+      "zip": "344 01"
+    },
+    "manufacturer_cb": {
+      "name": "Alfa Romeo",
+      "seo_name": "alfa-romeo",
+      "value": 1
+    },
+    "manufacturing_date": "2008-07-01",
+    "model_cb": {
+      "name": "147",
+      "seo_name": "147",
+      "value": 11
+    },
+    "name": "Alfa Romeo 147, 1,9 JTD multijet sport 2008",
+    "old_id": null,
+    "premise": {
+      "external_id": 8411,
+      "id": 13187664,
+      "logo": "https://d48-a.sdn.cz/d_48/c_img_F_G/UhXalK.jpeg",
+      "name": "Autobazar TOPTEN"
+    },
+    "price": 44000,
+    "price_by_agreement": false,
+    "sorting_date": "2025-01-30T11:19:40",
+    "source": "web_source",
+    "tachometer": 176207,
+    "topped": false,
+    "user": {
+      "id": 16236432
+    },
+    "manufacturer_name": "Alfa Romeo",
+    "model_name": "147",
+    "seller_type": "bazar",
+    "url": "https://www.sauto.cz/osobni/detail/alfa-romeo/147/207895726",
+    "detail_fetch_ok": true,
+    "detail_raw": {
+      "result": {
+        "additional_model_name": "1,9 JTD multijet sport 2008",
+        "adjustments_for_handicapped": false,
+        "airbags": 6,
+        "aircondition_cb": {
+          "name": "Automatická",
+          "value": 3
+        },
+        "approval_admin": "unchecked",
+        "average_gas_mileage": 5.0,
+        "capacity": 5,
+        "category": {
+          "id": 838,
+          "name": "Osobní",
+          "seo_name": "osobni"
+        },
+        "color_cb": {
+          "name": "Modrá",
+          "value": 8
+        },
+        "color_tone_cb": {
+          "name": "Tmavá",
+          "value": 2
+        },
+        "color_type_cb": {
+          "name": "Metalíza",
+          "value": 2
+        },
+        "condition_cb": {
+          "name": "Ojeté",
+          "value": 2
+        },
+        "country_of_origin_cb": {
+          "name": "Itálie",
+          "value": 4
+        },
+        "crashed_in_past": false,
+        "create_date": "2025-01-30T11:15:06",
+        "custom_id": null,
+        "deactivation_reason": null,
+        "deal_type": "sale",
+        "description": "Alfa Romeo 147 1,9 Jtdm 88 kw..2008..jen 176t.km\nNa prodej Alfa Romeo 147 1,9 JTDm 88 kw..r.v.07/2008,najeto jen 176t.km...Dovoz Itálie bez koroze. Běží krásně..Na přihlášení.",
+        "dont_show_phone": false,
+        "doors": 5,
+        "drive_cb": {
+          "name": "Pohon předních kol",
+          "value": 9
+        },
+        "edit_date": "2026-04-24T09:20:03",
+        "engine_power": 88,
+        "engine_volume": 1910,
+        "equipment_cb": [
+          {
+            "equipment_category": "safety",
+            "name": "ABS",
+            "value": 8
+          },
+          {
+            "equipment_category": "security",
+            "name": "Alarm",
+            "value": 22
+          },
+          {
+            "equipment_category": "systems",
+            "name": "Autorádio",
+            "value": 28
+          },
+          {
+            "equipment_category": "systems",
+            "name": "CD přehrávač",
+            "value": 56
+          },
+          {
+            "equipment_category": "security",
+            "name": "Centrální zamykání",
+            "value": 7
+          },
+          {
+            "equipment_category": "security",
+            "name": "Dálkové centrální zamykání",
+            "value": 24
+          },
+          {
+            "equipment_category": "seats",
+            "name": "Dělená zadní sedadla",
+            "value": 221
+          },
+          {
+            "equipment_category": "exterior",
+            "name": "Dojezdové rezervní kolo",
+            "value": 285
+          },
+          {
+            "equipment_category": "interior",
+            "name": "El. ovládání oken",
+            "value": 51
+          },
+          {
+            "equipment_category": "interior",
+            "name": "El. ovládání zrcátek",
+            "value": 13
+          },
+          {
+            "equipment_category": "interior",
+            "name": "El. ovládaný kufr",
+            "value": 246
+          },
+          {
+            "equipment_category": "interior",
+            "name": "El. sklopná zrcátka",
+            "value": 245
+          },
+          {
+            "equipment_category": "interior",
+            "name": "El. startér",
+            "value": 47
+          },
+          {
+            "equipment_category": "safety",
+            "name": "ESP",
+            "value": 15
+          },
+          {
+            "equipment_category": "security",
+            "name": "Imobilizér",
+            "value": 4
+          },
+          {
+            "equipment_category": "lights",
+            "name": "Mlhovky",
+            "value": 187
+          },
+          {
+            "equipment_category": "seats",
+            "name": "Nastavitelná sedadla",
+            "value": 36
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Nastavitelný volant",
+            "value": 37
+          },
+          {
+            "equipment_category": "systems",
+            "name": "Palubní počítač",
+            "value": 30
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Posilovač řízení",
+            "value": 32
+          },
+          {
+            "equipment_category": "safety",
+            "name": "Protiprokluzový systém kol (ASR)",
+            "value": 142
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Senzor opotřebení brzd. destiček",
+            "value": 249
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Senzor stěračů",
+            "value": 108
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Senzor tlaku v pneumatikách",
+            "value": 257
+          },
+          {
+            "equipment_category": "seats",
+            "name": "Sportovní sedadla",
+            "value": 92
+          },
+          {
+            "equipment_category": "exterior",
+            "name": "Tónovaná skla",
+            "value": 39
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Venkovní teploměr",
+            "value": 146
+          },
+          {
+            "equipment_category": "seats",
+            "name": "Výškově nastavitelná sedadla",
+            "value": 94
+          },
+          {
+            "equipment_category": "seats",
+            "name": "Výškově nastavitelné sedadlo řidiče",
+            "value": 224
+          },
+          {
+            "equipment_category": "seats",
+            "name": "Výsuvné opěrky hlav",
+            "value": 97
+          },
+          {
+            "equipment_category": "exterior",
+            "name": "Zadní stěrač",
+            "value": 79
+          },
+          {
+            "equipment_category": "other",
+            "name": "Záruka",
+            "value": 18
+          },
+          {
+            "equipment_category": "interior",
+            "name": "Otáčkoměr",
+            "value": 118
+          },
+          {
+            "equipment_category": "exterior",
+            "name": "Rezervní kolo",
+            "value": 201
+          },
+          {
+            "equipment_category": "other",
+            "name": "Sportovní paket",
+            "value": 329
+          }
+        ],
+        "euro_level_cb": {
+          "name": "EURO 3",
+          "value": 3
+        },
+        "first_owner": true,
+        "fuel_cb": {
+          "name": "Nafta",
+          "seo_name": "nafta",
+          "value": 2
+        },
+        "gearbox_cb": {
+          "name": "Manuální",
+          "value": 1
+        },
+        "gearbox_levels_cb": {
+          "name": "6 stupňová",
+          "value": 6
+        },
+        "id": 207895726,
+        "images": [
+          {
+            "id": 1214597998,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_oV_A/nO1SBfAluiyaoUY1CNDMJO/351d.jpeg"
+          },
+          {
+            "id": 1214598001,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_oV_A/kObgaqJNMnB0yvGYoCNDMKB/4c32.jpeg"
+          },
+          {
+            "id": 1214598004,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_oV_A/nO1SBfAluiBJE31Y0CNDMKv/7064.jpeg"
+          },
+          {
+            "id": 1214598007,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_oV_A/kObgaqJNMnDx7wrYnCNDMLc/9733.jpeg"
+          },
+          {
+            "id": 1214598010,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_oV_A/kObgaqJNMnB0llrYqCNDMMJ/21cf.jpeg"
+          },
+          {
+            "id": 1214598013,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_oV_A/nO1SBfAluiBtfltYxCNDMM6/4219.jpeg"
+          },
+          {
+            "id": 1214598016,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_oV_A/kObgaqJNMnD1IUpYqCNDMNh/1f3c.jpeg"
+          },
+          {
+            "id": 1214598028,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_oV_A/nO1SBfAluiyaoUY0CNDMOW/f48a.jpeg"
+          },
+          {
+            "id": 1214598031,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_oV_A/kObgaqJNMnKEQFYnCNDMPB/e32c.jpeg"
+          },
+          {
+            "id": 1214598034,
+            "image_kind": 0,
+            "url": "//d19-a.sdn.cz/d_19/c_img_oV_A/nO1SBfAluiDshGGY2CNDMPl/a1ce.jpeg"
+          }
+        ],
+        "in_operation_date": "2008-07-01",
+        "locality": {
+          "address": "543",
+          "address_id": 9757414,
+          "citypart": "Bezděkovské Předměstí",
+          "country_id": 112,
+          "district": "Domažlice",
+          "district_id": 8,
+          "district_seo_name": "domazlice",
+          "entity_id": 9757414,
+          "entity_type": "address",
+          "gps_lat": 49.429302481917716,
+          "gps_lon": 12.959902095036915,
+          "housenumber": "543",
+          "municipality": "Domažlice",
+          "municipality_id": 1144,
+          "municipality_seo_name": "domazlice",
+          "quarter": "",
+          "quarter_id": 0,
+          "region": "Plzeňský kraj",
+          "region_id": 2,
+          "region_seo_name": "plzensky-kraj",
+          "source": "regionserver",
+          "street": "Masarykova",
+          "street_id": 86408,
+          "streetnumber": "",
+          "ward": "Bezděkovské Předměstí",
+          "ward_id": 14105,
+          "zip": "344 01"
+        },
+        "manufacturer_cb": {
+          "name": "Alfa Romeo",
+          "seo_name": "alfa-romeo",
+          "value": 1
+        },
+        "manufacturing_date": "2008-07-01",
+        "mirroring_id": null,
+        "model_cb": {
+          "name": "147",
+          "seo_name": "147",
+          "value": 11
+        },
+        "name": "Alfa Romeo 147, 1,9 JTD multijet sport 2008",
+        "old_id": null,
+        "operating_lease_intended_for_cb": [],
+        "other_localities": [],
+        "phone": "+420774300531",
+        "preferred_offer": false,
+        "premise": {
+          "description": "Provoz autobazaru.Výkup a prodej motorových vozidel.",
+          "emails": [
+            {
+              "default": true,
+              "email": "zdenda47@seznam.cz",
+              "id": 7989537,
+              "name": "E-mail"
+            }
+          ],
+          "external_id": 8411,
+          "home_delivery": true,
+          "id": 13187664,
+          "locality": {
+            "address": "543",
+            "address_id": 9757414,
+            "citypart": "Bezděkovské Předměstí",
+            "country_id": 112,
+            "district": "Domažlice",
+            "district_id": 8,
+            "district_seo_name": "domazlice",
+            "entity_id": 9757414,
+            "entity_type": "address",
+            "gps_lat": 49.429302481917716,
+            "gps_lon": 12.959902095036915,
+            "housenumber": "543",
+            "municipality": "Domažlice",
+            "municipality_id": 1144,
+            "municipality_seo_name": "domazlice",
+            "quarter": "",
+            "quarter_id": 0,
+            "region": "Plzeňský kraj",
+            "region_id": 2,
+            "region_seo_name": "plzensky-kraj",
+            "source": "regionserver",
+            "street": "Masarykova",
+            "street_id": 86408,
+            "streetnumber": "",
+            "ward": "Bezděkovské Předměstí",
+            "ward_id": 14105,
+            "zip": "344 01"
+          },
+          "logo": null,
+          "name": "Autobazar TOPTEN",
+          "old_id": 8411,
+          "opening_hours": {
+            "opening_time_additional_info": "Vždy nutná telefonická dohoda!!! Sobota a neděle jen po telefonické domluvě.",
+            "opening_time_description": "Otevírací hodiny",
+            "opening_time_holiday_info": "",
+            "opening_time_st": [
+              {
+                "amEnd": {
+                  "hour": 17,
+                  "minute": 0
+                },
+                "amStart": {
+                  "hour": 9,
+                  "minute": 0
+                },
+                "specification_id": "open"
+              },
+              {
+                "amEnd": {
+                  "hour": 17,
+                  "minute": 0
+                },
+                "amStart": {
+                  "hour": 9,
+                  "minute": 0
+                },
+                "specification_id": "open"
+              },
+              {
+                "amEnd": {
+                  "hour": 17,
+                  "minute": 0
+                },
+                "amStart": {
+                  "hour": 9,
+                  "minute": 0
+                },
+                "specification_id": "open"
+              },
+              {
+                "amEnd": {
+                  "hour": 17,
+                  "minute": 0
+                },
+                "amStart": {
+                  "hour": 9,
+                  "minute": 0
+                },
+                "specification_id": "open"
+              },
+              {
+                "amEnd": {
+                  "hour": 17,
+                  "minute": 0
+                },
+                "amStart": {
+                  "hour": 9,
+                  "minute": 0
+                },
+                "specification_id": "open"
+              },
+              {
+                "specification_id": "closed"
+              },
+              {
+                "specification_id": "closed"
+              }
+            ],
+            "opening_time_visible": true
+          },
+          "phones": [
+            {
+              "default": true,
+              "id": 11287647,
+              "name": "Telefon",
+              "phone": "+420774300531"
+            }
+          ],
+          "retargeting_id": null,
+          "reviews": {
+            "count": 8,
+            "stars": 4.5
+          },
+          "seo_name": "the-topten-sro",
+          "social_networks": null,
+          "software_keys": [
+            {
+              "id": 3
+            },
+            {
+              "id": 6
+            }
+          ],
+          "subject": {
+            "ico": 7052065,
+            "id": 4059124
+          },
+          "url_detail_firmy": "https://www.firmy.cz/detail/13187664-the-topten-s-r-o-domazlice-bezdekovske-predmesti.html",
+          "use_advert_locality": false,
+          "web": ""
+        },
+        "price": 44000,
+        "price_is_vat_deductible": null,
+        "price_is_without_vat": null,
+        "price_leasing": null,
+        "price_note": null,
+        "price_original": 44000,
+        "price_payment": null,
+        "price_payment_count": null,
+        "seo_name": "207895726-alfa-romeo-147-19-jtd-multijet-sport-2008",
+        "service_book": true,
+        "sorting_date": "2025-01-30T11:19:40",
+        "source": "web_source",
+        "status": "active",
+        "stk_date": "2027-01-01",
+        "tachometer": 176207,
+        "topped": false,
+        "tuning": false,
+        "user": {
+          "bankid_status": "unverified",
+          "enabled": true,
+          "id": 16236432,
+          "portrait_url": "https://i.im.cz/ac/eeQ2AE5OtyxVo_H7qTsMhBvvREftQ7fkDjGsIwxExNk",
+          "ubox_created_date": "2007-04-01",
+          "user_service": {
+            "created_date": "1970-01-01",
+            "service_enabled": true,
+            "service_name": "sauto",
+            "shop_description": "",
+            "shop_name": "",
+            "shop_url": null
+          }
+        },
+        "valid_to": "2025-01-30T11:15:06",
+        "vehicle_body_cb": {
+          "name": "Hatchback",
+          "seo_name": "hatchback",
+          "value": 1
+        },
+        "videos": [],
+        "vin": "ZAR93700003429623"
+      },
+      "status_code": 200,
+      "status_message": "OK"
+    },
+    "offer_metrics": {
+      "price_per_kw": 500.0,
+      "price_per_km": 0.2497,
+      "km_per_year": 9789,
+      "age_years": 18,
+      "gearbox_type": "manual",
+      "drive_type": "fwd",
+      "brand_tier": "premium",
+      "listing_age_days": 514,
+      "months_to_stk": 6,
+      "euro_value": 3,
+      "annual_fuel_cost": 18599,
+      "annual_insurance": 4750,
+      "annual_maintenance": 14873,
+      "annual_total_cost": 38222,
+      "estimated_consumption_per_100km": 5.0,
+      "model_family_key": "alfa-romeo:147",
+      "first_owner": true,
+      "service_book": true,
+      "tuning": false,
+      "equipment_list": [
+        "abs",
+        "alarm",
+        "autorádio",
+        "cd přehrávač",
+        "centrální zamykání",
+        "dálkové centrální zamykání",
+        "dělená zadní sedadla",
+        "dojezdové rezervní kolo",
+        "el. ovládání oken",
+        "el. ovládání zrcátek",
+        "el. ovládaný kufr",
+        "el. sklopná zrcátka",
+        "el. startér",
+        "esp",
+        "imobilizér",
+        "mlhovky",
+        "nastavitelná sedadla",
+        "nastavitelný volant",
+        "palubní počítač",
+        "posilovač řízení",
+        "protiprokluzový systém kol (asr)",
+        "senzor opotřebení brzd. destiček",
+        "senzor stěračů",
+        "senzor tlaku v pneumatikách",
+        "sportovní sedadla",
+        "tónovaná skla",
+        "venkovní teploměr",
+        "výškově nastavitelná sedadla",
+        "výškově nastavitelné sedadlo řidiče",
+        "výsuvné opěrky hlav",
+        "zadní stěrač",
+        "záruka",
+        "otáčkoměr",
+        "rezervní kolo",
+        "sportovní paket"
+      ],
+      "images_count": 10
+    }
+  }
+]

@@ -1068,36 +1068,32 @@ def _collect_models_for_brand(
             return False, "", ""
         return True, model_seo, (model_name or model_seo)
 
-    # Collect from live API (global catalog pages), then keep only selected brand.
-    # The upstream API can ignore manufacturer filters, so we enforce brand match locally.
+    # Collect from live API using a brand-specific query to avoid missing models
+    # for less frequent manufacturers when scanning global pages.
     total_rows: int | None = None
-    stale_pages = 0
     for page in range(max_pages):
         offset = page * page_size
-        batch, page_total = _fetch_sauto_page({"category_id": 838, "limit": page_size, "offset": offset})
+        batch, page_total = _fetch_sauto_page(
+            {
+                "category_id": 838,
+                "limit": page_size,
+                "offset": offset,
+                "manufacturer_model_seo": selected_brand,
+            }
+        )
         if page_total is not None:
             total_rows = page_total
         if not batch:
             break
-        added_in_page = 0
+
         for item in batch:
             ok, model_seo, model_name = _is_valid_model_row(item)
             if not ok:
                 continue
             if model_seo not in models:
                 models[model_seo] = {"label": model_name or model_seo, "count": 0}
-                added_in_page += 1
             if include_counts:
                 models[model_seo]["count"] = int(models[model_seo].get("count", 0)) + 1
-
-        if not include_counts:
-            if added_in_page == 0:
-                stale_pages += 1
-                if stale_pages >= 4:
-                    break
-            else:
-                stale_pages = 0
-            continue
 
         if total_rows is not None and (offset + len(batch)) >= total_rows:
             break
@@ -1137,11 +1133,20 @@ def _collect_model_counts_for_brand_with_config(
         return []
 
     cfg = config if isinstance(config, dict) else {}
+    selected_brands = set(_split_csv_values(cfg.get("manufacturer_seo_name")))
+    excluded_brands = set(_split_csv_values(cfg.get("exclude_manufacturer_seo_name")))
+    active_brands = {b for b in selected_brands if b and b not in excluded_brands}
+
+    # model_seo_name is a flat list without brand mapping. When multiple brands are
+    # selected we must not force the current brand to match every selected model,
+    # otherwise one brand can accidentally hide models of another brand.
+    apply_selected_model_filter = (not active_brands) or (active_brands == {selected_brand})
+
     selected_models = _split_csv_values(cfg.get("model_seo_name"))
     excluded_models = set(_split_csv_values(cfg.get("exclude_model_seo_name")))
     excluded_bodies = set(_split_csv_values(cfg.get("exclude_body_seo")))
 
-    pairs = [f"{selected_brand}:{m}" for m in selected_models if m and m not in excluded_models]
+    pairs = [f"{selected_brand}:{m}" for m in selected_models if apply_selected_model_filter and m and m not in excluded_models]
     manufacturer_model_seo = "|".join(pairs) if pairs else selected_brand
 
     params: dict[str, Any] = {
@@ -1201,7 +1206,7 @@ def _collect_model_counts_for_brand_with_config(
                 continue
             if model_seo in excluded_models:
                 continue
-            if selected_models and model_seo not in selected_models:
+            if apply_selected_model_filter and selected_models and model_seo not in selected_models:
                 continue
             if body_seo_item and (body_seo_item in EXCLUDED_MODEL_BODY_TYPES or body_seo_item in excluded_bodies):
                 continue
@@ -1508,7 +1513,7 @@ def get_catalog_models(brand: str, force_refresh: bool = False) -> dict[str, Any
     cached_collector_version = brand_cache.get("collector_version") if isinstance(brand_cache, dict) else None
 
     # Per-brand cache gate to avoid serving stale entries from older buggy collector logic.
-    cache_ok = cached_collector_version == 6
+    cache_ok = cached_collector_version == 7
 
     if not force_refresh and cache_ok and _is_fresh(cached_ts) and isinstance(cached_items, list):
         return {"brand": selected_brand, "items": cached_items, "cached": True, "updated_at": cached_ts}
@@ -1534,7 +1539,7 @@ def get_catalog_models(brand: str, force_refresh: bool = False) -> dict[str, Any
     cache["models"][selected_brand] = {
         "updated_at": now,
         "items": items,
-        "collector_version": 6,
+        "collector_version": 7,
     }
     _save_catalog_cache(cache)
 

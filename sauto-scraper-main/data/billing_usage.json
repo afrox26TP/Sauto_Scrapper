@@ -1,5 +1,5 @@
 {
-  "updated_at": 1782648430.7038286,
+  "updated_at": 1782669103.0998282,
   "rates": {
     "run_base_czk": 5.0,
     "item_czk": 0.02,
@@ -150,6 +150,22 @@
       },
       "total_czk": 5.2,
       "last_event_at": 1782648430.7038221
+    },
+    "proj_mqy2j9o8_vetyqg": {
+      "project_id": "proj_mqy2j9o8_vetyqg",
+      "runs_total": 1,
+      "runs_success": 0,
+      "runs_failed": 1,
+      "items_total": 0,
+      "api_calls": 0,
+      "costs": {
+        "runs_czk": 5.0,
+        "items_czk": 0.0,
+        "api_calls_czk": 0.0,
+        "proxy_czk": 0.0
+      },
+      "total_czk": 5.0,
+      "last_event_at": 1782669103.099821
     }
   },
   "events": [
@@ -267,6 +283,19 @@
       "charges": {
         "run_base_czk": 5.0,
         "items_czk": 0.2,
+        "proxy_czk": 0.0
+      }
+    },
+    {
+      "type": "run_usage",
+      "at": 1782669103.099821,
+      "project_id": "proj_mqy2j9o8_vetyqg",
+      "job_id": "job_a89425f14220",
+      "exit_code": -1,
+      "item_count": 0,
+      "charges": {
+        "run_base_czk": 5.0,
+        "items_czk": 0.0,
         "proxy_czk": 0.0
       }
     }
