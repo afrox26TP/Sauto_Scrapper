@@ -30,6 +30,16 @@ npm install && npm run dev
 
 Open [http://localhost:5173](http://localhost:5173).
 
+## Cloudflare CI Note
+
+Repository root includes `wrangler.toml` for static frontend deploy from CI using:
+
+```bash
+npx wrangler deploy
+```
+
+It builds `sauto-scraper-main/web-ui` and deploys assets from `sauto-scraper-main/web-ui/dist`.
+
 ## License
 
 MIT

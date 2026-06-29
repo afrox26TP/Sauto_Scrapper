@@ -90,6 +90,22 @@ VITE_API_BASE_URL=https://api.your-domain.com
 
 Add custom domain in Cloudflare Pages, for example `app.your-domain.com`.
 
+## Alternative: Wrangler Deploy from Repository Root
+
+If your CI runs `npx wrangler deploy` from repo root, use `wrangler.toml` in root.
+This repo already includes:
+
+- `wrangler.toml` with:
+  - build command: `cd sauto-scraper-main/web-ui && npm install && npm run build`
+  - assets directory: `./sauto-scraper-main/web-ui/dist`
+  - SPA fallback: `not_found_handling = "single-page-application"`
+
+In that case, keep deploy command as:
+
+```bash
+npx wrangler deploy
+```
+
 ## 4) Verification Checklist
 
 - `https://api.your-domain.com/api/health` returns `200`
