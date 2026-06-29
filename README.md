@@ -5,6 +5,7 @@
 ## Quick Links
 
 - **User Documentation**: [`sauto-scraper-main/README.md`](sauto-scraper-main/README.md)
+- **Cloudflare Deploy**: [`sauto-scraper-main/CLOUDFLARE_DEPLOY.md`](sauto-scraper-main/CLOUDFLARE_DEPLOY.md)
 - **AI/Developer Context**: [`CODEBUDDY.md`](CODEBUDDY.md)
 
 Original version by [karlosmatos](https://github.com/karlosmatos/sauto-scraper). This fork adds a web dashboard, multi-preset scoring engine, market analysis, and Discord notifications.

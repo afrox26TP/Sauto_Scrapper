@@ -1,5 +1,6 @@
 // ── API wrapper ──
-const API_BASE = "http://localhost:8000";
+const RAW_API_BASE = String(import.meta.env.VITE_API_BASE_URL || "").trim();
+const API_BASE = RAW_API_BASE.replace(/\/+$/, "") || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "");
 const AUTH_TOKEN_KEY = "sauto_auth_token";
 
 export function getAuthToken() {
@@ -20,7 +21,10 @@ export function clearAuthToken() {
 }
 
 function apiUrl(path, query = {}) {
-  const url = new URL(`${API_BASE}${path}`);
+  const normalizedPath = String(path || "").startsWith("/") ? String(path) : `/${String(path || "")}`;
+  const url = API_BASE
+    ? new URL(normalizedPath, `${API_BASE}/`)
+    : new URL(normalizedPath, window.location.origin);
   Object.entries(query).forEach(([k, v]) => {
     if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, v);
   });

@@ -1,0 +1,19 @@
+# Copy to your cloudflared config path, usually:
+# - Linux: ~/.cloudflared/config.yml
+# - Windows: C:\Users\<user>\.cloudflared\config.yml
+
+# Tunnel name created by: cloudflared tunnel create sauto-api
+tunnel: sauto-api
+
+# Update this path with the credentials file created by cloudflared.
+# Linux example: /root/.cloudflared/<tunnel-id>.json
+# Windows example: C:\Users\<user>\.cloudflared\<tunnel-id>.json
+credentials-file: C:\\Users\\<user>\\.cloudflared\\<tunnel-id>.json
+
+ingress:
+  # Public hostname for your FastAPI backend.
+  - hostname: api.your-domain.com
+    service: http://127.0.0.1:8000
+
+  # Catch-all fallback.
+  - service: http_status:404

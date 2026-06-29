@@ -11,6 +11,20 @@ uvicorn web-api.app:app --reload --port 8000
 
 The API will be available at `http://localhost:8000`.
 
+## Environment
+
+Create `.env` from `.env.example` for production:
+
+```bash
+cp .env.example .env
+```
+
+Important variables:
+
+- `AUTH_SECRET`: required in production, use a long random value.
+- `CORS_ALLOW_ORIGINS`: comma-separated origins allowed from browser (for example `https://app.example.com`).
+- `SAUTO_API_KEYS`: optional API keys that protect all write endpoints.
+
 ## Endpoints
 
 - `GET /api/health`
@@ -60,6 +74,26 @@ x-api-key: key_a
 ```
 
 If `SAUTO_API_KEYS` is empty, guard is disabled.
+
+## Cloudflare Setup Pattern
+
+Cloudflare Pages cannot run Python/FastAPI directly. Use this split deployment:
+
+1. Frontend on Cloudflare Pages (`web-ui`).
+2. FastAPI on a VM/container (or any Python host).
+3. Expose FastAPI through Cloudflare Tunnel on `https://api.your-domain.com`.
+
+For the API host set:
+
+```bash
+CORS_ALLOW_ORIGINS=https://app.your-domain.com
+```
+
+Then set frontend variable:
+
+```bash
+VITE_API_BASE_URL=https://api.your-domain.com
+```
 
 ## Usage Billing (No Plans)
 

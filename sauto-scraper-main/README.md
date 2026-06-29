@@ -13,6 +13,8 @@ A full-stack web scraper and deal analyzer for the Czech car marketplace [Sauto.
 - **Web dashboard** — React UI for live param editing, scraper control, and results browsing
 - **Result management** — sort, filter, mark, export, import, and delete results
 
+Deployment guide: [`CLOUDFLARE_DEPLOY.md`](CLOUDFLARE_DEPLOY.md)
+
 ---
 
 ## Project Structure

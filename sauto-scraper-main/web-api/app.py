@@ -91,6 +91,13 @@ BILLING_RUN_BASE_CZK = float(os.getenv("BILLING_RUN_BASE_CZK", "5.0"))
 BILLING_ITEM_CZK = float(os.getenv("BILLING_ITEM_CZK", "0.02"))
 BILLING_API_CALL_CZK = float(os.getenv("BILLING_API_CALL_CZK", "0.05"))
 BILLING_PROXY_RUN_CZK = float(os.getenv("BILLING_PROXY_RUN_CZK", "0.0"))
+CORS_ALLOW_ORIGINS = [
+    origin.strip()
+    for origin in (os.getenv("CORS_ALLOW_ORIGINS") or "http://localhost:5173,http://127.0.0.1:5173").split(",")
+    if origin.strip()
+]
+CORS_ALLOW_ANY_ORIGIN = "*" in CORS_ALLOW_ORIGINS
+CORS_ALLOW_ORIGIN_SET = {origin for origin in CORS_ALLOW_ORIGINS if origin != "*"}
 
 
 class ParamsPayload(BaseModel):
@@ -1420,7 +1427,7 @@ def _collect_equipment(max_pages: int = 20, page_size: int = 200) -> list[dict[s
 app = FastAPI(title="Sauto Scraper API", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"] if CORS_ALLOW_ANY_ORIGIN else CORS_ALLOW_ORIGINS,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -1438,10 +1445,17 @@ async def api_key_guard(request: Request, call_next):
     def _cors_json(status_code: int, content: dict[str, Any]) -> JSONResponse:
         # Ensure browser clients receive auth errors as normal HTTP responses
         # instead of opaque CORS failures.
+        headers: dict[str, str] = {}
+        origin = request.headers.get("origin", "").strip()
+        if CORS_ALLOW_ANY_ORIGIN:
+            headers["Access-Control-Allow-Origin"] = "*"
+        elif origin and origin in CORS_ALLOW_ORIGIN_SET:
+            headers["Access-Control-Allow-Origin"] = origin
+            headers["Vary"] = "Origin"
         return JSONResponse(
             status_code=status_code,
             content=content,
-            headers={"Access-Control-Allow-Origin": "*"},
+            headers=headers,
         )
 
     # Let CORS middleware handle preflight requests. Blocking OPTIONS here
