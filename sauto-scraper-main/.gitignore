@@ -153,6 +153,12 @@ dmypy.json
 web-ui/node_modules/
 web-ui/dist/
 
+# Local runtime data (do not commit)
+data/sauto_catalog_cache.json
+data/users.json
+data/billing_usage.json
+marked_ids.json
+
 # Cython debug symbols
 cython_debug/
 

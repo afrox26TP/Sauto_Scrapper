@@ -35,6 +35,10 @@ SAUTO_API_KEYS=<optional-comma-separated-keys>
 
 Install and login `cloudflared`, then create tunnel and DNS route.
 
+If `cloudflared` is not in PATH on Windows, this repo supports local binary at:
+
+- `c:\scraper\tools\cloudflared\cloudflared.exe`
+
 ### Quick commands (Windows PowerShell)
 
 ```powershell
@@ -112,6 +116,70 @@ npx wrangler deploy
 - `https://app.your-domain.com` loads without console CORS errors
 - Login/signup works from frontend
 - `POST /api/run` works (with auth and optional `x-api-key`)
+
+## Troubleshooting: Frontend Live, Backend/Database Not Working
+
+If Cloudflare Pages is live but API calls fail:
+
+1. This project backend is **not** deployable to Cloudflare Pages (Pages is static).
+2. FastAPI must run on a separate Python host (VM/container).
+3. "Database" in this project is file-based JSON in `data/` (for example `data/users.json`, `data/billing_usage.json`).
+4. If backend host has ephemeral filesystem, data will be reset or missing after restart.
+
+Quick checks:
+
+- `https://api.your-domain.com/api/health` returns `200`
+- API server process is listening on `127.0.0.1:8000`
+- Cloudflare Tunnel is running and DNS points to that tunnel
+- Backend has write access to project `data/` directory
+
+Common local startup error:
+
+- `WinError 10048` means port `8000` is already in use (not a code crash)
+
+## Backend with Persistent Storage (Docker)
+
+Repo includes:
+
+- `deploy/backend/Dockerfile`
+- `deploy/backend/docker-compose.yml`
+
+Run:
+
+```bash
+cd sauto-scraper-main/deploy/backend
+docker compose up -d --build
+```
+
+This keeps JSON "DB" persistent by mounting:
+
+- `../../data -> /app/data`
+- `../../params.json -> /app/params.json`
+- `../../notified_ids.json -> /app/notified_ids.json`
+- `../../marked_ids.json -> /app/marked_ids.json`
+
+## Windows Quick Recovery (No Docker)
+
+If Docker is not available, repo includes scripts:
+
+- `deploy/backend/run-backend-windows.ps1`
+- `deploy/backend/check-backend-health.ps1`
+
+Run backend:
+
+```powershell
+cd sauto-scraper-main
+.\deploy\backend\run-backend-windows.ps1
+```
+
+Verify backend:
+
+```powershell
+cd sauto-scraper-main
+.\deploy\backend\check-backend-health.ps1
+```
+
+This backend uses file-based JSON storage in project files (`data/*.json`, `params.json`, `marked_ids.json`, `notified_ids.json`).
 
 ## 5) Exact Production Values
 

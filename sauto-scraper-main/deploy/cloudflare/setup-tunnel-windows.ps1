@@ -6,24 +6,34 @@ param(
   [string]$TunnelName = "sauto-api",
 
   [Parameter(Mandatory = $false)]
-  [string]$ApiHostname = "api.your-domain.com"
+  [string]$ApiHostname = "api.your-domain.com",
+
+  [Parameter(Mandatory = $false)]
+  [string]$CloudflaredPath = "c:\scraper\tools\cloudflared\cloudflared.exe"
 )
 
 $ErrorActionPreference = "Stop"
 
 Write-Host "[1/6] Checking cloudflared..."
-if (-not (Get-Command cloudflared -ErrorAction SilentlyContinue)) {
-  throw "cloudflared is not installed. Install it first: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/"
+$cloudflaredCmd = ""
+$cmd = Get-Command cloudflared -ErrorAction SilentlyContinue
+if ($cmd) {
+  $cloudflaredCmd = $cmd.Source
+} elseif (Test-Path $CloudflaredPath) {
+  $cloudflaredCmd = $CloudflaredPath
+} else {
+  throw "cloudflared was not found in PATH and local binary was not found at $CloudflaredPath"
 }
+Write-Host "Using cloudflared: $cloudflaredCmd"
 
 Write-Host "[2/6] Login to Cloudflare (browser will open)..."
-cloudflared tunnel login
+& $cloudflaredCmd tunnel login
 
 Write-Host "[3/6] Creating tunnel: $TunnelName"
-cloudflared tunnel create $TunnelName
+& $cloudflaredCmd tunnel create $TunnelName
 
 Write-Host "[4/6] Creating DNS route: $ApiHostname"
-cloudflared tunnel route dns $TunnelName $ApiHostname
+& $cloudflaredCmd tunnel route dns $TunnelName $ApiHostname
 
 $cfDir = Join-Path $env:USERPROFILE ".cloudflared"
 $configPath = Join-Path $cfDir "config.yml"
@@ -51,7 +61,7 @@ ingress:
 Set-Content -Path $configPath -Value $config -Encoding UTF8
 
 Write-Host "[6/6] Done. Start tunnel with:"
-Write-Host "cloudflared tunnel run $TunnelName"
+Write-Host "`"$cloudflaredCmd`" tunnel run $TunnelName"
 Write-Host ""
 Write-Host "Remember to set web-api/.env:"
 Write-Host "CORS_ALLOW_ORIGINS=https://app.$Zone"

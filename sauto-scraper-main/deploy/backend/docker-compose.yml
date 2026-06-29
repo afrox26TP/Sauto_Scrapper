@@ -1,0 +1,16 @@
+services:
+  sauto-api:
+    build:
+      context: ../..
+      dockerfile: deploy/backend/Dockerfile
+    container_name: sauto-api
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    env_file:
+      - ../../web-api/.env
+    volumes:
+      - ../../data:/app/data
+      - ../../params.json:/app/params.json
+      - ../../notified_ids.json:/app/notified_ids.json
+      - ../../marked_ids.json:/app/marked_ids.json
