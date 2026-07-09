@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import urlencode
 from urllib.error import HTTPError
-from urllib.request import urlopen
+from urllib.request import Request as UrlRequest, urlopen
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -59,10 +59,12 @@ PUBLIC_API_PATHS = {
     "/api/catalog/bodies",
 }
 AUTH_REQUIRED_PATHS = {
-    "/api/run",
+    "/api/auth/me",
     "/api/pause",
     "/api/resume",
     "/api/stop",
+    "/api/billing/access",
+    "/api/billing/checkout-session",
 }
 LOCKED_SEARCH_DEFAULTS = {
     "category_id": "838",
@@ -91,6 +93,16 @@ BILLING_RUN_BASE_CZK = float(os.getenv("BILLING_RUN_BASE_CZK", "5.0"))
 BILLING_ITEM_CZK = float(os.getenv("BILLING_ITEM_CZK", "0.02"))
 BILLING_API_CALL_CZK = float(os.getenv("BILLING_API_CALL_CZK", "0.05"))
 BILLING_PROXY_RUN_CZK = float(os.getenv("BILLING_PROXY_RUN_CZK", "0.0"))
+PAYMENT_PROVIDER = (os.getenv("PAYMENT_PROVIDER", "stripe") or "stripe").strip().lower()
+ALLOW_LOCAL_FREE_RUNS = (os.getenv("ALLOW_LOCAL_FREE_RUNS", "true") or "true").strip().lower() not in {"0", "false", "no"}
+STRIPE_SECRET_KEY = (os.getenv("STRIPE_SECRET_KEY") or "").strip()
+STRIPE_PRICE_ID = (os.getenv("STRIPE_PRICE_ID") or "").strip()
+STRIPE_SUCCESS_URL = (os.getenv("STRIPE_SUCCESS_URL") or "").strip()
+STRIPE_CANCEL_URL = (os.getenv("STRIPE_CANCEL_URL") or "").strip()
+STRIPE_PAYMENT_LINK_URL = (os.getenv("STRIPE_PAYMENT_LINK_URL") or "").strip()
+STRIPE_WEBHOOK_SECRET = (os.getenv("STRIPE_WEBHOOK_SECRET") or "").strip()
+STRIPE_DEFAULT_CURRENCY = (os.getenv("STRIPE_DEFAULT_CURRENCY") or "czk").strip().lower() or "czk"
+STRIPE_DEFAULT_AMOUNT_CENTS = int(os.getenv("STRIPE_DEFAULT_AMOUNT_CENTS", "9900"))
 CORS_ALLOW_ORIGINS = [
     origin.strip()
     for origin in (os.getenv("CORS_ALLOW_ORIGINS") or "http://localhost:5173,http://127.0.0.1:5173").split(",")
@@ -107,6 +119,7 @@ class ParamsPayload(BaseModel):
 class RunPayload(BaseModel):
     output_file: str = "data/sauto_interesting.json"
     project_id: str = "default"
+    run_mode: str = "cloud_paid"
 
 
 class ResultsPathPayload(BaseModel):
@@ -154,6 +167,70 @@ class SignupPayload(BaseModel):
 class LoginPayload(BaseModel):
     email: str = ""
     password: str = ""
+
+
+class CheckoutSessionPayload(BaseModel):
+    success_url: str = ""
+    cancel_url: str = ""
+
+
+def _is_paid_status(value: str) -> bool:
+    return str(value or "").strip().lower() in {"paid", "active", "trialing", "lifetime"}
+
+
+def _is_loopback_request(request: Request) -> bool:
+    host = str(getattr(request.client, "host", "") or "").strip().lower()
+    return host in {"127.0.0.1", "::1", "localhost"}
+
+
+def _stripe_request(path: str, payload: dict[str, Any]) -> dict[str, Any]:
+    if not STRIPE_SECRET_KEY:
+        raise RuntimeError("STRIPE_SECRET_KEY is not configured.")
+
+    body = urlencode(payload).encode("utf-8")
+    req = UrlRequest(
+        url=f"https://api.stripe.com{path}",
+        method="POST",
+        data=body,
+        headers={
+            "Authorization": f"Bearer {STRIPE_SECRET_KEY}",
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+    )
+    with urlopen(req, timeout=20) as response:
+        raw = response.read().decode("utf-8")
+    data = json.loads(raw)
+    if not isinstance(data, dict):
+        raise RuntimeError("Invalid Stripe response.")
+    return data
+
+
+def _stripe_verify_signature(payload: bytes, header_value: str) -> bool:
+    if not STRIPE_WEBHOOK_SECRET:
+        return True
+    signed_header = str(header_value or "")
+    if not signed_header:
+        return False
+
+    timestamp = ""
+    signature = ""
+    for part in signed_header.split(","):
+        key, _, value = part.strip().partition("=")
+        if key == "t":
+            timestamp = value
+        elif key == "v1":
+            signature = value
+
+    if not timestamp or not signature:
+        return False
+
+    signed_payload = f"{timestamp}.{payload.decode('utf-8')}"
+    expected = hmac.new(
+        STRIPE_WEBHOOK_SECRET.encode("utf-8"),
+        signed_payload.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    return hmac.compare_digest(expected, signature)
 
 
 class ScraperRunner:
@@ -557,12 +634,14 @@ class RunQueue:
         self._active_job_id: str | None = None
         self.on_job_finished: Callable[[dict[str, Any]], None] | None = None
 
-    def _new_job(self, output_file: str, project_id: str) -> dict[str, Any]:
+    def _new_job(self, output_file: str, project_id: str, run_mode: str, billable: bool) -> dict[str, Any]:
         now = time.time()
         job = {
             "job_id": f"job_{uuid.uuid4().hex[:12]}",
             "project_id": project_id or "default",
             "output_file": output_file,
+            "run_mode": run_mode,
+            "billable": bool(billable),
             "status": "queued",
             "created_at": now,
             "started_at": None,
@@ -573,9 +652,9 @@ class RunQueue:
         self._jobs[job["job_id"]] = job
         return job
 
-    def enqueue(self, output_file: str, project_id: str) -> dict[str, Any]:
+    def enqueue(self, output_file: str, project_id: str, run_mode: str = "cloud_paid", billable: bool = True) -> dict[str, Any]:
         with self._lock:
-            job = self._new_job(output_file=output_file, project_id=project_id)
+            job = self._new_job(output_file=output_file, project_id=project_id, run_mode=run_mode, billable=billable)
             self._pending.append(job)
             started_now = self._try_start_next_unlocked()
             return {
@@ -736,6 +815,8 @@ class BillingLedger:
         project_id = str(job.get("project_id") or "default")
         output_rel = str(job.get("output_file") or "data/sauto_interesting.json")
         exit_code = int(job.get("exit_code") or -1)
+        run_mode = str(job.get("run_mode") or "cloud_paid")
+        billable = bool(job.get("billable", True))
 
         result_path = (ROOT_DIR / output_rel).resolve()
         item_count = len(load_result_items(result_path)) if result_path.exists() else 0
@@ -750,26 +831,29 @@ class BillingLedger:
 
             project["items_total"] += item_count
             costs = project["costs"]
-            costs["runs_czk"] = round(float(costs.get("runs_czk", 0.0)) + BILLING_RUN_BASE_CZK, 4)
-            costs["items_czk"] = round(float(costs.get("items_czk", 0.0)) + (item_count * BILLING_ITEM_CZK), 4)
+            if billable:
+                costs["runs_czk"] = round(float(costs.get("runs_czk", 0.0)) + BILLING_RUN_BASE_CZK, 4)
+                costs["items_czk"] = round(float(costs.get("items_czk", 0.0)) + (item_count * BILLING_ITEM_CZK), 4)
 
-            if os.getenv("SAUTO_PROXY_LIST") or os.getenv("SAUTO_PROXY_URL"):
-                costs["proxy_czk"] = round(float(costs.get("proxy_czk", 0.0)) + BILLING_PROXY_RUN_CZK, 4)
+                if os.getenv("SAUTO_PROXY_LIST") or os.getenv("SAUTO_PROXY_URL"):
+                    costs["proxy_czk"] = round(float(costs.get("proxy_czk", 0.0)) + BILLING_PROXY_RUN_CZK, 4)
 
             project["last_event_at"] = time.time()
             self._recompute_total_unlocked(project)
             self._append_event_unlocked(
                 {
-                    "type": "run_usage",
+                    "type": "run_usage" if billable else "run_usage_free",
                     "at": project["last_event_at"],
                     "project_id": project_id,
                     "job_id": job.get("job_id"),
                     "exit_code": exit_code,
                     "item_count": item_count,
+                    "run_mode": run_mode,
+                    "billable": billable,
                     "charges": {
-                        "run_base_czk": BILLING_RUN_BASE_CZK,
-                        "items_czk": round(item_count * BILLING_ITEM_CZK, 4),
-                        "proxy_czk": BILLING_PROXY_RUN_CZK if (os.getenv("SAUTO_PROXY_LIST") or os.getenv("SAUTO_PROXY_URL")) else 0.0,
+                        "run_base_czk": BILLING_RUN_BASE_CZK if billable else 0.0,
+                        "items_czk": round(item_count * BILLING_ITEM_CZK, 4) if billable else 0.0,
+                        "proxy_czk": (BILLING_PROXY_RUN_CZK if (os.getenv("SAUTO_PROXY_LIST") or os.getenv("SAUTO_PROXY_URL")) else 0.0) if billable else 0.0,
                     },
                 }
             )
@@ -938,11 +1022,39 @@ def _find_user_by_email(email: str) -> dict[str, Any] | None:
     return None
 
 
+def _find_user_by_id(user_id: str) -> dict[str, Any] | None:
+    target = str(user_id or "").strip()
+    if not target:
+        return None
+    users = _load_users()
+    for user in users:
+        if str(user.get("id") or "").strip() == target:
+            return user
+    return None
+
+
+def _update_user(updated_user: dict[str, Any]) -> None:
+    target_id = str(updated_user.get("id") or "").strip()
+    if not target_id:
+        return
+    users = _load_users()
+    for idx, user in enumerate(users):
+        if str(user.get("id") or "").strip() == target_id:
+            users[idx] = updated_user
+            _save_users(users)
+            return
+
+
 def _auth_user_public(user: dict[str, Any]) -> dict[str, Any]:
+    payment_status = str(user.get("payment_status") or "none").strip().lower() or "none"
     return {
         "id": str(user.get("id") or ""),
         "email": str(user.get("email") or "").lower(),
         "created_at": user.get("created_at"),
+        "payment_status": payment_status,
+        "cloud_access": _is_paid_status(payment_status),
+        "local_free_access": bool(user.get("local_free_access", True)),
+        "stripe_customer_id": str(user.get("stripe_customer_id") or ""),
     }
 
 
@@ -1475,7 +1587,7 @@ async def api_key_guard(request: Request, call_next):
     if not API_KEYS:
         response = await call_next(request)
     else:
-        if path.startswith("/api/") and method in WRITE_HTTP_METHODS:
+        if path.startswith("/api/") and method in WRITE_HTTP_METHODS and path != "/api/billing/webhook/stripe":
             if api_key not in API_KEYS:
                 return _cors_json(401, {"detail": "Missing or invalid API key."})
         response = await call_next(request)
@@ -1529,6 +1641,12 @@ def auth_signup(payload: SignupPayload) -> dict[str, Any]:
         "password_hash": _hash_password(password, salt_hex),
         "password_salt": salt_hex,
         "created_at": time.time(),
+        "payment_status": "none",
+        "local_free_access": True,
+        "stripe_customer_id": "",
+        "stripe_subscription_id": "",
+        "stripe_checkout_session_id": "",
+        "stripe_last_event_at": None,
     }
 
     users = _load_users()
@@ -1565,12 +1683,176 @@ def auth_me(request: Request) -> dict[str, Any]:
     claims = getattr(request.state, "auth_user", None)
     if not isinstance(claims, dict):
         raise HTTPException(status_code=401, detail="Missing or invalid auth token.")
+    user_id = str(claims.get("sub") or "").strip()
+    db_user = _find_user_by_id(user_id) if user_id else None
+    if db_user is not None:
+        return {"user": _auth_user_public(db_user)}
     return {
         "user": {
             "id": str(claims.get("sub") or ""),
             "email": str(claims.get("email") or "").lower(),
+            "payment_status": "none",
+            "cloud_access": False,
+            "local_free_access": True,
         }
     }
+
+
+def _resolve_request_user(request: Request) -> dict[str, Any] | None:
+    claims = getattr(request.state, "auth_user", None)
+    if not isinstance(claims, dict):
+        auth_header = str(request.headers.get("authorization", "") or "")
+        token = ""
+        if auth_header.lower().startswith("bearer "):
+            token = auth_header[7:].strip()
+        if token:
+            claims = _decode_auth_token(token)
+        if not isinstance(claims, dict):
+            return None
+
+    user_id = str(claims.get("sub") or "").strip()
+    if user_id:
+        by_id = _find_user_by_id(user_id)
+        if by_id is not None:
+            return by_id
+
+    email = str(claims.get("email") or "").strip().lower()
+    if email:
+        return _find_user_by_email(email)
+    return None
+
+
+def _user_has_cloud_access(user: dict[str, Any] | None) -> bool:
+    if not isinstance(user, dict):
+        return False
+    return _is_paid_status(str(user.get("payment_status") or "none"))
+
+
+@app.get("/api/billing/access")
+def get_billing_access(request: Request) -> dict[str, Any]:
+    user = _resolve_request_user(request)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Missing or invalid auth token.")
+
+    return {
+        "provider": PAYMENT_PROVIDER,
+        "can_run_cloud": _user_has_cloud_access(user),
+        "can_run_local_free": bool(user.get("local_free_access", True)) and ALLOW_LOCAL_FREE_RUNS,
+        "payment_status": str(user.get("payment_status") or "none"),
+        "checkout_available": bool(STRIPE_PAYMENT_LINK_URL or (STRIPE_SECRET_KEY and (STRIPE_PRICE_ID or STRIPE_DEFAULT_AMOUNT_CENTS > 0))),
+    }
+
+
+@app.post("/api/billing/checkout-session")
+def create_checkout_session(payload: CheckoutSessionPayload, request: Request) -> dict[str, Any]:
+    user = _resolve_request_user(request)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Missing or invalid auth token.")
+
+    if STRIPE_PAYMENT_LINK_URL:
+        return {"url": STRIPE_PAYMENT_LINK_URL, "provider": "stripe", "mode": "payment_link"}
+
+    if PAYMENT_PROVIDER != "stripe":
+        raise HTTPException(status_code=501, detail="Payment provider is not configured.")
+
+    success_url = str(payload.success_url or STRIPE_SUCCESS_URL).strip()
+    cancel_url = str(payload.cancel_url or STRIPE_CANCEL_URL).strip()
+    if not success_url or not cancel_url:
+        raise HTTPException(status_code=400, detail="Missing success/cancel redirect URL.")
+
+    stripe_payload: dict[str, Any] = {
+        "mode": "payment",
+        "success_url": success_url,
+        "cancel_url": cancel_url,
+        "client_reference_id": str(user.get("id") or ""),
+        "customer_email": str(user.get("email") or ""),
+    }
+    if STRIPE_PRICE_ID:
+        stripe_payload["line_items[0][price]"] = STRIPE_PRICE_ID
+        stripe_payload["line_items[0][quantity]"] = "1"
+    else:
+        stripe_payload["line_items[0][price_data][currency]"] = STRIPE_DEFAULT_CURRENCY
+        stripe_payload["line_items[0][price_data][unit_amount]"] = str(max(100, STRIPE_DEFAULT_AMOUNT_CENTS))
+        stripe_payload["line_items[0][price_data][product_data][name]"] = "Sauto Scraper Cloud credit"
+        stripe_payload["line_items[0][quantity]"] = "1"
+
+    try:
+        session = _stripe_request("/v1/checkout/sessions", stripe_payload)
+    except HTTPError as exc:
+        detail = exc.read().decode("utf-8") if hasattr(exc, "read") else str(exc)
+        raise HTTPException(status_code=502, detail=f"Stripe checkout failed: {detail}") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Stripe checkout failed: {exc}") from exc
+
+    checkout_url = str(session.get("url") or "").strip()
+    session_id = str(session.get("id") or "").strip()
+    customer_id = str(session.get("customer") or user.get("stripe_customer_id") or "").strip()
+    if checkout_url:
+        user["stripe_checkout_session_id"] = session_id
+        if customer_id:
+            user["stripe_customer_id"] = customer_id
+        _update_user(user)
+    return {"url": checkout_url, "provider": "stripe", "mode": "checkout_session", "session_id": session_id}
+
+
+@app.post("/api/billing/webhook/stripe")
+async def stripe_webhook(request: Request) -> dict[str, Any]:
+    raw = await request.body()
+    signature = request.headers.get("stripe-signature", "")
+    if not _stripe_verify_signature(raw, signature):
+        raise HTTPException(status_code=400, detail="Invalid Stripe signature.")
+
+    try:
+        event = json.loads(raw.decode("utf-8"))
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid payload: {exc}") from exc
+
+    if not isinstance(event, dict):
+        raise HTTPException(status_code=400, detail="Invalid Stripe payload.")
+
+    event_type = str(event.get("type") or "")
+    obj = (((event.get("data") or {}).get("object") or {}) if isinstance(event.get("data"), dict) else {})
+    if not isinstance(obj, dict):
+        obj = {}
+
+    customer_id = str(obj.get("customer") or "").strip()
+    reference_user_id = str(obj.get("client_reference_id") or "").strip()
+
+    user = _find_user_by_id(reference_user_id) if reference_user_id else None
+    if user is None and customer_id:
+        for existing in _load_users():
+            if str(existing.get("stripe_customer_id") or "").strip() == customer_id:
+                user = existing
+                break
+
+    if user is None:
+        return {"ok": True, "ignored": True}
+
+    paid_event_types = {
+        "checkout.session.completed",
+        "invoice.payment_succeeded",
+        "customer.subscription.created",
+        "customer.subscription.updated",
+    }
+    unpaid_event_types = {
+        "invoice.payment_failed",
+        "customer.subscription.deleted",
+    }
+
+    if event_type in paid_event_types:
+        user["payment_status"] = "paid"
+    elif event_type in unpaid_event_types:
+        user["payment_status"] = "none"
+
+    if customer_id:
+        user["stripe_customer_id"] = customer_id
+    subscription_id = str(obj.get("subscription") or obj.get("id") or "").strip()
+    if subscription_id and event_type.startswith("customer.subscription"):
+        user["stripe_subscription_id"] = subscription_id
+    user["stripe_last_event_at"] = time.time()
+    _update_user(user)
+
+    return {"ok": True}
 
 
 @app.get("/api/params")
@@ -1593,9 +1875,11 @@ def update_params(payload: ParamsPayload) -> dict[str, Any]:
 
 
 @app.post("/api/run")
-def run_scraper(payload: RunPayload) -> dict[str, Any]:
+def run_scraper(payload: RunPayload, request: Request) -> dict[str, Any]:
     output_file = payload.output_file.strip() or "data/sauto_interesting.json"
     project_id = (payload.project_id or "default").strip() or "default"
+    requested_mode = str(payload.run_mode or "cloud_paid").strip().lower()
+    run_mode = "local_free" if requested_mode == "local_free" else "cloud_paid"
 
     if os.path.isabs(output_file):
         raise HTTPException(status_code=400, detail="Use a relative output_file path.")
@@ -1604,7 +1888,23 @@ def run_scraper(payload: RunPayload) -> dict[str, Any]:
     if ROOT_DIR not in resolved.parents and resolved != ROOT_DIR:
         raise HTTPException(status_code=400, detail="output_file must stay inside project directory.")
 
-    return run_queue.enqueue(output_file=output_file, project_id=project_id)
+    user = _resolve_request_user(request)
+    if run_mode == "local_free":
+        if not ALLOW_LOCAL_FREE_RUNS:
+            raise HTTPException(status_code=403, detail="Local free mode is disabled on this server.")
+        if not _is_loopback_request(request):
+            raise HTTPException(status_code=403, detail="Local free mode is available only from localhost.")
+        return run_queue.enqueue(output_file=output_file, project_id=project_id, run_mode=run_mode, billable=False)
+
+    if user is None:
+        raise HTTPException(status_code=401, detail="Login is required for cloud scraping.")
+    if not _user_has_cloud_access(user):
+        raise HTTPException(
+            status_code=402,
+            detail="Cloud scraping requires active payment. Use local_free mode, or complete checkout first.",
+        )
+
+    return run_queue.enqueue(output_file=output_file, project_id=project_id, run_mode=run_mode, billable=True)
 
 
 @app.post("/api/pause")

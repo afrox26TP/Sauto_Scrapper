@@ -4,14 +4,6 @@ import { Lock, Unlock } from "lucide-react";
 export default function ProjectNameInput({ name, customName, onNameChange, onToggleCustom }) {
   return (
     <div className="project-name-input">
-      <input
-        type="text"
-        className="project-name-field"
-        value={name}
-        onChange={(e) => onNameChange(e.target.value)}
-        placeholder="Název projektu..."
-        title={customName ? "Vlastní název (ručně zadaný)" : "Automatický název (mění se podle filtrů)"}
-      />
       <button
         type="button"
         className={`project-name-lock${customName ? " locked" : ""}`}
@@ -20,6 +12,14 @@ export default function ProjectNameInput({ name, customName, onNameChange, onTog
       >
         {customName ? <Lock className="ui-icon" /> : <Unlock className="ui-icon" />}
       </button>
+      <input
+        type="text"
+        className="project-name-field"
+        value={name}
+        onChange={(e) => onNameChange(e.target.value)}
+        placeholder="Název projektu..."
+        title={customName ? "Vlastní název (ručně zadaný)" : "Automatický název (mění se podle filtrů)"}
+      />
     </div>
   );
 }

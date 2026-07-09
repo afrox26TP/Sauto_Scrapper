@@ -37,6 +37,7 @@ export function createProject(name = "", config = {}) {
     selectedPreset: "balanced",
     createdAt: Date.now(),
     errorMessage: "",
+    runMode: "cloud_paid", // cloud_paid | local_free
   };
 }
 
@@ -50,7 +51,11 @@ export function loadProjects() {
     // whether they are still running or should transition to results. Reset only
     // queued jobs because the in-memory queue cannot be safely reconstructed.
     return parsed.map((p) => {
-      const normalized = { ...p, config: normalizeProjectConfig(p.config) };
+      const normalized = {
+        ...p,
+        config: normalizeProjectConfig(p.config),
+        runMode: p?.runMode === "local_free" ? "local_free" : "cloud_paid",
+      };
       if (p.phase === "running") {
         return { ...normalized, queuePosition: 0, logs: [...(p.logs || []), "[systém] Stav běžícího scraperu obnoven po načtení stránky."] };
       }

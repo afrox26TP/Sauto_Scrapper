@@ -134,7 +134,7 @@ export default function ProjectRunning({
           <strong>{progressPct}%</strong>
         </div>
         <div className="running-stat-card running-stat-cost">
-          <span className="running-stat-label">Odhad nákladů teď (5 Kč + live)</span>
+          <span className="running-stat-label">Odhad nákladů teď (jen cloud scrape: 5 Kč + live)</span>
           <strong>{fmtCzk(estimatedCostNow)}</strong>
         </div>
       </div>

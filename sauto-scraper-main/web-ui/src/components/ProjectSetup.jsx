@@ -99,6 +99,7 @@ export default function ProjectSetup({
   isRunning,
 }) {
   const config = project.config || {};
+  const runMode = project?.runMode === "local_free" ? "local_free" : "cloud_paid";
   const busy = isRunning || project.phase === "running" || project.phase === "queued";
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -185,12 +186,31 @@ export default function ProjectSetup({
         <button className="btn-primary btn-run" onClick={() => onRun(project.id)} disabled={busy}>
           {busy ? <><LoaderCircle className="ui-icon icon-spin" /> Pracuji…</> : <><Play className="ui-icon" /> Spustit scraper</>}
         </button>
-        <ProjectNameInput
-          name={project.name}
-          customName={project.customName}
-          onNameChange={(val) => onUpdateProject({ name: val, customName: true })}
-          onToggleCustom={() => onUpdateProject({ customName: !project.customName })}
-        />
+        <div className="project-title-mode-wrap">
+          <ProjectNameInput
+            name={project.name}
+            customName={project.customName}
+            onNameChange={(val) => onUpdateProject({ name: val, customName: true })}
+            onToggleCustom={() => onUpdateProject({ customName: !project.customName })}
+          />
+          <div className="run-mode-select-wrap run-mode-select-inline run-mode-select-after-name">
+            <div className="run-mode-note">
+              {runMode === "local_free"
+                ? "Local free: bezi na vasem zarizeni"
+                : "Cloud: vyzaduje prostredky k dispozici"}
+            </div>
+            <select
+              id={`run-mode-${project.id}`}
+              className="run-mode-select"
+              value={runMode}
+              onChange={(e) => onUpdateProject({ runMode: e.target.value === "local_free" ? "local_free" : "cloud_paid" })}
+              disabled={busy}
+            >
+              <option value="cloud_paid">cloud (placene)</option>
+              <option value="local_free">local (zdarma)</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Brand / Model / Body / Equipment – první řádek vedle sebe */}

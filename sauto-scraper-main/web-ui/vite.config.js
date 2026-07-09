@@ -5,6 +5,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    host: true
+    host: true,
+    allowedHosts: ["autoidx.cz", "www.autoidx.cz", "localhost", "127.0.0.1"]
   }
 });

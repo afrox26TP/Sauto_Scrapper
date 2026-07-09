@@ -8,7 +8,7 @@ import ProjectQueued from "./components/ProjectQueued";
 import ProjectResults from "./components/ProjectResults";
 import TerminalBar from "./components/TerminalBar";
 import { useProjects } from "./hooks/useProjects";
-import { clearAuthToken, fetchBillingRates, fetchBrands, fetchBodies, fetchCurrentUser, fetchModels, fetchModelCounts, fetchResults, fetchEquipment, getAuthToken, login, signup } from "./utils/api";
+import { clearAuthToken, createCheckoutSession, fetchBillingAccess, fetchBillingRates, fetchBrands, fetchBodies, fetchCurrentUser, fetchModels, fetchModelCounts, fetchResults, fetchEquipment, getAuthToken, login, signup } from "./utils/api";
 import { csvToArray, uniq } from "./utils/scoring";
 
 export default function App() {
@@ -30,6 +30,8 @@ export default function App() {
   });
   const [billingRates, setBillingRates] = useState(null);
   const [billingRatesError, setBillingRatesError] = useState("");
+  const [billingAccess, setBillingAccess] = useState(null);
+  const [checkoutBusy, setCheckoutBusy] = useState(false);
   const [brandOptions, setBrandOptions] = useState([]);
   const [bodyOptions, setBodyOptions] = useState([]);
   const [equipmentOptions, setEquipmentOptions] = useState([]);
@@ -174,6 +176,14 @@ export default function App() {
         setBillingRatesError("Sazby z API teď nejsou dostupné, používám výchozí sazby.");
       });
   }, [currentPage, isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setBillingAccess(null);
+      return;
+    }
+    fetchBillingAccess().then(setBillingAccess).catch(() => setBillingAccess(null));
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (projects.length === 0) {
@@ -325,14 +335,41 @@ export default function App() {
   }, [currentProject]);
 
   const handleRunProject = useCallback((projectId) => {
-    if (!isAuthenticated) {
+    const targetProject = projects.find((p) => p.id === projectId);
+    const runMode = targetProject?.runMode === "local_free" ? "local_free" : "cloud_paid";
+    if (runMode === "cloud_paid" && !isAuthenticated) {
       setAuthMode("login");
-      setAuthError("Pro spuštění scraperu se nejdřív přihlas.");
+      setAuthError("Pro cloud run se nejdriv prihlas a aktivuj platbu.");
       setShowAuthModal(true);
       return;
     }
     runProject(projectId);
-  }, [isAuthenticated, runProject]);
+  }, [isAuthenticated, projects, runProject]);
+
+  const handleStartCheckout = useCallback(async () => {
+    if (checkoutBusy) return;
+    if (!isAuthenticated) {
+      setAuthMode("login");
+      setAuthError("Nejdřív se přihlas, pak otevři checkout.");
+      setShowAuthModal(true);
+      return;
+    }
+    setCheckoutBusy(true);
+    try {
+      const successUrl = `${window.location.origin}/pricing?checkout=success`;
+      const cancelUrl = `${window.location.origin}/pricing?checkout=cancel`;
+      const data = await createCheckoutSession({ success_url: successUrl, cancel_url: cancelUrl });
+      if (data?.url) {
+        window.location.href = data.url;
+        return;
+      }
+      showToast("Checkout URL není dostupná.", "error");
+    } catch (err) {
+      showToast(err?.message || "Checkout se nepodařilo vytvořit.", "error");
+    } finally {
+      setCheckoutBusy(false);
+    }
+  }, [checkoutBusy, isAuthenticated]);
 
   useEffect(() => {
     selectedBrands.forEach((brand) => {
@@ -543,8 +580,32 @@ export default function App() {
             <p className="pricing-note">
               Aktuální sazby načítáme z backendu přes <code>/api/billing/rates</code>.
             </p>
+            <p className="pricing-note">
+              Cloud scraping je placeny (Stripe). Local run na vlastnim PC je zdarma a bezi z IP uzivatele.
+            </p>
             {billingRatesError ? <p className="pricing-note">{billingRatesError}</p> : null}
             <div className="pricing-actions">
+              {isAuthenticated ? (
+                <button className="btn-primary" onClick={handleStartCheckout} disabled={checkoutBusy}>
+                  {checkoutBusy ? "Vytvarim checkout..." : "Aktivovat cloud scraping"}
+                </button>
+              ) : (
+                <button
+                  className="btn-primary"
+                  onClick={() => {
+                    setAuthMode("login");
+                    setAuthError("");
+                    setShowAuthModal(true);
+                  }}
+                >
+                  Prihlasit se pro cloud plan
+                </button>
+              )}
+              {billingAccess ? (
+                <p className="pricing-note">
+                  Stav uctu: cloud={billingAccess.can_run_cloud ? "active" : "inactive"}, local_free={billingAccess.can_run_local_free ? "on" : "off"}
+                </p>
+              ) : null}
               <button className="btn-primary" onClick={() => navigateTo("dashboard")}>
                 <ArrowLeft className="ui-icon" aria-hidden="true" /> Zpět na dashboard
               </button>
@@ -722,7 +783,7 @@ export default function App() {
           {currentPage === "dashboard" && !isAuthenticated ? (
             <div className="auth-dashboard-cta">
               <h2>Přihlášení je potřeba</h2>
-              <p>Nastavení projektu můžeš dělat i bez loginu, ale pro spuštění scraperu se musíš přihlásit.</p>
+              <p>Nastaveni projektu funguje bez loginu. Pro cloud run je login + platba, local free run funguje na localhostu.</p>
               <button
                 type="button"
                 className="btn-primary"

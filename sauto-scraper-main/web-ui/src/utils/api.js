@@ -97,9 +97,17 @@ export async function fetchLogs(limit = 160) {
   return data.lines || [];
 }
 
-export async function runScraper(outputFile = "data/sauto_interesting.json", projectId = "default") {
-  const data = await request("POST", "/api/run", { output_file: outputFile, project_id: projectId });
+export async function runScraper(outputFile = "data/sauto_interesting.json", projectId = "default", runMode = "cloud_paid") {
+  const data = await request("POST", "/api/run", { output_file: outputFile, project_id: projectId, run_mode: runMode });
   return data;
+}
+
+export async function fetchBillingAccess() {
+  return request("GET", "/api/billing/access");
+}
+
+export async function createCheckoutSession(payload = {}) {
+  return request("POST", "/api/billing/checkout-session", payload || {});
 }
 
 export async function pauseScraper() {

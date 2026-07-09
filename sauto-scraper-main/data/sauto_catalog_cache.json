@@ -1,7 +1,7 @@
 {
   "models": {
     "bmw": {
-      "updated_at": 1782672228,
+      "updated_at": 1783629918,
       "items": [
         {
           "value": "i3",
@@ -147,7 +147,7 @@
       "collector_version": 7
     },
     "alfa-romeo": {
-      "updated_at": 1782672237,
+      "updated_at": 1783633344,
       "items": [
         {
           "value": "147",
@@ -190,6 +190,10 @@
           "label": "Giulietta"
         },
         {
+          "value": "gt",
+          "label": "GT"
+        },
+        {
           "value": "gtv",
           "label": "GTV"
         },
@@ -219,11 +223,103 @@
         }
       ],
       "collector_version": 7
+    },
+    "alpina": {
+      "updated_at": 1783633346,
+      "items": [
+        {
+          "value": "b3-s",
+          "label": "B3 S"
+        },
+        {
+          "value": "b4",
+          "label": "B4"
+        },
+        {
+          "value": "b5",
+          "label": "B5"
+        },
+        {
+          "value": "b6",
+          "label": "B6"
+        },
+        {
+          "value": "b8",
+          "label": "B8"
+        },
+        {
+          "value": "d3",
+          "label": "D3"
+        },
+        {
+          "value": "ostatni",
+          "label": "Ostatní"
+        }
+      ],
+      "collector_version": 7
+    },
+    "chrysler": {
+      "updated_at": 1783638816,
+      "items": [
+        {
+          "value": "200",
+          "label": "200"
+        },
+        {
+          "value": "300c",
+          "label": "300C"
+        },
+        {
+          "value": "crossfire",
+          "label": "Crossfire"
+        },
+        {
+          "value": "grand-voyager",
+          "label": "Grand Voyager"
+        },
+        {
+          "value": "le-baron-cabrio",
+          "label": "Le Baron Cabrio"
+        },
+        {
+          "value": "ostatni",
+          "label": "Ostatní"
+        },
+        {
+          "value": "pacifica",
+          "label": "Pacifica"
+        },
+        {
+          "value": "pt-cruiser",
+          "label": "PT Cruiser"
+        },
+        {
+          "value": "sebring",
+          "label": "Sebring"
+        },
+        {
+          "value": "stratus",
+          "label": "Stratus"
+        },
+        {
+          "value": "town-country",
+          "label": "Town & Country"
+        },
+        {
+          "value": "voyager",
+          "label": "Voyager"
+        }
+      ],
+      "collector_version": 7
     }
   },
   "brands": {
-    "updated_at": 1782672540,
+    "updated_at": 1783629925,
     "items": [
+      {
+        "value": "abarth",
+        "label": "Abarth"
+      },
       {
         "value": "alfa-romeo",
         "label": "Alfa Romeo"
@@ -237,8 +333,8 @@
         "label": "Audi"
       },
       {
-        "value": "bentley",
-        "label": "Bentley"
+        "value": "baic",
+        "label": "BAIC"
       },
       {
         "value": "bmw",
@@ -277,6 +373,10 @@
         "label": "Dacia"
       },
       {
+        "value": "daihatsu",
+        "label": "Daihatsu"
+      },
+      {
         "value": "dodge",
         "label": "Dodge"
       },
@@ -301,10 +401,6 @@
         "label": "Ford"
       },
       {
-        "value": "genesis",
-        "label": "Genesis"
-      },
-      {
         "value": "honda",
         "label": "Honda"
       },
@@ -315,6 +411,10 @@
       {
         "value": "hyundai",
         "label": "Hyundai"
+      },
+      {
+        "value": "isuzu",
+        "label": "Isuzu"
       },
       {
         "value": "jaecoo",
@@ -337,20 +437,40 @@
         "label": "Kia"
       },
       {
+        "value": "lamborghini",
+        "label": "Lamborghini"
+      },
+      {
+        "value": "lancia",
+        "label": "Lancia"
+      },
+      {
         "value": "land-rover",
         "label": "Land Rover"
+      },
+      {
+        "value": "leapmotor",
+        "label": "Leapmotor"
       },
       {
         "value": "lexus",
         "label": "Lexus"
       },
       {
-        "value": "mazda",
-        "label": "Mazda"
+        "value": "ligier",
+        "label": "Ligier"
       },
       {
-        "value": "mclaren",
-        "label": "McLaren"
+        "value": "lotus",
+        "label": "Lotus"
+      },
+      {
+        "value": "maserati",
+        "label": "Maserati"
+      },
+      {
+        "value": "mazda",
+        "label": "Mazda"
       },
       {
         "value": "mercedes-benz",
@@ -381,6 +501,10 @@
         "label": "Opel"
       },
       {
+        "value": "ostatni",
+        "label": "Ostatní"
+      },
+      {
         "value": "peugeot",
         "label": "Peugeot"
       },
@@ -391,6 +515,10 @@
       {
         "value": "porsche",
         "label": "Porsche"
+      },
+      {
+        "value": "ram",
+        "label": "RAM"
       },
       {
         "value": "renault",
@@ -437,6 +565,10 @@
         "label": "Toyota"
       },
       {
+        "value": "trabant",
+        "label": "Trabant"
+      },
+      {
         "value": "volkswagen",
         "label": "Volkswagen"
       },
@@ -447,7 +579,7 @@
     ]
   },
   "bodies": {
-    "updated_at": 1782672711,
+    "updated_at": 1783630005,
     "items": [
       {
         "value": "hatchback",
@@ -496,7 +628,7 @@
     ]
   },
   "equipment": {
-    "updated_at": 1782673105,
+    "updated_at": 1783630720,
     "items": [
       {
         "value": "abs",

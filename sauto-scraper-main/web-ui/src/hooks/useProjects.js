@@ -325,14 +325,22 @@ export function useProjects(brandOptions, modelsByBrand, options = {}) {
     );
 
     saveParams(project.config)
-      .then(() => runScraper(project.resultsPath, project.id))
+      .then(() => runScraper(project.resultsPath, project.id, project.runMode || "cloud_paid"))
       .then(() => {
         setScraperRunning(true);
         setScraperPaused(false);
         setProjects((prev) =>
           prev.map((p) =>
             p.id === projectId
-              ? { ...p, logs: [...(p.logs || []), "[systém] Scraper úspěšně spuštěn z fronty."] }
+              ? {
+                  ...p,
+                  logs: [
+                    ...(p.logs || []),
+                    project.runMode === "local_free"
+                      ? "[systém] Scraper spuštěn v local free režimu (běh z lokální IP)."
+                      : "[systém] Scraper úspěšně spuštěn z fronty.",
+                  ],
+                }
               : p
           )
         );
@@ -386,14 +394,22 @@ export function useProjects(brandOptions, modelsByBrand, options = {}) {
       if (!project) throw new Error("Projekt nenalezen.");
 
       await saveParams(project.config);
-      await runScraper(project.resultsPath, project.id);
+      await runScraper(project.resultsPath, project.id, project.runMode || "cloud_paid");
       setScraperRunning(true);
       setScraperPaused(false);
 
       setProjects((prev) =>
         prev.map((p) =>
           p.id === projectId
-            ? { ...p, logs: [...(p.logs || []), "[systém] Scraper úspěšně spuštěn."] }
+            ? {
+                ...p,
+                logs: [
+                  ...(p.logs || []),
+                  project.runMode === "local_free"
+                    ? "[systém] Scraper spuštěn v local free režimu (běh z lokální IP)."
+                    : "[systém] Scraper úspěšně spuštěn.",
+                ],
+              }
             : p
         )
       );

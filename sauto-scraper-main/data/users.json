@@ -47,5 +47,18 @@
     "password_hash": "5b75fe4cae285d41c0c69371d92a15af9eaef4f842fc81fa81e5aabc54bfb28c",
     "password_salt": "c9a78b3cec92d1faf273495be62a6419",
     "created_at": 1782673029.352868
+  },
+  {
+    "id": "usr_a1625a97fe90",
+    "email": "fixrun_ba14de71@example.com",
+    "password_hash": "a90e45292022ef8789ba8246eda8994b49deed85b07b196b92a30e58ad96f230",
+    "password_salt": "04291a781519c718990d473f609dc33f",
+    "created_at": 1783638810.0624204,
+    "payment_status": "none",
+    "local_free_access": true,
+    "stripe_customer_id": "",
+    "stripe_subscription_id": "",
+    "stripe_checkout_session_id": "",
+    "stripe_last_event_at": null
   }
 ]

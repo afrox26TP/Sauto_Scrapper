@@ -287,6 +287,17 @@ The FastAPI backend serves on `http://localhost:8000`:
 | `POST` | `/api/results/import` | Import results JSON |
 | `POST` | `/api/results/mark` | Mark/unmark results by ID |
 
+`POST /api/run` accepts:
+
+- `output_file` (relative path)
+- `project_id`
+- `run_mode`: `cloud_paid` (default) or `local_free`
+
+Run mode behavior:
+
+- `cloud_paid`: requires logged-in user with active payment status.
+- `local_free`: free mode, only accepted from localhost (user runs backend on own machine/IP).
+
 ---
 
 ## Proxy Rotation (Production)
@@ -330,11 +341,12 @@ When configured, all `/api/*` write endpoints (`POST`, `PUT`, `PATCH`, `DELETE`)
 
 ---
 
-## Billing Model (Usage Only)
+## Billing + Payment
 
-No plans/tiers are required.
+Cloud scraping uses Stripe payment access, local scraping can remain free.
 
-- Scraper billing: per run + per output item.
+- `cloud_paid` runs: billed (per run + per output item), require active payment.
+- `local_free` runs: not billed, only allowed from localhost.
 - Integration billing: per API call when request contains `x-api-key`.
 
 Billing endpoints:
@@ -342,6 +354,9 @@ Billing endpoints:
 - `GET /api/billing/rates`
 - `GET /api/billing/usage?project_id=<id>`
 - `GET /api/billing/events?project_id=<id>&limit=100`
+- `GET /api/billing/access` (auth required)
+- `POST /api/billing/checkout-session` (auth required)
+- `POST /api/billing/webhook/stripe` (Stripe webhook)
 
 Default rates are configurable with env vars:
 
@@ -349,6 +364,13 @@ Default rates are configurable with env vars:
 - `BILLING_ITEM_CZK`
 - `BILLING_API_CALL_CZK`
 - `BILLING_PROXY_RUN_CZK`
+- `ALLOW_LOCAL_FREE_RUNS`
+- `STRIPE_SECRET_KEY`
+- `STRIPE_PRICE_ID` (optional if using payment link)
+- `STRIPE_SUCCESS_URL`
+- `STRIPE_CANCEL_URL`
+- `STRIPE_PAYMENT_LINK_URL` (optional shortcut)
+- `STRIPE_WEBHOOK_SECRET` (optional signature verification)
 
 ---
 
