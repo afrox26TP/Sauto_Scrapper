@@ -19,7 +19,7 @@
         "kind": "free_proxy",
         "proxy_url": "http://iclfibis:jy4oowbe7772@31.59.20.176:6754",
         "created_at": 1783817521.7563438,
-        "updated_at": 1783818442.7338593
+        "updated_at": 1783818845.1039183
       },
       {
         "id": "paid_proxy_default",
@@ -27,12 +27,12 @@
         "kind": "paid_proxy",
         "proxy_url": "",
         "created_at": 1783817521.7563438,
-        "updated_at": 1783818442.7338827
+        "updated_at": 1783818845.1039402
       }
     ],
     "free_proxy_url": "http://iclfibis:jy4oowbe7772@31.59.20.176:6754",
     "paid_proxy_url": "",
-    "proxy_updated_at": 1783818442.733888
+    "proxy_updated_at": 1783818845.1039443
   },
   {
     "id": "usr_66e9479d0f37",
