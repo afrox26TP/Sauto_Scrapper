@@ -3,9 +3,11 @@ import random
 import logging
 from collections import deque
 from typing import Iterable
+from urllib.parse import urlsplit
 
 from fake_useragent import UserAgent
 from scrapy import Request, signals
+from scrapy.exceptions import IgnoreRequest
 from scrapy.downloadermiddlewares.retry import get_retry_request
 
 
@@ -36,12 +38,41 @@ class RotatingProxyMiddleware:
     DEFAULT_BAN_STATUSES = {403, 407, 429, 500, 502, 503, 504}
     RETRY_EXCEPTIONS = ("TimeoutError", "TCPTimedOutError", "ConnectionRefusedError", "ConnectionDone")
     LOGGER = logging.getLogger(__name__)
+    ALLOWED_PROXY_SCHEMES = {"http", "https", "socks5h"}
 
-    def __init__(self, proxies: Iterable[str], mode: str, ban_statuses: set[int]):
+    def __init__(self, proxies: Iterable[str], mode: str, ban_statuses: set[int], strict_mode: bool, request_timeout: float):
         self.mode = (mode or "round_robin").strip().lower()
         self.ban_statuses = ban_statuses or set(self.DEFAULT_BAN_STATUSES)
         self.proxies = deque(proxies)
         self._enabled = bool(self.proxies)
+        self.strict_mode = strict_mode
+        self.request_timeout = max(1.0, float(request_timeout or 8.0))
+
+    @classmethod
+    def _is_truthy(cls, value: str | None, default: bool = False) -> bool:
+        if value is None:
+            return default
+        return str(value).strip().lower() not in {"", "0", "false", "no", "off"}
+
+    @classmethod
+    def _sanitize_proxies(cls, proxies: list[str]) -> list[str]:
+        safe: list[str] = []
+        for proxy in proxies:
+            parsed = urlsplit(proxy)
+            scheme = (parsed.scheme or "").lower()
+            if scheme not in cls.ALLOWED_PROXY_SCHEMES:
+                cls.LOGGER.warning(
+                    "Ignoring proxy with unsupported scheme '%s': %s",
+                    scheme or "<missing>",
+                    proxy,
+                )
+                continue
+            # socks5 (without 'h') can leak DNS because resolution may happen locally.
+            if scheme == "socks5":
+                cls.LOGGER.warning("Ignoring socks5 proxy (use socks5h to force remote DNS): %s", proxy)
+                continue
+            safe.append(proxy)
+        return safe
 
     @classmethod
     def from_crawler(cls, crawler):
@@ -53,6 +84,10 @@ class RotatingProxyMiddleware:
         proxies = _parse_proxy_list(list_env)
         if one_env.strip():
             proxies.append(one_env.strip())
+        proxies = cls._sanitize_proxies(proxies)
+
+        strict_mode = cls._is_truthy(os.getenv("SAUTO_PROXY_STRICT"), default=bool(proxies))
+        request_timeout = os.getenv("SAUTO_PROXY_TIMEOUT", "8")
 
         parsed_ban_statuses: set[int] = set()
         for token in ban_statuses_raw.replace(" ", "").split(","):
@@ -67,16 +102,27 @@ class RotatingProxyMiddleware:
             proxies=proxies,
             mode=mode,
             ban_statuses=parsed_ban_statuses or set(cls.DEFAULT_BAN_STATUSES),
+            strict_mode=strict_mode,
+            request_timeout=float(request_timeout or 8),
         )
         if middleware._enabled:
             crawler.stats.set_value("proxy_pool/size", len(middleware.proxies))
+            crawler.stats.set_value("proxy_pool/strict_mode", bool(middleware.strict_mode))
             cls.LOGGER.info(
-                "RotatingProxyMiddleware enabled with %s proxies (mode=%s).",
+                "RotatingProxyMiddleware enabled with %s proxies (mode=%s, strict=%s, timeout=%ss).",
                 len(middleware.proxies),
                 middleware.mode,
+                middleware.strict_mode,
+                middleware.request_timeout,
             )
         else:
-            cls.LOGGER.info("RotatingProxyMiddleware disabled (no proxies configured).")
+            if middleware.strict_mode:
+                cls.LOGGER.warning(
+                    "RotatingProxyMiddleware running in strict mode but no proxy is configured. "
+                    "Requests will be blocked to prevent direct fallback."
+                )
+            else:
+                cls.LOGGER.info("RotatingProxyMiddleware disabled (no proxies configured).")
         return middleware
 
     def _choose_proxy(self, current_proxy: str | None = None) -> str | None:
@@ -93,9 +139,15 @@ class RotatingProxyMiddleware:
         return selected
 
     def process_request(self, request: Request, spider):
+        request.meta.setdefault("download_timeout", self.request_timeout)
+
         if not self._enabled:
+            if self.strict_mode and not request.meta.get("disable_proxy"):
+                raise IgnoreRequest("Proxy strict mode is enabled and no proxy is configured.")
             return None
         if request.meta.get("disable_proxy"):
+            if self.strict_mode:
+                raise IgnoreRequest("Proxy strict mode forbids disable_proxy requests.")
             return None
         if request.meta.get("proxy"):
             return None
@@ -123,8 +175,13 @@ class RotatingProxyMiddleware:
 
         old_proxy = request.meta.get("proxy")
         new_proxy = self._choose_proxy(current_proxy=old_proxy)
-        if new_proxy:
-            retry_request.meta["proxy"] = new_proxy
+        if not new_proxy:
+            if self.strict_mode:
+                raise IgnoreRequest("No proxy available for retry in strict mode.")
+            return response
+
+        retry_request.meta["proxy"] = new_proxy
+        retry_request.meta.setdefault("download_timeout", self.request_timeout)
         return retry_request
 
     def process_exception(self, request: Request, exception, spider):
@@ -145,8 +202,13 @@ class RotatingProxyMiddleware:
 
         old_proxy = request.meta.get("proxy")
         new_proxy = self._choose_proxy(current_proxy=old_proxy)
-        if new_proxy:
-            retry_request.meta["proxy"] = new_proxy
+        if not new_proxy:
+            if self.strict_mode:
+                raise IgnoreRequest("No proxy available after exception in strict mode.")
+            return None
+
+        retry_request.meta["proxy"] = new_proxy
+        retry_request.meta.setdefault("download_timeout", self.request_timeout)
         return retry_request
 
 

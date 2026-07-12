@@ -13,12 +13,14 @@ import base64
 import hashlib
 import hmac
 import secrets
+import ipaddress
+import socket
 from collections import deque
 from pathlib import Path
 from typing import Any, Callable
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 from urllib.error import HTTPError
-from urllib.request import Request as UrlRequest, urlopen
+from urllib.request import Request as UrlRequest, urlopen, build_opener, ProxyHandler
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -65,6 +67,8 @@ AUTH_REQUIRED_PATHS = {
     "/api/stop",
     "/api/billing/access",
     "/api/billing/checkout-session",
+    "/api/proxy/config",
+    "/api/proxy/test",
 }
 LOCKED_SEARCH_DEFAULTS = {
     "category_id": "838",
@@ -94,7 +98,6 @@ BILLING_ITEM_CZK = float(os.getenv("BILLING_ITEM_CZK", "0.02"))
 BILLING_API_CALL_CZK = float(os.getenv("BILLING_API_CALL_CZK", "0.05"))
 BILLING_PROXY_RUN_CZK = float(os.getenv("BILLING_PROXY_RUN_CZK", "0.0"))
 PAYMENT_PROVIDER = (os.getenv("PAYMENT_PROVIDER", "stripe") or "stripe").strip().lower()
-ALLOW_LOCAL_FREE_RUNS = (os.getenv("ALLOW_LOCAL_FREE_RUNS", "true") or "true").strip().lower() not in {"0", "false", "no"}
 STRIPE_SECRET_KEY = (os.getenv("STRIPE_SECRET_KEY") or "").strip()
 STRIPE_PRICE_ID = (os.getenv("STRIPE_PRICE_ID") or "").strip()
 STRIPE_SUCCESS_URL = (os.getenv("STRIPE_SUCCESS_URL") or "").strip()
@@ -108,8 +111,92 @@ CORS_ALLOW_ORIGINS = [
     for origin in (os.getenv("CORS_ALLOW_ORIGINS") or "http://localhost:5173,http://127.0.0.1:5173").split(",")
     if origin.strip()
 ]
+CORS_ALLOW_ORIGIN_REGEX = (os.getenv("CORS_ALLOW_ORIGIN_REGEX") or r"https://.*\.trycloudflare\.com").strip()
+CORS_ALLOW_ORIGIN_PATTERN = re.compile(CORS_ALLOW_ORIGIN_REGEX) if CORS_ALLOW_ORIGIN_REGEX else None
 CORS_ALLOW_ANY_ORIGIN = "*" in CORS_ALLOW_ORIGINS
 CORS_ALLOW_ORIGIN_SET = {origin for origin in CORS_ALLOW_ORIGINS if origin != "*"}
+_NO_PROXY_OPENER = build_opener(ProxyHandler({}))
+BLOCKED_PROXY_ENV_KEYS = {
+    "HTTP_PROXY",
+    "HTTPS_PROXY",
+    "ALL_PROXY",
+    "NO_PROXY",
+    "http_proxy",
+    "https_proxy",
+    "all_proxy",
+    "no_proxy",
+}
+ALLOWED_PROXY_SCHEMES = {"http", "https", "socks5h"}
+DEFAULT_FREE_PROXY_PROFILE_ID = "free_proxy_default"
+DEFAULT_PAID_PROXY_PROFILE_ID = "paid_proxy_default"
+
+# Enforce zero implicit proxying in the API process itself.
+for _proxy_env_key in BLOCKED_PROXY_ENV_KEYS:
+    os.environ.pop(_proxy_env_key, None)
+
+
+def _urlopen_no_proxy(url_or_request: str | UrlRequest, timeout: float):
+    return _NO_PROXY_OPENER.open(url_or_request, timeout=timeout)
+
+
+def _is_public_ip(ip_text: str) -> bool:
+    try:
+        ip = ipaddress.ip_address(ip_text)
+    except ValueError:
+        return False
+    return bool(getattr(ip, "is_global", False))
+
+
+def _validate_proxy_url(proxy_url: str) -> str:
+    value = str(proxy_url or "").strip()
+    if not value:
+        raise ValueError("Nelze spustit úlohu: Chybí konfigurace proxy.")
+
+    parsed = urlsplit(value)
+    scheme = (parsed.scheme or "").lower()
+    if scheme not in ALLOWED_PROXY_SCHEMES:
+        raise ValueError("Proxy schema musí být http, https nebo socks5h.")
+
+    host = str(parsed.hostname or "").strip().lower()
+    if not host:
+        raise ValueError("Proxy host chybí.")
+    if host in {"localhost", "127.0.0.1", "::1"}:
+        raise ValueError("Proxy host nesmí být localhost.")
+    if host.endswith(".local"):
+        raise ValueError("Lokální domény nejsou povoleny.")
+
+    # If proxy host is an IP literal, only public addresses are allowed.
+    try:
+        ip_obj = ipaddress.ip_address(host)
+        if not bool(getattr(ip_obj, "is_global", False)):
+            raise ValueError("Privátní nebo lokální IP adresa proxy není povolena.")
+        return value
+    except ValueError:
+        pass
+
+    # For domain names, resolve and reject private/loopback/link-local targets.
+    try:
+        resolved = socket.getaddrinfo(host, parsed.port or 0, type=socket.SOCK_STREAM)
+    except Exception as exc:
+        raise ValueError(f"Proxy doména není resolvovatelná: {exc}") from exc
+
+    if not resolved:
+        raise ValueError("Proxy doména není resolvovatelná.")
+
+    for addr in resolved:
+        sockaddr = addr[4]
+        ip_text = str(sockaddr[0]) if isinstance(sockaddr, tuple) and sockaddr else ""
+        if not _is_public_ip(ip_text):
+            raise ValueError("Proxy doména směřuje na privátní nebo lokální IP, což není povoleno.")
+
+    return value
+
+
+def _sanitize_subprocess_env(base_env: dict[str, str]) -> dict[str, str]:
+    sanitized = dict(base_env)
+    for key in BLOCKED_PROXY_ENV_KEYS:
+        sanitized.pop(key, None)
+    return sanitized
 
 
 class ParamsPayload(BaseModel):
@@ -119,7 +206,8 @@ class ParamsPayload(BaseModel):
 class RunPayload(BaseModel):
     output_file: str = "data/sauto_interesting.json"
     project_id: str = "default"
-    run_mode: str = "cloud_paid"
+    run_mode: str = "free_proxy"
+    proxy_profile_id: str = ""
 
 
 class ResultsPathPayload(BaseModel):
@@ -174,6 +262,28 @@ class CheckoutSessionPayload(BaseModel):
     cancel_url: str = ""
 
 
+class ProxyConfigPayload(BaseModel):
+    free_proxy_url: str | None = None
+    paid_proxy_url: str | None = None
+    profiles: list[dict[str, Any]] | None = None
+
+
+class ProxyProfilePayload(BaseModel):
+    name: str = ""
+    kind: str = "free_proxy"
+    proxy_url: str = ""
+
+
+class ProxyProfileUpdatePayload(BaseModel):
+    name: str | None = None
+    kind: str | None = None
+    proxy_url: str | None = None
+
+
+class ProxyTestPayload(BaseModel):
+    proxy_url: str = ""
+
+
 def _is_paid_status(value: str) -> bool:
     return str(value or "").strip().lower() in {"paid", "active", "trialing", "lifetime"}
 
@@ -197,7 +307,7 @@ def _stripe_request(path: str, payload: dict[str, Any]) -> dict[str, Any]:
             "Content-Type": "application/x-www-form-urlencoded",
         },
     )
-    with urlopen(req, timeout=20) as response:
+    with _urlopen_no_proxy(req, timeout=20) as response:
         raw = response.read().decode("utf-8")
     data = json.loads(raw)
     if not isinstance(data, dict):
@@ -285,7 +395,7 @@ class ScraperRunner:
         with self.lock:
             return self._status_unlocked()
 
-    def start(self, output_file: str) -> dict[str, Any]:
+    def start(self, output_file: str, run_mode: str = "free_proxy", proxy_url: str = "") -> dict[str, Any]:
         with self.lock:
             if self.process is not None and self.process.poll() is None:
                 raise RuntimeError("Scraper is already running.")
@@ -303,14 +413,30 @@ class ScraperRunner:
                 "-O",
                 str(RAW_OUTPUT_PATH.relative_to(ROOT_DIR)),
             ]
+
+            run_mode_norm = "paid_proxy" if str(run_mode or "").strip().lower() == "paid_proxy" else "free_proxy"
+            selected_url = str(proxy_url or "").strip()
+            proxy_count = 1 if selected_url else 0
+            subprocess_env = _sanitize_subprocess_env(dict(os.environ))
+            subprocess_env["SAUTO_PROXY_LIST"] = ""
+            subprocess_env["SAUTO_PROXY_URL"] = selected_url
+            subprocess_env["SAUTO_PROXY_MODE"] = "round_robin"
+            subprocess_env["SAUTO_PROXY_BAN_STATUSES"] = ""
+            subprocess_env["SAUTO_PROXY_STRICT"] = "true"
+            subprocess_env.setdefault("SAUTO_PROXY_TIMEOUT", "8")
+
             self.log_lines.clear()
             self.log_lines.append(f"[web-api] Spouštím: {' '.join(command)}")
+            self.log_lines.append(
+                f"[web-api] Proxy profil: {run_mode_norm} ({'aktivni' if proxy_count > 0 else 'bez proxy konfigurace'})."
+            )
             popen_kwargs: dict[str, Any] = {
                 "cwd": ROOT_DIR,
                 "stdout": subprocess.PIPE,
                 "stderr": subprocess.STDOUT,
                 "text": True,
                 "bufsize": 1,
+                "env": subprocess_env,
             }
             if os.name == "nt":
                 popen_kwargs["creationflags"] = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
@@ -634,13 +760,14 @@ class RunQueue:
         self._active_job_id: str | None = None
         self.on_job_finished: Callable[[dict[str, Any]], None] | None = None
 
-    def _new_job(self, output_file: str, project_id: str, run_mode: str, billable: bool) -> dict[str, Any]:
+    def _new_job(self, output_file: str, project_id: str, run_mode: str, billable: bool, proxy_url: str) -> dict[str, Any]:
         now = time.time()
         job = {
             "job_id": f"job_{uuid.uuid4().hex[:12]}",
             "project_id": project_id or "default",
             "output_file": output_file,
             "run_mode": run_mode,
+            "proxy_url": str(proxy_url or ""),
             "billable": bool(billable),
             "status": "queued",
             "created_at": now,
@@ -652,15 +779,36 @@ class RunQueue:
         self._jobs[job["job_id"]] = job
         return job
 
-    def enqueue(self, output_file: str, project_id: str, run_mode: str = "cloud_paid", billable: bool = True) -> dict[str, Any]:
+    def _public_job(self, job: dict[str, Any] | None) -> dict[str, Any] | None:
+        if not isinstance(job, dict):
+            return None
+        safe = dict(job)
+        if "proxy_url" in safe:
+            safe["proxy_url"] = "***" if str(safe.get("proxy_url") or "").strip() else ""
+        return safe
+
+    def enqueue(
+        self,
+        output_file: str,
+        project_id: str,
+        run_mode: str = "free_proxy",
+        billable: bool = True,
+        proxy_url: str = "",
+    ) -> dict[str, Any]:
         with self._lock:
-            job = self._new_job(output_file=output_file, project_id=project_id, run_mode=run_mode, billable=billable)
+            job = self._new_job(
+                output_file=output_file,
+                project_id=project_id,
+                run_mode=run_mode,
+                billable=billable,
+                proxy_url=proxy_url,
+            )
             self._pending.append(job)
             started_now = self._try_start_next_unlocked()
             return {
                 "accepted": True,
                 "started": started_now,
-                "job": dict(job),
+                "job": self._public_job(job),
                 "queue": self.summary_unlocked(),
             }
 
@@ -679,7 +827,11 @@ class RunQueue:
             dump_json(resolved, [])
 
             try:
-                self._runner.start(output_file=job["output_file"])
+                self._runner.start(
+                    output_file=job["output_file"],
+                    run_mode=str(job.get("run_mode") or "free_proxy"),
+                    proxy_url=str(job.get("proxy_url") or ""),
+                )
                 return True
             except Exception as exc:
                 job["status"] = "failed"
@@ -715,10 +867,10 @@ class RunQueue:
     def summary_unlocked(self) -> dict[str, Any]:
         active = self._jobs.get(self._active_job_id or "") if self._active_job_id else None
         return {
-            "active_job": dict(active) if active else None,
+            "active_job": self._public_job(active),
             "pending_count": len(self._pending),
-            "pending_jobs": [dict(job) for job in list(self._pending)[:20]],
-            "history": list(self._history)[-20:],
+            "pending_jobs": [self._public_job(job) for job in list(self._pending)[:20]],
+            "history": [self._public_job(job) for job in list(self._history)[-20:]],
         }
 
     def summary(self) -> dict[str, Any]:
@@ -728,7 +880,7 @@ class RunQueue:
     def get_job(self, job_id: str) -> dict[str, Any] | None:
         with self._lock:
             job = self._jobs.get(job_id)
-            return dict(job) if job else None
+            return self._public_job(job)
 
 
 class BillingLedger:
@@ -815,7 +967,7 @@ class BillingLedger:
         project_id = str(job.get("project_id") or "default")
         output_rel = str(job.get("output_file") or "data/sauto_interesting.json")
         exit_code = int(job.get("exit_code") or -1)
-        run_mode = str(job.get("run_mode") or "cloud_paid")
+        run_mode = str(job.get("run_mode") or "free_proxy")
         billable = bool(job.get("billable", True))
 
         result_path = (ROOT_DIR / output_rel).resolve()
@@ -1045,15 +1197,149 @@ def _update_user(updated_user: dict[str, Any]) -> None:
             return
 
 
+def _mask_proxy_url(value: str) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    parsed = urlsplit(raw)
+    host = str(parsed.hostname or "")
+    scheme = str(parsed.scheme or "")
+    port = f":{parsed.port}" if parsed.port else ""
+    if not host or not scheme:
+        return "<configured>"
+    return f"{scheme}://***@{host}{port}"
+
+
+def _normalize_proxy_kind(value: str) -> str:
+    return "paid_proxy" if str(value or "").strip().lower() == "paid_proxy" else "free_proxy"
+
+
+def _normalize_user_proxy_profiles(user: dict[str, Any]) -> list[dict[str, Any]]:
+    if not isinstance(user, dict):
+        return []
+
+    now = time.time()
+    profiles_raw = user.get("proxy_profiles")
+    profiles: list[dict[str, Any]] = []
+
+    if isinstance(profiles_raw, list):
+        for entry in profiles_raw:
+            if not isinstance(entry, dict):
+                continue
+            profile_id = str(entry.get("id") or "").strip()
+            if not profile_id:
+                continue
+            profiles.append(
+                {
+                    "id": profile_id,
+                    "name": str(entry.get("name") or "").strip() or profile_id,
+                    "kind": _normalize_proxy_kind(str(entry.get("kind") or "free_proxy")),
+                    "proxy_url": str(entry.get("proxy_url") or "").strip(),
+                    "created_at": float(entry.get("created_at") or now),
+                    "updated_at": float(entry.get("updated_at") or now),
+                }
+            )
+
+    # Backward compatibility for legacy free/paid fields.
+    free_proxy_url = str(user.get("free_proxy_url") or "").strip()
+    paid_proxy_url = str(user.get("paid_proxy_url") or "").strip()
+
+    profile_by_id = {str(p.get("id") or ""): p for p in profiles}
+
+    free_profile = profile_by_id.get(DEFAULT_FREE_PROXY_PROFILE_ID)
+    if free_profile is None:
+        free_profile = {
+            "id": DEFAULT_FREE_PROXY_PROFILE_ID,
+            "name": "Proxy profil A",
+            "kind": "free_proxy",
+            "proxy_url": free_proxy_url,
+            "created_at": now,
+            "updated_at": now,
+        }
+        profiles.insert(0, free_profile)
+    elif free_proxy_url and not str(free_profile.get("proxy_url") or "").strip():
+        free_profile["proxy_url"] = free_proxy_url
+
+    paid_profile = profile_by_id.get(DEFAULT_PAID_PROXY_PROFILE_ID)
+    if paid_profile is None:
+        paid_profile = {
+            "id": DEFAULT_PAID_PROXY_PROFILE_ID,
+            "name": "Proxy profil B",
+            "kind": "paid_proxy",
+            "proxy_url": paid_proxy_url,
+            "created_at": now,
+            "updated_at": now,
+        }
+        profiles.append(paid_profile)
+    elif paid_proxy_url and not str(paid_profile.get("proxy_url") or "").strip():
+        paid_profile["proxy_url"] = paid_proxy_url
+
+    # Keep legacy fields synchronized for any old client paths.
+    user["proxy_profiles"] = profiles
+    user["free_proxy_url"] = str(free_profile.get("proxy_url") or "").strip()
+    user["paid_proxy_url"] = str(paid_profile.get("proxy_url") or "").strip()
+    return profiles
+
+
+def _public_proxy_profiles(profiles: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    public_items: list[dict[str, Any]] = []
+    for profile in profiles:
+        proxy_url = str(profile.get("proxy_url") or "").strip()
+        public_items.append(
+            {
+                "id": str(profile.get("id") or ""),
+                "name": str(profile.get("name") or ""),
+                "kind": _normalize_proxy_kind(str(profile.get("kind") or "free_proxy")),
+                "has_proxy_url": bool(proxy_url),
+                "proxy_preview": _mask_proxy_url(proxy_url),
+            }
+        )
+    return public_items
+
+
+def _get_user_proxy_profile(user: dict[str, Any], run_mode: str, proxy_profile_id: str) -> dict[str, Any] | None:
+    if not isinstance(user, dict):
+        return None
+
+    profiles = _normalize_user_proxy_profiles(user)
+    requested_profile_id = str(proxy_profile_id or "").strip()
+    if requested_profile_id:
+        for profile in profiles:
+            if str(profile.get("id") or "").strip() == requested_profile_id:
+                return profile
+        return None
+
+    mode = _normalize_proxy_kind(run_mode)
+    fallback_id = DEFAULT_PAID_PROXY_PROFILE_ID if mode == "paid_proxy" else DEFAULT_FREE_PROXY_PROFILE_ID
+    for profile in profiles:
+        if str(profile.get("id") or "").strip() == fallback_id:
+            return profile
+
+    for profile in profiles:
+        if _normalize_proxy_kind(str(profile.get("kind") or "free_proxy")) == mode:
+            return profile
+    return None
+
+
 def _auth_user_public(user: dict[str, Any]) -> dict[str, Any]:
     payment_status = str(user.get("payment_status") or "none").strip().lower() or "none"
+    profiles = _normalize_user_proxy_profiles(user)
+    profile_by_id = {str(p.get("id") or ""): p for p in profiles}
+    free_proxy_url = str((profile_by_id.get(DEFAULT_FREE_PROXY_PROFILE_ID) or {}).get("proxy_url") or "").strip()
+    paid_proxy_url = str((profile_by_id.get(DEFAULT_PAID_PROXY_PROFILE_ID) or {}).get("proxy_url") or "").strip()
     return {
         "id": str(user.get("id") or ""),
         "email": str(user.get("email") or "").lower(),
         "created_at": user.get("created_at"),
         "payment_status": payment_status,
         "cloud_access": _is_paid_status(payment_status),
+        "free_proxy_access": bool(user.get("local_free_access", True)),
         "local_free_access": bool(user.get("local_free_access", True)),
+        "has_free_proxy_config": bool(free_proxy_url),
+        "has_paid_proxy_config": bool(paid_proxy_url),
+        "free_proxy_preview": _mask_proxy_url(free_proxy_url),
+        "paid_proxy_preview": _mask_proxy_url(paid_proxy_url),
+        "proxy_profiles": _public_proxy_profiles(profiles),
         "stripe_customer_id": str(user.get("stripe_customer_id") or ""),
     }
 
@@ -1211,7 +1497,7 @@ def _fetch_sauto_page(params: dict[str, Any]) -> tuple[list[dict[str, Any]], int
     query = urlencode(params)
     url = f"{SAUTO_SEARCH_API}?{query}"
     try:
-        with urlopen(url, timeout=15) as response:
+        with _urlopen_no_proxy(url, timeout=15) as response:
             payload = json.loads(response.read().decode("utf-8"))
     except HTTPError as exc:
         # Sauto returns 422 for too large offsets. Treat as end of pagination.
@@ -1240,7 +1526,7 @@ def _fetch_sauto_item_detail(item_id: int | str) -> dict[str, Any]:
         return {}
 
     url = SAUTO_ITEM_DETAIL_API.format(item_id_int)
-    with urlopen(url, timeout=15) as response:
+    with _urlopen_no_proxy(url, timeout=15) as response:
         payload = json.loads(response.read().decode("utf-8"))
     result = payload.get("result", {}) if isinstance(payload, dict) else {}
     return result if isinstance(result, dict) else {}
@@ -1540,6 +1826,7 @@ app = FastAPI(title="Sauto Scraper API", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"] if CORS_ALLOW_ANY_ORIGIN else CORS_ALLOW_ORIGINS,
+    allow_origin_regex=CORS_ALLOW_ORIGIN_REGEX or None,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -1561,7 +1848,7 @@ async def api_key_guard(request: Request, call_next):
         origin = request.headers.get("origin", "").strip()
         if CORS_ALLOW_ANY_ORIGIN:
             headers["Access-Control-Allow-Origin"] = "*"
-        elif origin and origin in CORS_ALLOW_ORIGIN_SET:
+        elif origin and (origin in CORS_ALLOW_ORIGIN_SET or (CORS_ALLOW_ORIGIN_PATTERN is not None and CORS_ALLOW_ORIGIN_PATTERN.match(origin))):
             headers["Access-Control-Allow-Origin"] = origin
             headers["Vary"] = "Origin"
         return JSONResponse(
@@ -1643,6 +1930,8 @@ def auth_signup(payload: SignupPayload) -> dict[str, Any]:
         "created_at": time.time(),
         "payment_status": "none",
         "local_free_access": True,
+        "free_proxy_url": "",
+        "paid_proxy_url": "",
         "stripe_customer_id": "",
         "stripe_subscription_id": "",
         "stripe_checkout_session_id": "",
@@ -1693,9 +1982,215 @@ def auth_me(request: Request) -> dict[str, Any]:
             "email": str(claims.get("email") or "").lower(),
             "payment_status": "none",
             "cloud_access": False,
+            "free_proxy_access": True,
             "local_free_access": True,
         }
     }
+
+
+@app.get("/api/proxy/config")
+def get_proxy_config(request: Request) -> dict[str, Any]:
+    user = _resolve_request_user(request)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Missing or invalid auth token.")
+
+    profiles = _normalize_user_proxy_profiles(user)
+    profile_by_id = {str(p.get("id") or ""): p for p in profiles}
+    free_proxy_url = str((profile_by_id.get(DEFAULT_FREE_PROXY_PROFILE_ID) or {}).get("proxy_url") or "").strip()
+    paid_proxy_url = str((profile_by_id.get(DEFAULT_PAID_PROXY_PROFILE_ID) or {}).get("proxy_url") or "").strip()
+    return {
+        "free_proxy_url": _mask_proxy_url(free_proxy_url),
+        "paid_proxy_url": _mask_proxy_url(paid_proxy_url),
+        "has_free_proxy_config": bool(free_proxy_url),
+        "has_paid_proxy_config": bool(paid_proxy_url),
+        "profiles": _public_proxy_profiles(profiles),
+    }
+
+
+@app.put("/api/proxy/config")
+def set_proxy_config(payload: ProxyConfigPayload, request: Request) -> dict[str, Any]:
+    user = _resolve_request_user(request)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Missing or invalid auth token.")
+
+    existing_profiles = _normalize_user_proxy_profiles(user)
+    existing_by_id = {str(p.get("id") or ""): p for p in existing_profiles}
+    next_profiles = [dict(p) for p in existing_profiles]
+
+    if payload.profiles is not None:
+        next_profiles = []
+        seen_ids: set[str] = set()
+        now = time.time()
+        for item in payload.profiles:
+            item_data = item if isinstance(item, dict) else {
+                "id": getattr(item, "id", ""),
+                "name": getattr(item, "name", ""),
+                "kind": getattr(item, "kind", "free_proxy"),
+                "proxy_url": getattr(item, "proxy_url", None),
+            }
+
+            profile_id = str(item_data.get("id") or "").strip()
+            if not profile_id:
+                raise HTTPException(status_code=400, detail="Each proxy profile must include id.")
+            if profile_id in seen_ids:
+                raise HTTPException(status_code=400, detail=f"Duplicate proxy profile id '{profile_id}'.")
+            seen_ids.add(profile_id)
+
+            previous = existing_by_id.get(profile_id) or {}
+            kind = _normalize_proxy_kind(str(item_data.get("kind") or "free_proxy"))
+            if profile_id == DEFAULT_FREE_PROXY_PROFILE_ID:
+                kind = "free_proxy"
+            elif profile_id == DEFAULT_PAID_PROXY_PROFILE_ID:
+                kind = "paid_proxy"
+            name = str(item_data.get("name") or "").strip() or profile_id
+
+            if item_data.get("proxy_url") is None:
+                proxy_url = str(previous.get("proxy_url") or "").strip()
+            else:
+                proxy_url = str(item_data.get("proxy_url") or "").strip()
+
+            if proxy_url:
+                try:
+                    proxy_url = _validate_proxy_url(proxy_url)
+                except ValueError as exc:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Invalid proxy_url for profile '{profile_id}': {exc}",
+                    ) from exc
+
+            next_profiles.append(
+                {
+                    "id": profile_id,
+                    "name": name,
+                    "kind": kind,
+                    "proxy_url": proxy_url,
+                    "created_at": float(previous.get("created_at") or now),
+                    "updated_at": now,
+                }
+            )
+
+    next_by_id = {str(p.get("id") or ""): p for p in next_profiles}
+    now = time.time()
+
+    if DEFAULT_FREE_PROXY_PROFILE_ID not in next_by_id:
+        previous = existing_by_id.get(DEFAULT_FREE_PROXY_PROFILE_ID) or {}
+        next_profiles.insert(
+            0,
+            {
+                "id": DEFAULT_FREE_PROXY_PROFILE_ID,
+                "name": str(previous.get("name") or "").strip() or "Proxy profil A",
+                "kind": "free_proxy",
+                "proxy_url": str(previous.get("proxy_url") or "").strip(),
+                "created_at": float(previous.get("created_at") or now),
+                "updated_at": now,
+            },
+        )
+        next_by_id = {str(p.get("id") or ""): p for p in next_profiles}
+
+    if DEFAULT_PAID_PROXY_PROFILE_ID not in next_by_id:
+        previous = existing_by_id.get(DEFAULT_PAID_PROXY_PROFILE_ID) or {}
+        next_profiles.append(
+            {
+                "id": DEFAULT_PAID_PROXY_PROFILE_ID,
+                "name": str(previous.get("name") or "").strip() or "Proxy profil B",
+                "kind": "paid_proxy",
+                "proxy_url": str(previous.get("proxy_url") or "").strip(),
+                "created_at": float(previous.get("created_at") or now),
+                "updated_at": now,
+            }
+        )
+        next_by_id = {str(p.get("id") or ""): p for p in next_profiles}
+
+    if payload.free_proxy_url is not None:
+        free_proxy_url = str(payload.free_proxy_url or "").strip()
+        if free_proxy_url:
+            try:
+                free_proxy_url = _validate_proxy_url(free_proxy_url)
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=f"Invalid free_proxy_url: {exc}") from exc
+        free_profile = next_by_id[DEFAULT_FREE_PROXY_PROFILE_ID]
+        free_profile["proxy_url"] = free_proxy_url
+        free_profile["updated_at"] = time.time()
+
+    if payload.paid_proxy_url is not None:
+        paid_proxy_url = str(payload.paid_proxy_url or "").strip()
+        if paid_proxy_url:
+            try:
+                paid_proxy_url = _validate_proxy_url(paid_proxy_url)
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=f"Invalid paid_proxy_url: {exc}") from exc
+        paid_profile = next_by_id[DEFAULT_PAID_PROXY_PROFILE_ID]
+        paid_profile["proxy_url"] = paid_proxy_url
+        paid_profile["updated_at"] = time.time()
+
+    free_proxy_url = str(next_by_id[DEFAULT_FREE_PROXY_PROFILE_ID].get("proxy_url") or "").strip()
+    paid_proxy_url = str(next_by_id[DEFAULT_PAID_PROXY_PROFILE_ID].get("proxy_url") or "").strip()
+
+    user["proxy_profiles"] = next_profiles
+    user["free_proxy_url"] = free_proxy_url
+    user["paid_proxy_url"] = paid_proxy_url
+    user["proxy_updated_at"] = time.time()
+    _update_user(user)
+
+    return {
+        "saved": True,
+        "free_proxy_url": _mask_proxy_url(free_proxy_url),
+        "paid_proxy_url": _mask_proxy_url(paid_proxy_url),
+        "has_free_proxy_config": bool(free_proxy_url),
+        "has_paid_proxy_config": bool(paid_proxy_url),
+        "profiles": _public_proxy_profiles(next_profiles),
+    }
+
+
+@app.post("/api/proxy/test")
+def test_proxy_connection(payload: ProxyTestPayload, request: Request) -> dict[str, Any]:
+    user = _resolve_request_user(request)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Missing or invalid auth token.")
+
+    raw_proxy_url = str(payload.proxy_url or "").strip()
+    if not raw_proxy_url:
+        raise HTTPException(status_code=400, detail="Proxy URL je povinna.")
+
+    try:
+        proxy_url = _validate_proxy_url(raw_proxy_url)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Neplatna proxy URL: {exc}") from exc
+
+    proxy_handler = ProxyHandler({"http": proxy_url, "https": proxy_url})
+    probe_targets = [
+        "https://api.ipify.org?format=json",
+        "https://ifconfig.me/all.json",
+    ]
+    last_error = "Proxy test selhal."
+
+    for target in probe_targets:
+        opener = build_opener(proxy_handler)
+        req = UrlRequest(
+            target,
+            headers={
+                "User-Agent": "sauto-proxy-check/1.0",
+                "Accept": "application/json,text/plain,*/*",
+            },
+        )
+        try:
+            with opener.open(req, timeout=12) as response:
+                body = response.read().decode("utf-8", errors="ignore")
+            parsed = json.loads(body)
+            if isinstance(parsed, dict):
+                external_ip = str(parsed.get("ip") or parsed.get("ip_addr") or parsed.get("ip_address") or "").strip()
+            else:
+                external_ip = ""
+            return {
+                "ok": True,
+                "message": "Proxy je dostupna a odpovida.",
+                "external_ip": external_ip,
+            }
+        except Exception as exc:
+            last_error = str(exc)
+            continue
+
+    raise HTTPException(status_code=400, detail=f"Proxy test selhal: {last_error}")
 
 
 def _resolve_request_user(request: Request) -> dict[str, Any] | None:
@@ -1737,7 +2232,8 @@ def get_billing_access(request: Request) -> dict[str, Any]:
     return {
         "provider": PAYMENT_PROVIDER,
         "can_run_cloud": _user_has_cloud_access(user),
-        "can_run_local_free": bool(user.get("local_free_access", True)) and ALLOW_LOCAL_FREE_RUNS,
+        "can_run_free_proxy": bool(user.get("local_free_access", True)),
+        "can_run_local_free": bool(user.get("local_free_access", True)),
         "payment_status": str(user.get("payment_status") or "none"),
         "checkout_available": bool(STRIPE_PAYMENT_LINK_URL or (STRIPE_SECRET_KEY and (STRIPE_PRICE_ID or STRIPE_DEFAULT_AMOUNT_CENTS > 0))),
     }
@@ -1878,8 +2374,8 @@ def update_params(payload: ParamsPayload) -> dict[str, Any]:
 def run_scraper(payload: RunPayload, request: Request) -> dict[str, Any]:
     output_file = payload.output_file.strip() or "data/sauto_interesting.json"
     project_id = (payload.project_id or "default").strip() or "default"
-    requested_mode = str(payload.run_mode or "cloud_paid").strip().lower()
-    run_mode = "local_free" if requested_mode == "local_free" else "cloud_paid"
+    requested_mode = str(payload.run_mode or "free_proxy").strip().lower()
+    run_mode = "paid_proxy" if requested_mode == "paid_proxy" else "free_proxy"
 
     if os.path.isabs(output_file):
         raise HTTPException(status_code=400, detail="Use a relative output_file path.")
@@ -1889,22 +2385,30 @@ def run_scraper(payload: RunPayload, request: Request) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail="output_file must stay inside project directory.")
 
     user = _resolve_request_user(request)
-    if run_mode == "local_free":
-        if not ALLOW_LOCAL_FREE_RUNS:
-            raise HTTPException(status_code=403, detail="Local free mode is disabled on this server.")
-        if not _is_loopback_request(request):
-            raise HTTPException(status_code=403, detail="Local free mode is available only from localhost.")
-        return run_queue.enqueue(output_file=output_file, project_id=project_id, run_mode=run_mode, billable=False)
-
     if user is None:
-        raise HTTPException(status_code=401, detail="Login is required for cloud scraping.")
-    if not _user_has_cloud_access(user):
-        raise HTTPException(
-            status_code=402,
-            detail="Cloud scraping requires active payment. Use local_free mode, or complete checkout first.",
-        )
+        raise HTTPException(status_code=401, detail="Login is required for scraping jobs.")
 
-    return run_queue.enqueue(output_file=output_file, project_id=project_id, run_mode=run_mode, billable=True)
+    selected_profile = _get_user_proxy_profile(user, run_mode, payload.proxy_profile_id or "")
+    if selected_profile is None:
+        raise HTTPException(status_code=400, detail="Nelze spustit úlohu: Vybraný proxy profil neexistuje.")
+
+    run_mode = _normalize_proxy_kind(str(selected_profile.get("kind") or run_mode))
+    selected_proxy = str(selected_profile.get("proxy_url") or "").strip()
+    if not selected_proxy:
+        raise HTTPException(status_code=400, detail="Nelze spustit úlohu: Chybí konfigurace proxy.")
+
+    try:
+        validated_proxy = _validate_proxy_url(selected_proxy)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid proxy configuration: {exc}") from exc
+
+    return run_queue.enqueue(
+        output_file=output_file,
+        project_id=project_id,
+        run_mode=run_mode,
+        billable=False,
+        proxy_url=validated_proxy,
+    )
 
 
 @app.post("/api/pause")

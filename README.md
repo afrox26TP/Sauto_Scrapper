@@ -30,6 +30,31 @@ npm install && npm run dev
 
 Open [http://localhost:5173](http://localhost:5173).
 
+## BYOP Model
+
+This project uses `BYOP` (Bring Your Own Proxy):
+
+- Each user supplies their own proxy credentials (for example Webshare or Smartproxy).
+- Proxy traffic billing (GB/data transfer) is handled by the proxy provider, not by this app.
+- The app works as an orchestrator: run control, validation, scheduling, scoring, and API/UI management.
+
+## Proxy Benchmark (BYOP Profile A vs B)
+
+Use this helper to run one `free_proxy` (BYOP profile A) and one `paid_proxy` (BYOP profile B) job and compare duration and item count:
+
+```powershell
+cd sauto-scraper-main
+.\deploy\benchmark-proxy-modes.ps1 -ApiBase "http://127.0.0.1:8000" -ProjectId "proxy-benchmark"
+```
+
+If API key auth is enabled, add `-ApiKey "<your-key>"`.
+
+Before benchmarking, set proxy profiles with:
+
+```powershell
+.\deploy\set-proxy-profiles-windows.ps1
+```
+
 ## Cloudflare CI Note
 
 Repository root includes `wrangler.toml` for static frontend deploy from CI using:

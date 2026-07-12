@@ -11,7 +11,28 @@
     "email": "tomaspycha10@gmail.com",
     "password_hash": "747b53f453513e7ec42f0db3574ee9011188c0bb2d3347ce9d074dd37ba08295",
     "password_salt": "b84db1c4c4db494c16d8f48d5af87fb8",
-    "created_at": 1782672256.3848002
+    "created_at": 1782672256.3848002,
+    "proxy_profiles": [
+      {
+        "id": "free_proxy_default",
+        "name": "test",
+        "kind": "free_proxy",
+        "proxy_url": "http://iclfibis:jy4oowbe7772@31.59.20.176:6754",
+        "created_at": 1783817521.7563438,
+        "updated_at": 1783818442.7338593
+      },
+      {
+        "id": "paid_proxy_default",
+        "name": "Proxy profil B",
+        "kind": "paid_proxy",
+        "proxy_url": "",
+        "created_at": 1783817521.7563438,
+        "updated_at": 1783818442.7338827
+      }
+    ],
+    "free_proxy_url": "http://iclfibis:jy4oowbe7772@31.59.20.176:6754",
+    "paid_proxy_url": "",
+    "proxy_updated_at": 1783818442.733888
   },
   {
     "id": "usr_66e9479d0f37",
@@ -60,5 +81,104 @@
     "stripe_subscription_id": "",
     "stripe_checkout_session_id": "",
     "stripe_last_event_at": null
+  },
+  {
+    "id": "usr_cbd91497277c",
+    "email": "fix500_57d88d02@example.com",
+    "password_hash": "86c27fbb8b9b7ac42cb2a1dbe0f1924e0f2b0a53cfbe6aae34092ccd9dcfa19c",
+    "password_salt": "7b4ab253f4dab4bc34c3530fe689ac75",
+    "created_at": 1783817250.736838,
+    "payment_status": "none",
+    "local_free_access": true,
+    "free_proxy_url": "",
+    "paid_proxy_url": "",
+    "stripe_customer_id": "",
+    "stripe_subscription_id": "",
+    "stripe_checkout_session_id": "",
+    "stripe_last_event_at": null
+  },
+  {
+    "id": "usr_8712f799bc75",
+    "email": "dbg1783817473839@example.com",
+    "password_hash": "1114572122113625b45ca042d3863f90fbdf0feba9c1b2d5ef2850d739573275",
+    "password_salt": "2731304c07850d21dc5821f583627686",
+    "created_at": 1783817473.9080806,
+    "payment_status": "none",
+    "local_free_access": true,
+    "free_proxy_url": "",
+    "paid_proxy_url": "",
+    "stripe_customer_id": "",
+    "stripe_subscription_id": "",
+    "stripe_checkout_session_id": "",
+    "stripe_last_event_at": null,
+    "proxy_profiles": [
+      {
+        "id": "free_proxy_default",
+        "name": "BYOP profil A",
+        "kind": "free_proxy",
+        "proxy_url": "",
+        "created_at": 1783817473.9379587,
+        "updated_at": 1783817473.9380224
+      },
+      {
+        "id": "free",
+        "name": "Proxy",
+        "kind": "free_proxy",
+        "proxy_url": "http://user:pass@1.1.1.1:8080",
+        "created_at": 1783817473.937967,
+        "updated_at": 1783817473.937967
+      },
+      {
+        "id": "paid_proxy_default",
+        "name": "BYOP profil B",
+        "kind": "paid_proxy",
+        "proxy_url": "",
+        "created_at": 1783817473.9379587,
+        "updated_at": 1783817473.9380224
+      }
+    ],
+    "proxy_updated_at": 1783817473.9380267
+  },
+  {
+    "id": "usr_3f7d3c0f0cd6",
+    "email": "dbg1783817497445@example.com",
+    "password_hash": "41d5865467d605acda6c7303683f4ee7d4e785cd67e28b3effd5cc9d29b7aada",
+    "password_salt": "6bb3eb8b81be797bd444f8753eadf8af",
+    "created_at": 1783817497.5043113,
+    "payment_status": "none",
+    "local_free_access": true,
+    "free_proxy_url": "",
+    "paid_proxy_url": "",
+    "stripe_customer_id": "",
+    "stripe_subscription_id": "",
+    "stripe_checkout_session_id": "",
+    "stripe_last_event_at": null,
+    "proxy_profiles": [
+      {
+        "id": "free_proxy_default",
+        "name": "Proxy profil A",
+        "kind": "free_proxy",
+        "proxy_url": "",
+        "created_at": 1783817497.5150304,
+        "updated_at": 1783817497.5151043
+      },
+      {
+        "id": "free",
+        "name": "Proxy",
+        "kind": "free_proxy",
+        "proxy_url": "http://user:pass@1.1.1.1:8080",
+        "created_at": 1783817497.5150387,
+        "updated_at": 1783817497.5150387
+      },
+      {
+        "id": "paid_proxy_default",
+        "name": "Proxy profil B",
+        "kind": "paid_proxy",
+        "proxy_url": "",
+        "created_at": 1783817497.5150304,
+        "updated_at": 1783817497.5151043
+      }
+    ],
+    "proxy_updated_at": 1783817497.5151088
   }
 ]

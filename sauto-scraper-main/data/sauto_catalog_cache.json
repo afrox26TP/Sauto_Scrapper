@@ -1,7 +1,7 @@
 {
   "models": {
     "bmw": {
-      "updated_at": 1783629918,
+      "updated_at": 1783818057,
       "items": [
         {
           "value": "i3",
@@ -147,7 +147,7 @@
       "collector_version": 7
     },
     "alfa-romeo": {
-      "updated_at": 1783633344,
+      "updated_at": 1783816541,
       "items": [
         {
           "value": "147",
@@ -314,27 +314,23 @@
     }
   },
   "brands": {
-    "updated_at": 1783629925,
+    "updated_at": 1783809968,
     "items": [
-      {
-        "value": "abarth",
-        "label": "Abarth"
-      },
       {
         "value": "alfa-romeo",
         "label": "Alfa Romeo"
       },
       {
-        "value": "alpina",
-        "label": "Alpina"
+        "value": "aston-martin",
+        "label": "Aston Martin"
       },
       {
         "value": "audi",
         "label": "Audi"
       },
       {
-        "value": "baic",
-        "label": "BAIC"
+        "value": "bentley",
+        "label": "Bentley"
       },
       {
         "value": "bmw",
@@ -349,8 +345,8 @@
         "label": "Cadillac"
       },
       {
-        "value": "chery",
-        "label": "Chery"
+        "value": "caterham",
+        "label": "Caterham"
       },
       {
         "value": "chevrolet",
@@ -371,10 +367,6 @@
       {
         "value": "dacia",
         "label": "Dacia"
-      },
-      {
-        "value": "daihatsu",
-        "label": "Daihatsu"
       },
       {
         "value": "dodge",
@@ -401,8 +393,16 @@
         "label": "Ford"
       },
       {
+        "value": "gmc",
+        "label": "GMC"
+      },
+      {
         "value": "honda",
         "label": "Honda"
+      },
+      {
+        "value": "hongqi",
+        "label": "Hongqi"
       },
       {
         "value": "hummer",
@@ -411,10 +411,6 @@
       {
         "value": "hyundai",
         "label": "Hyundai"
-      },
-      {
-        "value": "isuzu",
-        "label": "Isuzu"
       },
       {
         "value": "jaecoo",
@@ -441,32 +437,20 @@
         "label": "Lamborghini"
       },
       {
-        "value": "lancia",
-        "label": "Lancia"
-      },
-      {
         "value": "land-rover",
         "label": "Land Rover"
-      },
-      {
-        "value": "leapmotor",
-        "label": "Leapmotor"
       },
       {
         "value": "lexus",
         "label": "Lexus"
       },
       {
-        "value": "ligier",
-        "label": "Ligier"
-      },
-      {
-        "value": "lotus",
-        "label": "Lotus"
-      },
-      {
         "value": "maserati",
         "label": "Maserati"
+      },
+      {
+        "value": "maybach",
+        "label": "Maybach"
       },
       {
         "value": "mazda",
@@ -501,16 +485,8 @@
         "label": "Opel"
       },
       {
-        "value": "ostatni",
-        "label": "Ostatní"
-      },
-      {
         "value": "peugeot",
         "label": "Peugeot"
-      },
-      {
-        "value": "polestar",
-        "label": "Polestar"
       },
       {
         "value": "porsche",
@@ -523,6 +499,10 @@
       {
         "value": "renault",
         "label": "Renault"
+      },
+      {
+        "value": "rolls-royce",
+        "label": "Rolls-Royce"
       },
       {
         "value": "saab",
@@ -565,21 +545,21 @@
         "label": "Toyota"
       },
       {
-        "value": "trabant",
-        "label": "Trabant"
-      },
-      {
         "value": "volkswagen",
         "label": "Volkswagen"
       },
       {
         "value": "volvo",
         "label": "Volvo"
+      },
+      {
+        "value": "voyah",
+        "label": "Voyah"
       }
     ]
   },
   "bodies": {
-    "updated_at": 1783630005,
+    "updated_at": 1783807959,
     "items": [
       {
         "value": "hatchback",
@@ -628,23 +608,15 @@
     ]
   },
   "equipment": {
-    "updated_at": 1783630720,
+    "updated_at": 1783816485,
     "items": [
       {
         "value": "abs",
         "label": "abs"
       },
       {
-        "value": "adaptivní tempomat",
-        "label": "Adaptivní tempomat"
-      },
-      {
         "value": "alarm",
         "label": "alarm"
-      },
-      {
-        "value": "ambientní led osvětlení interiéru",
-        "label": "Ambientní LED osvětlení interiéru"
       },
       {
         "value": "android auto",
@@ -655,20 +627,8 @@
         "label": "apple car play"
       },
       {
-        "value": "asistent pro vedení vozu v jízdních pruzích",
-        "label": "Asistent pro vedení vozu v jízdních pruzích"
-      },
-      {
         "value": "asistent rozjezdu do kopce",
         "label": "asistent rozjezdu do kopce"
-      },
-      {
-        "value": "asistent změny jízdního pruhu",
-        "label": "Asistent změny jízdního pruhu"
-      },
-      {
-        "value": "automatické přepínání dálkových světel",
-        "label": "Automatické přepínání dálkových světel"
       },
       {
         "value": "automatické svícení",
@@ -707,26 +667,6 @@
         "label": "denní svícení"
       },
       {
-        "value": "digitální příjem rádia (dab)",
-        "label": "Digitální příjem rádia (DAB)"
-      },
-      {
-        "value": "digitální přístrojová deska",
-        "label": "Digitální přístrojová deska"
-      },
-      {
-        "value": "digitální přístrojový štít",
-        "label": "Digitální přístrojový štít"
-      },
-      {
-        "value": "dojezdové rezervní kolo",
-        "label": "Dojezdové rezervní kolo"
-      },
-      {
-        "value": "dotykové ovládání palubního počítače",
-        "label": "Dotykové ovládání palubního počítače"
-      },
-      {
         "value": "dálkové centrální zamykání",
         "label": "dálkové centrální zamykání"
       },
@@ -735,20 +675,12 @@
         "label": "Dělená zadní sedadla"
       },
       {
-        "value": "el. ovládaný kufr",
-        "label": "El. ovládaný kufr"
-      },
-      {
         "value": "el. ovládání oken",
         "label": "el. ovládání oken"
       },
       {
         "value": "el. ovládání zrcátek",
         "label": "el. ovládání zrcátek"
-      },
-      {
-        "value": "el. parkovací brzda",
-        "label": "El. parkovací brzda"
       },
       {
         "value": "el. seřiditelná sedadla",
@@ -767,16 +699,12 @@
         "label": "elektrochromatické vnitřní zpětné zrcátko"
       },
       {
+        "value": "elektronická uzávěrka diferenciálu (eds)",
+        "label": "Elektronická uzávěrka diferenciálu (EDS)"
+      },
+      {
         "value": "esp",
         "label": "esp"
-      },
-      {
-        "value": "hlasové ovládání palubního počítače",
-        "label": "Hlasové ovládání palubního počítače"
-      },
-      {
-        "value": "hlídání mrtvého úhlu",
-        "label": "Hlídání mrtvého úhlu"
       },
       {
         "value": "imobilizér",
@@ -807,22 +735,6 @@
         "label": "laděný výfuk"
       },
       {
-        "value": "led adaptivní světlomety",
-        "label": "LED adaptivní světlomety"
-      },
-      {
-        "value": "led denní svícení",
-        "label": "LED denní svícení"
-      },
-      {
-        "value": "led matrixové světlomety",
-        "label": "LED matrixové světlomety"
-      },
-      {
-        "value": "led světlomety plnohodnotné",
-        "label": "LED světlomety plnohodnotné"
-      },
-      {
         "value": "litá kola",
         "label": "litá kola"
       },
@@ -849,10 +761,6 @@
       {
         "value": "nastavitelný volant",
         "label": "nastavitelný volant"
-      },
-      {
-        "value": "nouzové brždění",
-        "label": "Nouzové brždění"
       },
       {
         "value": "originální autorádio",
@@ -887,10 +795,6 @@
         "label": "parkovací senzory"
       },
       {
-        "value": "parkovací senzory přední",
-        "label": "Parkovací senzory přední"
-      },
-      {
         "value": "parkovací senzory zadní",
         "label": "parkovací senzory zadní"
       },
@@ -923,10 +827,6 @@
         "label": "rezervní kolo"
       },
       {
-        "value": "satelitní navigace",
-        "label": "Satelitní navigace"
-      },
-      {
         "value": "senzor opotřebení brzd. destiček",
         "label": "senzor opotřebení brzd. destiček"
       },
@@ -939,24 +839,12 @@
         "label": "senzor tlaku v pneumatikách"
       },
       {
-        "value": "sledování jízdního pruhu",
-        "label": "Sledování jízdního pruhu"
-      },
-      {
-        "value": "sledování únavy řidiče",
-        "label": "Sledování únavy řidiče"
-      },
-      {
         "value": "sportovní podvozek",
         "label": "sportovní podvozek"
       },
       {
         "value": "sportovní sedadla",
         "label": "sportovní sedadla"
-      },
-      {
-        "value": "start/stop systém",
-        "label": "Start/Stop systém"
       },
       {
         "value": "střešní okno",
@@ -1007,8 +895,8 @@
         "label": "vyhřívaná zrcátka"
       },
       {
-        "value": "vyhřívaný volant",
-        "label": "Vyhřívaný volant"
+        "value": "výsuvné opěrky hlav",
+        "label": "Výsuvné opěrky hlav"
       },
       {
         "value": "výškově nastavitelná sedadla",

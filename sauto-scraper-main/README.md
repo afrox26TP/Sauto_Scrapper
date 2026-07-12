@@ -291,35 +291,44 @@ The FastAPI backend serves on `http://localhost:8000`:
 
 - `output_file` (relative path)
 - `project_id`
-- `run_mode`: `cloud_paid` (default) or `local_free`
+- `run_mode`: `free_proxy` (default) or `paid_proxy`
 
 Run mode behavior:
 
-- `cloud_paid`: requires logged-in user with active payment status.
-- `local_free`: free mode, only accepted from localhost (user runs backend on own machine/IP).
+- `free_proxy`: runs with free proxy profile variables (`SAUTO_FREE_PROXY_*`).
+- `paid_proxy`: runs with paid proxy profile variables (`SAUTO_PAID_PROXY_*`) and falls back to `SAUTO_PROXY_*`.
 
 ---
 
 ## Proxy Rotation (Production)
 
-The scraper now supports environment-driven proxy rotation in downloader middleware.
+The scraper supports environment-driven proxy rotation in downloader middleware.
 
 Supported variables:
 
-- `SAUTO_PROXY_LIST`: comma-separated or newline-separated proxy URLs
-- `SAUTO_PROXY_URL`: single proxy URL fallback
-- `SAUTO_PROXY_MODE`: `round_robin` (default) or `random`
-- `SAUTO_PROXY_BAN_STATUSES`: comma-separated HTTP codes that trigger proxy retry, default `403,407,429,500,502,503,504`
+- Free profile:
+- `SAUTO_FREE_PROXY_LIST`, `SAUTO_FREE_PROXY_URL`, `SAUTO_FREE_PROXY_MODE`, `SAUTO_FREE_PROXY_BAN_STATUSES`
+- Paid profile:
+- `SAUTO_PAID_PROXY_LIST`, `SAUTO_PAID_PROXY_URL`, `SAUTO_PAID_PROXY_MODE`, `SAUTO_PAID_PROXY_BAN_STATUSES`
+- Legacy fallback (used by paid profile if paid vars are not set):
+- `SAUTO_PROXY_LIST`, `SAUTO_PROXY_URL`, `SAUTO_PROXY_MODE`, `SAUTO_PROXY_BAN_STATUSES`
 
 Examples:
 
 ```bash
-# Single proxy
-export SAUTO_PROXY_URL="http://user:pass@proxy1.example.com:10000"
+# Free profile
+export SAUTO_FREE_PROXY_LIST="http://user:pass@free1.example.com:10000,http://user:pass@free2.example.com:10000"
+export SAUTO_FREE_PROXY_MODE="round_robin"
 
-# Proxy pool
-export SAUTO_PROXY_LIST="http://user:pass@proxy1.example.com:10000,http://user:pass@proxy2.example.com:10000"
-export SAUTO_PROXY_MODE="round_robin"
+# Paid profile
+export SAUTO_PAID_PROXY_LIST="http://user:pass@paid1.example.com:10000,http://user:pass@paid2.example.com:10000"
+export SAUTO_PAID_PROXY_MODE="round_robin"
+```
+
+Windows helper script:
+
+```powershell
+./deploy/set-proxy-profiles-windows.ps1 -FreeProxyList "http://user:pass@free1:10000" -PaidProxyList "http://user:pass@paid1:10000"
 ```
 
 Notes:
@@ -343,10 +352,10 @@ When configured, all `/api/*` write endpoints (`POST`, `PUT`, `PATCH`, `DELETE`)
 
 ## Billing + Payment
 
-Cloud scraping uses Stripe payment access, local scraping can remain free.
+Billing supports run/item/API usage pricing. Proxy mode selection itself does not require cloud/local mode switching.
 
-- `cloud_paid` runs: billed (per run + per output item), require active payment.
-- `local_free` runs: not billed, only allowed from localhost.
+- `free_proxy` runs: currently recorded as non-billable in `/api/run` path.
+- `paid_proxy` runs: currently recorded as non-billable in `/api/run` path.
 - Integration billing: per API call when request contains `x-api-key`.
 
 Billing endpoints:
@@ -364,7 +373,6 @@ Default rates are configurable with env vars:
 - `BILLING_ITEM_CZK`
 - `BILLING_API_CALL_CZK`
 - `BILLING_PROXY_RUN_CZK`
-- `ALLOW_LOCAL_FREE_RUNS`
 - `STRIPE_SECRET_KEY`
 - `STRIPE_PRICE_ID` (optional if using payment link)
 - `STRIPE_SUCCESS_URL`

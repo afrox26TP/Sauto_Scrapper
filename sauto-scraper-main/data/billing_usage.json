@@ -1,5 +1,5 @@
 {
-  "updated_at": 1783640651.2069502,
+  "updated_at": 1783817684.4298296,
   "rates": {
     "run_base_czk": 5.0,
     "item_czk": 0.02,
@@ -262,6 +262,70 @@
       },
       "total_czk": 0.0,
       "last_event_at": 1783640651.2069402
+    },
+    "proxy-mode-test": {
+      "project_id": "proxy-mode-test",
+      "runs_total": 2,
+      "runs_success": 0,
+      "runs_failed": 2,
+      "items_total": 50,
+      "api_calls": 0,
+      "costs": {
+        "runs_czk": 0.0,
+        "items_czk": 0.0,
+        "api_calls_czk": 0.0,
+        "proxy_czk": 0.0
+      },
+      "total_czk": 0.0,
+      "last_event_at": 1783712755.853087
+    },
+    "proxy-benchmark": {
+      "project_id": "proxy-benchmark",
+      "runs_total": 6,
+      "runs_success": 0,
+      "runs_failed": 6,
+      "items_total": 156,
+      "api_calls": 0,
+      "costs": {
+        "runs_czk": 0.0,
+        "items_czk": 0.0,
+        "api_calls_czk": 0.0,
+        "proxy_czk": 0.0
+      },
+      "total_czk": 0.0,
+      "last_event_at": 1783717277.1783743
+    },
+    "strict-test": {
+      "project_id": "strict-test",
+      "runs_total": 1,
+      "runs_success": 0,
+      "runs_failed": 1,
+      "items_total": 26,
+      "api_calls": 0,
+      "costs": {
+        "runs_czk": 0.0,
+        "items_czk": 0.0,
+        "api_calls_czk": 0.0,
+        "proxy_czk": 0.0
+      },
+      "total_czk": 0.0,
+      "last_event_at": 1783720955.1633904
+    },
+    "proj_mrh2xo24_tczho5": {
+      "project_id": "proj_mrh2xo24_tczho5",
+      "runs_total": 1,
+      "runs_success": 0,
+      "runs_failed": 1,
+      "items_total": 26,
+      "api_calls": 0,
+      "costs": {
+        "runs_czk": 0.0,
+        "items_czk": 0.0,
+        "api_calls_czk": 0.0,
+        "proxy_czk": 0.0
+      },
+      "total_czk": 0.0,
+      "last_event_at": 1783817684.4298193
     }
   },
   "events": [
@@ -507,6 +571,156 @@
       "exit_code": -1,
       "item_count": 25,
       "run_mode": "local_free",
+      "billable": false,
+      "charges": {
+        "run_base_czk": 0.0,
+        "items_czk": 0.0,
+        "proxy_czk": 0.0
+      }
+    },
+    {
+      "type": "run_usage_free",
+      "at": 1783712690.6689887,
+      "project_id": "proxy-mode-test",
+      "job_id": "job_c372fd563c15",
+      "exit_code": -1,
+      "item_count": 25,
+      "run_mode": "free_proxy",
+      "billable": false,
+      "charges": {
+        "run_base_czk": 0.0,
+        "items_czk": 0.0,
+        "proxy_czk": 0.0
+      }
+    },
+    {
+      "type": "run_usage_free",
+      "at": 1783712755.853087,
+      "project_id": "proxy-mode-test",
+      "job_id": "job_f42b40f8cbfa",
+      "exit_code": -1,
+      "item_count": 25,
+      "run_mode": "paid_proxy",
+      "billable": false,
+      "charges": {
+        "run_base_czk": 0.0,
+        "items_czk": 0.0,
+        "proxy_czk": 0.0
+      }
+    },
+    {
+      "type": "run_usage_free",
+      "at": 1783716927.3777027,
+      "project_id": "proxy-benchmark",
+      "job_id": "job_8a9d7f5b5f20",
+      "exit_code": -1,
+      "item_count": 26,
+      "run_mode": "free_proxy",
+      "billable": false,
+      "charges": {
+        "run_base_czk": 0.0,
+        "items_czk": 0.0,
+        "proxy_czk": 0.0
+      }
+    },
+    {
+      "type": "run_usage_free",
+      "at": 1783716992.6974447,
+      "project_id": "proxy-benchmark",
+      "job_id": "job_060f25f1acce",
+      "exit_code": -1,
+      "item_count": 26,
+      "run_mode": "free_proxy",
+      "billable": false,
+      "charges": {
+        "run_base_czk": 0.0,
+        "items_czk": 0.0,
+        "proxy_czk": 0.0
+      }
+    },
+    {
+      "type": "run_usage_free",
+      "at": 1783717064.407195,
+      "project_id": "proxy-benchmark",
+      "job_id": "job_877475a06b9a",
+      "exit_code": -1,
+      "item_count": 26,
+      "run_mode": "free_proxy",
+      "billable": false,
+      "charges": {
+        "run_base_czk": 0.0,
+        "items_czk": 0.0,
+        "proxy_czk": 0.0
+      }
+    },
+    {
+      "type": "run_usage_free",
+      "at": 1783717127.5894074,
+      "project_id": "proxy-benchmark",
+      "job_id": "job_a374410d60b2",
+      "exit_code": -1,
+      "item_count": 26,
+      "run_mode": "paid_proxy",
+      "billable": false,
+      "charges": {
+        "run_base_czk": 0.0,
+        "items_czk": 0.0,
+        "proxy_czk": 0.0
+      }
+    },
+    {
+      "type": "run_usage_free",
+      "at": 1783717206.7071497,
+      "project_id": "proxy-benchmark",
+      "job_id": "job_946d645342b6",
+      "exit_code": -1,
+      "item_count": 26,
+      "run_mode": "free_proxy",
+      "billable": false,
+      "charges": {
+        "run_base_czk": 0.0,
+        "items_czk": 0.0,
+        "proxy_czk": 0.0
+      }
+    },
+    {
+      "type": "run_usage_free",
+      "at": 1783717277.1783743,
+      "project_id": "proxy-benchmark",
+      "job_id": "job_d668d5152956",
+      "exit_code": -1,
+      "item_count": 26,
+      "run_mode": "paid_proxy",
+      "billable": false,
+      "charges": {
+        "run_base_czk": 0.0,
+        "items_czk": 0.0,
+        "proxy_czk": 0.0
+      }
+    },
+    {
+      "type": "run_usage_free",
+      "at": 1783720955.1633904,
+      "project_id": "strict-test",
+      "job_id": "job_0cafece22a21",
+      "exit_code": -1,
+      "item_count": 26,
+      "run_mode": "free_proxy",
+      "billable": false,
+      "charges": {
+        "run_base_czk": 0.0,
+        "items_czk": 0.0,
+        "proxy_czk": 0.0
+      }
+    },
+    {
+      "type": "run_usage_free",
+      "at": 1783817684.4298193,
+      "project_id": "proj_mrh2xo24_tczho5",
+      "job_id": "job_f176b9d67865",
+      "exit_code": -1,
+      "item_count": 26,
+      "run_mode": "free_proxy",
       "billable": false,
       "charges": {
         "run_base_czk": 0.0,

@@ -325,7 +325,12 @@ export function useProjects(brandOptions, modelsByBrand, options = {}) {
     );
 
     saveParams(project.config)
-      .then(() => runScraper(project.resultsPath, project.id, project.runMode || "cloud_paid"))
+      .then(() => runScraper(
+        project.resultsPath,
+        project.id,
+        project.runMode || "free_proxy",
+        project.proxyProfileId || ""
+      ))
       .then(() => {
         setScraperRunning(true);
         setScraperPaused(false);
@@ -336,9 +341,7 @@ export function useProjects(brandOptions, modelsByBrand, options = {}) {
                   ...p,
                   logs: [
                     ...(p.logs || []),
-                    project.runMode === "local_free"
-                      ? "[systém] Scraper spuštěn v local free režimu (běh z lokální IP)."
-                      : "[systém] Scraper úspěšně spuštěn z fronty.",
+                    `[systém] Scraper spuštěn s proxy profilem '${project.proxyProfileId || "default"}'.`,
                   ],
                 }
               : p
@@ -394,7 +397,12 @@ export function useProjects(brandOptions, modelsByBrand, options = {}) {
       if (!project) throw new Error("Projekt nenalezen.");
 
       await saveParams(project.config);
-      await runScraper(project.resultsPath, project.id, project.runMode || "cloud_paid");
+      await runScraper(
+        project.resultsPath,
+        project.id,
+        project.runMode || "free_proxy",
+        project.proxyProfileId || ""
+      );
       setScraperRunning(true);
       setScraperPaused(false);
 
@@ -405,9 +413,7 @@ export function useProjects(brandOptions, modelsByBrand, options = {}) {
                 ...p,
                 logs: [
                   ...(p.logs || []),
-                  project.runMode === "local_free"
-                    ? "[systém] Scraper spuštěn v local free režimu (běh z lokální IP)."
-                    : "[systém] Scraper úspěšně spuštěn.",
+                  `[systém] Scraper spuštěn s proxy profilem '${project.proxyProfileId || "default"}'.`,
                 ],
               }
             : p

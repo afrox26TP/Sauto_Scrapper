@@ -6,6 +6,12 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
-    allowedHosts: ["autoidx.cz", "www.autoidx.cz", "localhost", "127.0.0.1"]
+    allowedHosts: ["autoidx.cz", "www.autoidx.cz", "localhost", "127.0.0.1", ".trycloudflare.com"],
+    proxy: {
+      "/api": {
+        target: "http://127.0.0.1:8000",
+        changeOrigin: true,
+      },
+    },
   }
 });

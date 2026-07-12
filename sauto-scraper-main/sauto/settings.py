@@ -31,6 +31,9 @@ RANDOMIZE_DOWNLOAD_DELAY = True
 CONCURRENT_REQUESTS_PER_DOMAIN = 2
 #CONCURRENT_REQUESTS_PER_IP = 16
 
+# Keep per-request lifetime short so dead/slow proxies do not exhaust sockets.
+DOWNLOAD_TIMEOUT = 8
+
 # Disable cookies (enabled by default)
 #COOKIES_ENABLED = False
 
@@ -101,7 +104,7 @@ AUTOTHROTTLE_TARGET_CONCURRENCY = 1.0
 
 # Retry settings
 RETRY_ENABLED = True
-RETRY_TIMES = 3
+RETRY_TIMES = 2
 RETRY_HTTP_CODES = [500, 502, 503, 504, 408, 429]
 
 # Set settings whose default value is deprecated to a future-proof value

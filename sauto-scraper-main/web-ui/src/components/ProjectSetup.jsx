@@ -87,6 +87,7 @@ const Field = React.memo(function Field({ def, value, onChange }) {
 
 export default function ProjectSetup({
   project,
+  proxyProfiles,
   brandOptions,
   bodyOptions,
   equipmentOptions,
@@ -99,7 +100,22 @@ export default function ProjectSetup({
   isRunning,
 }) {
   const config = project.config || {};
-  const runMode = project?.runMode === "local_free" ? "local_free" : "cloud_paid";
+  const runMode = project?.runMode === "paid_proxy" ? "paid_proxy" : "free_proxy";
+  const DEFAULT_FREE_PROXY_PROFILE_ID = "profile_free_default";
+  const DEFAULT_PAID_PROXY_PROFILE_ID = "profile_paid_default";
+  const profileList = React.useMemo(
+    () => (Array.isArray(proxyProfiles) ? proxyProfiles : []),
+    [proxyProfiles]
+  );
+  const fallbackProfileId = runMode === "paid_proxy" ? DEFAULT_PAID_PROXY_PROFILE_ID : DEFAULT_FREE_PROXY_PROFILE_ID;
+  const selectedProfile = React.useMemo(() => {
+    const byProject = profileList.find((p) => String(p?.id || "") === String(project?.proxyProfileId || ""));
+    if (byProject) return byProject;
+    const byFallback = profileList.find((p) => String(p?.id || "") === fallbackProfileId);
+    if (byFallback) return byFallback;
+    return profileList[0] || null;
+  }, [profileList, project?.proxyProfileId, fallbackProfileId]);
+  const selectedProfileId = String(selectedProfile?.id || "");
   const busy = isRunning || project.phase === "running" || project.phase === "queued";
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -177,6 +193,17 @@ export default function ProjectSetup({
     return () => el.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    if (!selectedProfile) return;
+    const nextKind = selectedProfile.kind === "paid_proxy" ? "paid_proxy" : "free_proxy";
+    const currentProfileId = String(project?.proxyProfileId || "");
+    if (currentProfileId === selectedProfileId && runMode === nextKind) return;
+    onUpdateProject({
+      proxyProfileId: selectedProfileId,
+      runMode: nextKind,
+    });
+  }, [selectedProfile, selectedProfileId, project?.proxyProfileId, runMode, onUpdateProject]);
+
   const setConfigParam = useCallback((key, val) => { onUpdateConfig({ [key]: val }); }, [onUpdateConfig]);
   const extraKeys = Object.keys(config).filter((k) => !IGNORED_KEYS.has(k));
 
@@ -195,19 +222,33 @@ export default function ProjectSetup({
           />
           <div className="run-mode-select-wrap run-mode-select-inline run-mode-select-after-name">
             <div className="run-mode-note">
-              {runMode === "local_free"
-                ? "Local free: bezi na vasem zarizeni"
-                : "Cloud: vyzaduje prostredky k dispozici"}
+              {selectedProfile
+                ? `${selectedProfile.name || selectedProfile.id} · proxy${selectedProfile.has_proxy_url ? "" : " · nenastaveno"}`
+                : "Neni dostupny zadny proxy profil"}
             </div>
             <select
               id={`run-mode-${project.id}`}
               className="run-mode-select"
-              value={runMode}
-              onChange={(e) => onUpdateProject({ runMode: e.target.value === "local_free" ? "local_free" : "cloud_paid" })}
+              value={selectedProfileId}
+              onChange={(e) => {
+                const nextId = String(e.target.value || "");
+                const nextProfile = profileList.find((p) => String(p?.id || "") === nextId);
+                onUpdateProject({
+                  proxyProfileId: nextId,
+                  runMode: nextProfile?.kind === "paid_proxy" ? "paid_proxy" : "free_proxy",
+                });
+              }}
               disabled={busy}
             >
-              <option value="cloud_paid">cloud (placene)</option>
-              <option value="local_free">local (zdarma)</option>
+              {profileList.length === 0 ? <option value="">Zadny profil</option> : null}
+              {profileList.map((profile) => {
+                const id = String(profile?.id || "");
+                const name = String(profile?.name || id || "Bez nazvu");
+                const status = profile?.has_proxy_url ? "" : " (nenastaveno)";
+                return (
+                  <option key={id} value={id}>{`${name} [proxy]${status}`}</option>
+                );
+              })}
             </select>
           </div>
         </div>

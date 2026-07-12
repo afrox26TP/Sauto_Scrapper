@@ -1,6 +1,8 @@
 // ── localStorage persistence for projects ──
 
 const STORAGE_KEY = "sauto_projects";
+export const DEFAULT_FREE_PROXY_PROFILE_ID = "profile_free_default";
+export const DEFAULT_PAID_PROXY_PROFILE_ID = "profile_paid_default";
 
 export const DEFAULT_PROJECT_CONFIG = {
   category_id: "838",
@@ -37,7 +39,8 @@ export function createProject(name = "", config = {}) {
     selectedPreset: "balanced",
     createdAt: Date.now(),
     errorMessage: "",
-    runMode: "cloud_paid", // cloud_paid | local_free
+    runMode: "free_proxy", // free_proxy | paid_proxy
+    proxyProfileId: DEFAULT_FREE_PROXY_PROFILE_ID,
   };
 }
 
@@ -54,7 +57,11 @@ export function loadProjects() {
       const normalized = {
         ...p,
         config: normalizeProjectConfig(p.config),
-        runMode: p?.runMode === "local_free" ? "local_free" : "cloud_paid",
+        runMode: p?.runMode === "paid_proxy" ? "paid_proxy" : "free_proxy",
+        proxyProfileId: String(
+          p?.proxyProfileId
+            || (p?.runMode === "paid_proxy" ? DEFAULT_PAID_PROXY_PROFILE_ID : DEFAULT_FREE_PROXY_PROFILE_ID)
+        ),
       };
       if (p.phase === "running") {
         return { ...normalized, queuePosition: 0, logs: [...(p.logs || []), "[systém] Stav běžícího scraperu obnoven po načtení stránky."] };

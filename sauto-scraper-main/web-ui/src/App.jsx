@@ -8,10 +8,17 @@ import ProjectQueued from "./components/ProjectQueued";
 import ProjectResults from "./components/ProjectResults";
 import TerminalBar from "./components/TerminalBar";
 import { useProjects } from "./hooks/useProjects";
-import { clearAuthToken, createCheckoutSession, fetchBillingAccess, fetchBillingRates, fetchBrands, fetchBodies, fetchCurrentUser, fetchModels, fetchModelCounts, fetchResults, fetchEquipment, getAuthToken, login, signup } from "./utils/api";
+import { clearAuthToken, createCheckoutSession, fetchBillingAccess, fetchBillingRates, fetchBrands, fetchBodies, fetchCurrentUser, fetchModels, fetchModelCounts, fetchResults, fetchEquipment, fetchProxyConfig, saveProxyConfig, testProxyConnection, getAuthToken, login, signup } from "./utils/api";
 import { csvToArray, uniq } from "./utils/scoring";
 
 export default function App() {
+  const resolvePageFromPathname = useCallback((pathname) => {
+    const path = String(pathname || "").toLowerCase();
+    if (path.startsWith("/pricing")) return "pricing";
+    if (path.startsWith("/proxy")) return "proxy";
+    return "dashboard";
+  }, []);
+
   const [authToken, setAuthToken] = useState(() => getAuthToken());
   const [authUser, setAuthUser] = useState(null);
   const [authBooting, setAuthBooting] = useState(true);
@@ -21,9 +28,7 @@ export default function App() {
   const [authError, setAuthError] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [currentPage, setCurrentPage] = useState(() =>
-    window.location.pathname.startsWith("/pricing") ? "pricing" : "dashboard"
-  );
+  const [currentPage, setCurrentPage] = useState(() => resolvePageFromPathname(window.location.pathname));
   const [theme, setTheme] = useState(() => {
     const stored = window.localStorage.getItem("sauto_theme");
     return stored === "dark" ? "dark" : "light";
@@ -31,6 +36,25 @@ export default function App() {
   const [billingRates, setBillingRates] = useState(null);
   const [billingRatesError, setBillingRatesError] = useState("");
   const [billingAccess, setBillingAccess] = useState(null);
+  const DEFAULT_FREE_PROXY_PROFILE_ID = "free_proxy_default";
+  const DEFAULT_PAID_PROXY_PROFILE_ID = "paid_proxy_default";
+  const [proxyConfig, setProxyConfig] = useState({
+    has_free_proxy_config: false,
+    has_paid_proxy_config: false,
+    free_proxy_url: "",
+    paid_proxy_url: "",
+    profiles: [],
+  });
+  const [proxyEditors, setProxyEditors] = useState({
+    // [profileId]: { name, kind, proxy_url, dirty_url }
+  });
+  const [proxyLoading, setProxyLoading] = useState(false);
+  const [proxySaving, setProxySaving] = useState(false);
+  const [showProxyHelpModal, setShowProxyHelpModal] = useState(false);
+  const [selectedProviderId, setSelectedProviderId] = useState("webshare");
+  const [proxySmartInput, setProxySmartInput] = useState({});
+  const [proxyTestStatus, setProxyTestStatus] = useState({ state: "idle", message: "" });
+  const [helpProviderId, setHelpProviderId] = useState("webshare");
   const [checkoutBusy, setCheckoutBusy] = useState(false);
   const [brandOptions, setBrandOptions] = useState([]);
   const [bodyOptions, setBodyOptions] = useState([]);
@@ -54,6 +78,91 @@ export default function App() {
   const switchTokenRef = useRef(0);
 
   const isAuthenticated = !!authToken && !!authUser;
+  const providerCards = useMemo(() => ([
+    {
+      id: "webshare",
+      name: "Webshare",
+      logo: "WS",
+      recommended: true,
+      ctaLabel: "Ziskat proxy u Webshare",
+      url: "https://www.webshare.io/?referral_code=jixav3l993nd",
+      whereToFind: "Dashboard > Proxy list > Download/Copy endpoint",
+    },
+    {
+      id: "custom",
+      name: "Vlastni reseni",
+      logo: "MY",
+      recommended: false,
+      ctaLabel: "Pouzivam vlastni providera",
+      url: "#proxy-profiles",
+      whereToFind: "V administraci tveho providera hledej endpoint proxy (host, port, user, pass)",
+    },
+  ]), []);
+
+  const normalizeProxyProfiles = useCallback((profiles) => {
+    if (!Array.isArray(profiles)) return [];
+    const isSystemDefaultProfile = (id) => (
+      id === DEFAULT_FREE_PROXY_PROFILE_ID ||
+      id === DEFAULT_PAID_PROXY_PROFILE_ID ||
+      // Backward compatibility for previously used frontend-only ids.
+      id === "profile_free_default" ||
+      id === "profile_paid_default"
+    );
+
+    return profiles
+      .map((item) => ({
+        id: String(item?.id || "").trim(),
+        name: String(item?.name || "").trim(),
+        kind: String(item?.kind || "free_proxy").trim() === "paid_proxy" ? "paid_proxy" : "free_proxy",
+        has_proxy_url: Boolean(item?.has_proxy_url),
+        proxy_preview: String(item?.proxy_preview || ""),
+      }))
+      .filter((item) => {
+        if (!item.id) return false;
+        // Backend auto-creates default A/B profiles. Hide them in UI when empty,
+        // so users only see profiles they explicitly created/configured.
+        if (isSystemDefaultProfile(item.id) && !item.has_proxy_url) return false;
+        return true;
+      });
+  }, [DEFAULT_FREE_PROXY_PROFILE_ID, DEFAULT_PAID_PROXY_PROFILE_ID]);
+
+  const createDraftProxyProfile = useCallback(() => ({
+    id: `profile_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`,
+    name: "",
+    kind: "free_proxy",
+    has_proxy_url: false,
+    proxy_preview: "",
+  }), []);
+
+  const applyProxyConfigResponse = useCallback((data) => {
+    const incomingProfiles = normalizeProxyProfiles(data?.profiles);
+    const profiles = incomingProfiles.length ? incomingProfiles : [createDraftProxyProfile()];
+    const byId = Object.fromEntries(incomingProfiles.map((p) => [p.id, p]));
+    const freeProfile = byId[DEFAULT_FREE_PROXY_PROFILE_ID] || null;
+    const paidProfile = byId[DEFAULT_PAID_PROXY_PROFILE_ID] || null;
+
+    setProxyConfig({
+      has_free_proxy_config: Boolean(data?.has_free_proxy_config ?? freeProfile?.has_proxy_url),
+      has_paid_proxy_config: Boolean(data?.has_paid_proxy_config ?? paidProfile?.has_proxy_url),
+      free_proxy_url: String(data?.free_proxy_url || freeProfile?.proxy_preview || ""),
+      paid_proxy_url: String(data?.paid_proxy_url || paidProfile?.proxy_preview || ""),
+      profiles,
+    });
+
+    setProxyEditors(
+      Object.fromEntries(
+        profiles.map((profile) => [
+          profile.id,
+          {
+            name: profile.name || profile.id,
+            kind: profile.kind,
+            proxy_url: "",
+            dirty_url: false,
+          },
+        ])
+      )
+    );
+  }, [DEFAULT_FREE_PROXY_PROFILE_ID, DEFAULT_PAID_PROXY_PROFILE_ID, createDraftProxyProfile, normalizeProxyProfiles]);
 
   const {
     projects,
@@ -92,11 +201,11 @@ export default function App() {
 
   useEffect(() => {
     const onPopState = () => {
-      setCurrentPage(window.location.pathname.startsWith("/pricing") ? "pricing" : "dashboard");
+      setCurrentPage(resolvePageFromPathname(window.location.pathname));
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
-  }, []);
+  }, [resolvePageFromPathname]);
 
   useEffect(() => {
     const token = getAuthToken();
@@ -184,6 +293,48 @@ export default function App() {
     }
     fetchBillingAccess().then(setBillingAccess).catch(() => setBillingAccess(null));
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setProxyConfig({
+        has_free_proxy_config: false,
+        has_paid_proxy_config: false,
+        free_proxy_url: "",
+        paid_proxy_url: "",
+        profiles: [],
+      });
+      setProxyEditors({});
+      setProxySmartInput({});
+      setProxyTestStatus({ state: "idle", message: "" });
+      setProxyLoading(false);
+      setProxySaving(false);
+      return;
+    }
+
+    setProxyLoading(true);
+    fetchProxyConfig()
+      .then((data) => {
+        applyProxyConfigResponse(data);
+        setProxySmartInput({});
+        setProxyTestStatus({ state: "idle", message: "" });
+      })
+      .catch((err) => {
+        setProxyConfig({
+          has_free_proxy_config: false,
+          has_paid_proxy_config: false,
+          free_proxy_url: "",
+          paid_proxy_url: "",
+          profiles: [],
+        });
+        setProxyEditors({});
+        setProxySmartInput({});
+        setProxyTestStatus({ state: "idle", message: "" });
+        showToast(err?.message || "Nacteni konfigurace proxy selhalo.", "error");
+      })
+      .finally(() => {
+        setProxyLoading(false);
+      });
+  }, [isAuthenticated, applyProxyConfigResponse]);
 
   useEffect(() => {
     if (projects.length === 0) {
@@ -335,16 +486,8 @@ export default function App() {
   }, [currentProject]);
 
   const handleRunProject = useCallback((projectId) => {
-    const targetProject = projects.find((p) => p.id === projectId);
-    const runMode = targetProject?.runMode === "local_free" ? "local_free" : "cloud_paid";
-    if (runMode === "cloud_paid" && !isAuthenticated) {
-      setAuthMode("login");
-      setAuthError("Pro cloud run se nejdriv prihlas a aktivuj platbu.");
-      setShowAuthModal(true);
-      return;
-    }
     runProject(projectId);
-  }, [isAuthenticated, projects, runProject]);
+  }, [runProject]);
 
   const handleStartCheckout = useCallback(async () => {
     if (checkoutBusy) return;
@@ -370,6 +513,280 @@ export default function App() {
       setCheckoutBusy(false);
     }
   }, [checkoutBusy, isAuthenticated]);
+
+  const handleProxyProfileChange = useCallback((profileId, field, value) => {
+    const id = String(profileId || "");
+    if (!id) return;
+
+    if (field === "name" || field === "kind") {
+      setProxyConfig((prev) => ({
+        ...prev,
+        profiles: (prev.profiles || []).map((profile) =>
+          profile.id === id
+            ? {
+                ...profile,
+                [field]: field === "kind" && value === "paid_proxy" ? "paid_proxy" : field === "kind" ? "free_proxy" : String(value || ""),
+              }
+            : profile
+        ),
+      }));
+    }
+
+    if (field === "proxy_url") {
+      setProxyEditors((prev) => ({
+        ...prev,
+        [id]: {
+          ...(prev[id] || {}),
+          proxy_url: String(value || ""),
+          dirty_url: true,
+        },
+      }));
+      return;
+    }
+
+    setProxyEditors((prev) => ({
+      ...prev,
+      [id]: {
+        ...(prev[id] || {}),
+        [field]: field === "kind" && value === "paid_proxy" ? "paid_proxy" : field === "kind" ? "free_proxy" : String(value || ""),
+      },
+    }));
+  }, []);
+
+  const parseProxyString = useCallback((rawValue) => {
+    const source = String(rawValue || "").trim();
+    if (!source) return null;
+    const safeDecode = (value) => {
+      try {
+        return decodeURIComponent(String(value || ""));
+      } catch {
+        return String(value || "");
+      }
+    };
+
+    // Accept full shell commands like: curl --proxy "http://user:pass@host:port/" https://...
+    let candidate = source;
+    const curlProxyMatch = source.match(/(?:--proxy|-x)\s+["']?([^"'\s]+)["']?/i);
+    if (curlProxyMatch?.[1]) {
+      candidate = String(curlProxyMatch[1] || "").trim();
+    }
+    candidate = candidate.replace(/\/+$/, "");
+
+    const urlPattern = /^(?:(https?|socks5h):\/\/)?(?:([^:@\s]+):([^@\s]*)@)?([^:\/\s]+):(\d{2,5})$/i;
+    const urlMatch = candidate.match(urlPattern);
+    if (urlMatch) {
+      return {
+        scheme: String(urlMatch[1] || "http").toLowerCase(),
+        username: safeDecode(urlMatch[2]),
+        password: safeDecode(urlMatch[3]),
+        host: String(urlMatch[4] || ""),
+        port: String(urlMatch[5] || ""),
+      };
+    }
+
+    const parts = candidate.split(":");
+    if (parts.length === 4 && /^\d{2,5}$/.test(parts[1])) {
+      return {
+        scheme: "http",
+        host: parts[0],
+        port: parts[1],
+        username: parts[2],
+        password: parts[3],
+      };
+    }
+
+    if (parts.length === 2 && /^\d{2,5}$/.test(parts[1])) {
+      return {
+        scheme: "http",
+        host: parts[0],
+        port: parts[1],
+        username: "",
+        password: "",
+      };
+    }
+
+    return null;
+  }, []);
+
+  const buildProxyUrlFromParts = useCallback((parts) => {
+    if (!parts?.host || !parts?.port) return "";
+    const scheme = ["http", "https", "socks5h"].includes(String(parts.scheme || "").toLowerCase())
+      ? String(parts.scheme).toLowerCase()
+      : "http";
+    const username = String(parts.username || "").trim();
+    const password = String(parts.password || "");
+    const authPart = username
+      ? `${encodeURIComponent(username)}:${encodeURIComponent(password)}@`
+      : "";
+    return `${scheme}://${authPart}${String(parts.host || "").trim()}:${String(parts.port || "").trim()}`;
+  }, []);
+
+  const handleSmartPasteApply = useCallback((profileId) => {
+    const id = String(profileId || "");
+    if (!id) return;
+    const parsed = parseProxyString(proxySmartInput[id]);
+    if (!parsed) {
+      showToast("Smart paste nepoznal format. Zkus URL nebo IP:PORT:USER:PASS.", "error");
+      return;
+    }
+    const composed = buildProxyUrlFromParts(parsed);
+    if (!composed) {
+      showToast("Smart paste nenasel host/port.", "error");
+      return;
+    }
+    setProxyEditors((prev) => ({
+      ...prev,
+      [id]: {
+        ...(prev[id] || {}),
+        proxy_url: composed,
+        dirty_url: true,
+      },
+    }));
+    showToast("Udaje byly rozpoznany a vyplneny automaticky.", "info");
+  }, [buildProxyUrlFromParts, parseProxyString, proxySmartInput]);
+
+  const handleSmartInputChange = useCallback((profileId, value) => {
+    const id = String(profileId || "");
+    if (!id) return;
+    const nextValue = String(value || "");
+    setProxySmartInput((prev) => ({ ...prev, [id]: nextValue }));
+
+    const parsed = parseProxyString(nextValue);
+    if (!parsed) return;
+    const composed = buildProxyUrlFromParts(parsed);
+    if (!composed) return;
+
+    setProxyEditors((prev) => {
+      const currentUrl = String(prev[id]?.proxy_url || "").trim();
+      if (currentUrl === composed) return prev;
+      return {
+        ...prev,
+        [id]: {
+          ...(prev[id] || {}),
+          proxy_url: composed,
+          dirty_url: true,
+        },
+      };
+    });
+  }, [buildProxyUrlFromParts, parseProxyString]);
+
+  const handleAddProxyProfile = useCallback(() => {
+    const profile = createDraftProxyProfile();
+
+    setProxyConfig((prev) => ({
+      ...prev,
+      profiles: [
+        ...(prev.profiles || []),
+        profile,
+      ],
+    }));
+    setProxyEditors((prev) => ({
+      ...prev,
+      [profile.id]: {
+        name: "",
+        kind: "free_proxy",
+        proxy_url: "",
+        dirty_url: false,
+      },
+    }));
+  }, [createDraftProxyProfile]);
+
+  const handleRemoveProxyProfile = useCallback((profileId) => {
+    const id = String(profileId || "");
+    if (!id) return;
+    if (id === DEFAULT_FREE_PROXY_PROFILE_ID || id === DEFAULT_PAID_PROXY_PROFILE_ID) {
+      showToast("Vychozi profily nelze odstranit, lze jen prepsat nebo vymazat URL.", "info");
+      return;
+    }
+    const fallbackProfile = createDraftProxyProfile();
+    setProxyConfig((prev) => ({
+      ...prev,
+      profiles: (() => {
+        const remaining = (prev.profiles || []).filter((profile) => profile.id !== id);
+        return remaining.length ? remaining : [fallbackProfile];
+      })(),
+    }));
+    setProxyEditors((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      const hasAnyEditor = Object.keys(next).length > 0;
+      if (!hasAnyEditor) {
+        next[fallbackProfile.id] = {
+          name: "",
+          kind: "free_proxy",
+          proxy_url: "",
+          dirty_url: false,
+        };
+      }
+      return next;
+    });
+  }, [DEFAULT_FREE_PROXY_PROFILE_ID, DEFAULT_PAID_PROXY_PROFILE_ID, createDraftProxyProfile]);
+
+  const handleClearProxyProfileUrl = useCallback((profileId) => {
+    const id = String(profileId || "");
+    if (!id) return;
+    setProxyEditors((prev) => ({
+      ...prev,
+      [id]: {
+        ...(prev[id] || {}),
+        proxy_url: "",
+        dirty_url: true,
+      },
+    }));
+  }, []);
+
+  const handleSaveProxyConfig = useCallback(async (event) => {
+    event.preventDefault();
+    if (!isAuthenticated) {
+      setAuthMode("login");
+      setAuthError("Nejdřív se přihlas, pak nastav proxy profily.");
+      setShowAuthModal(true);
+      return;
+    }
+    if (proxySaving) return;
+
+    const profiles = (proxyConfig.profiles || []).map((profile) => {
+      const editor = proxyEditors[profile.id] || {};
+      const item = {
+        id: profile.id,
+        name: String(editor.name || profile.name || profile.id || "").trim() || String(profile.id || ""),
+        kind: editor.kind === "paid_proxy" ? "paid_proxy" : profile.kind === "paid_proxy" ? "paid_proxy" : "free_proxy",
+      };
+      if (editor.dirty_url) {
+        item.proxy_url = String(editor.proxy_url || "").trim();
+      }
+      return item;
+    });
+
+    if (!profiles.length) {
+      showToast("Pridat alespon jeden proxy profil.", "error");
+      return;
+    }
+
+    setProxySaving(true);
+    setProxyTestStatus({ state: "testing", message: "Testuji pripojeni proxy..." });
+    try {
+      const profilesToTest = profiles.filter((item) => Object.prototype.hasOwnProperty.call(item, "proxy_url"));
+      for (const profile of profilesToTest) {
+        const url = String(profile.proxy_url || "").trim();
+        if (!url) continue;
+        await testProxyConnection(url);
+      }
+
+      const data = await saveProxyConfig({ profiles });
+      applyProxyConfigResponse(data);
+      setProxyTestStatus({
+        state: "success",
+        message: "Uspesne pripojeno! Tva identita je skryta a jsi pripraven bezpecne stahovat data.",
+      });
+      showToast("Proxy konfigurace byla otestovana a ulozena.", "info");
+    } catch (err) {
+      setProxyTestStatus({ state: "error", message: String(err?.message || "Proxy test nebo ulozeni selhalo.") });
+      showToast(err?.message || "Ulozeni konfigurace proxy selhalo.", "error");
+    } finally {
+      setProxySaving(false);
+    }
+  }, [isAuthenticated, proxySaving, proxyConfig.profiles, proxyEditors, applyProxyConfigResponse]);
 
   useEffect(() => {
     selectedBrands.forEach((brand) => {
@@ -512,8 +929,8 @@ export default function App() {
   }
 
   function navigateTo(page) {
-    const target = page === "pricing" ? "pricing" : "dashboard";
-    const path = target === "pricing" ? "/pricing" : "/";
+    const target = page === "pricing" || page === "proxy" ? page : "dashboard";
+    const path = target === "pricing" ? "/pricing" : target === "proxy" ? "/proxy" : "/";
     if (window.location.pathname !== path) {
       window.history.pushState({}, "", path);
     }
@@ -581,13 +998,13 @@ export default function App() {
               Aktuální sazby načítáme z backendu přes <code>/api/billing/rates</code>.
             </p>
             <p className="pricing-note">
-              Cloud scraping je placeny (Stripe). Local run na vlastnim PC je zdarma a bezi z IP uzivatele.
+              Rezimy s vlastni proxy pouzivaji endpointy, ktere si uzivatel doda sam. Prenos a GB se uctuji u tveho proxy providera, ne v teto aplikaci.
             </p>
             {billingRatesError ? <p className="pricing-note">{billingRatesError}</p> : null}
             <div className="pricing-actions">
               {isAuthenticated ? (
                 <button className="btn-primary" onClick={handleStartCheckout} disabled={checkoutBusy}>
-                  {checkoutBusy ? "Vytvarim checkout..." : "Aktivovat cloud scraping"}
+                  {checkoutBusy ? "Vytvarim checkout..." : "Otevrit billing checkout"}
                 </button>
               ) : (
                 <button
@@ -598,12 +1015,12 @@ export default function App() {
                     setShowAuthModal(true);
                   }}
                 >
-                  Prihlasit se pro cloud plan
+                  Prihlasit se pro billing a API usage
                 </button>
               )}
               {billingAccess ? (
                 <p className="pricing-note">
-                  Stav uctu: cloud={billingAccess.can_run_cloud ? "active" : "inactive"}, local_free={billingAccess.can_run_local_free ? "on" : "off"}
+                  Stav uctu: billing={billingAccess.can_run_cloud ? "active" : "inactive"}, proxy_access={(billingAccess.can_run_free_proxy ?? billingAccess.can_run_local_free) ? "on" : "off"}
                 </p>
               ) : null}
               <button className="btn-primary" onClick={() => navigateTo("dashboard")}>
@@ -618,7 +1035,7 @@ export default function App() {
               Účtujeme jen reálnou spotřebu, protože každé spuštění a API integrace mají přímé provozní náklady.
             </p>
             <ul className="pricing-bullets">
-              <li>Proxy infrastruktura a její rotace proti blokacím.</li>
+              <li>Orchestrace proxy behu (řízení běhů, validace, bezpečnostní kontroly konfigurace).</li>
               <li>Výpočetní výkon backendu během scrapingu a zpracování dat.</li>
               <li>Síťový provoz, monitoring, logování a provoz API endpointů.</li>
               <li>Průběžná údržba scraperu při změnách cílového webu.</li>
@@ -629,6 +1046,215 @@ export default function App() {
           </article>
         </div>
       </div>
+    );
+  }
+
+  function renderProxyPage() {
+    if (!isAuthenticated) {
+      return (
+        <div className="auth-dashboard-cta">
+          <h2>Nastaveni proxy</h2>
+          <p>Pro editaci proxy profilu se prosim prihlas.</p>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => {
+              setAuthMode("login");
+              setAuthError("");
+              setShowAuthModal(true);
+            }}
+          >
+            Otevrit login
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="pricing-page">
+        <div className="pricing-head">
+          <h2>Proxy</h2>
+          <p>Sprava proxy profilu je oddelena od dashboardu, aby zustal landing cisty.</p>
+        </div>
+        {renderProxyConfigPanel()}
+      </div>
+    );
+  }
+
+  function renderProxyConfigPanel() {
+    const selectedProvider = providerCards.find((p) => p.id === selectedProviderId) || providerCards[0];
+
+    return (
+      <section className="byop-config-card" id="proxy-profiles">
+        <div className="byop-config-head">
+          <button
+            type="button"
+            className="byop-help-corner"
+            onClick={() => {
+              setHelpProviderId(selectedProvider.id);
+              setShowProxyHelpModal(true);
+            }}
+            title="Proc je proxy potreba a jak ji nastavit"
+          >
+            ?
+          </button>
+          <h3>Proxy Profily</h3>
+          <p>
+            Transparentne: dáváme ti svobodu a platis jen za data, ktera realne spotrebujes u sveho providera.
+          </p>
+        </div>
+
+        <div className="proxy-provider-cards" role="radiogroup" aria-label="Vyber providera">
+          {providerCards.map((provider) => {
+            const active = provider.id === selectedProvider.id;
+            return (
+              <button
+                key={provider.id}
+                type="button"
+                className={`proxy-provider-card ${active ? "active" : ""}`}
+                onClick={() => setSelectedProviderId(provider.id)}
+                role="radio"
+                aria-checked={active}
+              >
+                <span className="proxy-provider-logo">{provider.logo}</span>
+                <span className="proxy-provider-name">{provider.name}</span>
+                {provider.recommended ? <span className="proxy-provider-badge">Doporuceno</span> : null}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="proxy-provider-steps">
+          <a
+            className="btn-primary proxy-provider-cta"
+            href={selectedProvider.url}
+            target={selectedProvider.url.startsWith("#") ? "_self" : "_blank"}
+            rel={selectedProvider.url.startsWith("#") ? undefined : "noreferrer"}
+          >
+            {selectedProvider.ctaLabel}
+          </a>
+          <ol>
+            <li>Zaloz si ucet pres toto tlacitko.</li>
+            <li>Aktivuj zakladni balicek.</li>
+            <li>Zkopiruj vygenerovane udaje o proxy.</li>
+          </ol>
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={() => {
+              setHelpProviderId(selectedProvider.id);
+              setShowProxyHelpModal(true);
+            }}
+          >
+            Kde tyto udaje najdu?
+          </button>
+        </div>
+
+        <form className="byop-config-form" onSubmit={handleSaveProxyConfig}>
+          <div className="byop-config-grid byop-profile-list">
+            {(proxyConfig.profiles || []).map((profile) => {
+              const editor = proxyEditors[profile.id] || {};
+              const profileName = String(editor.name || profile.name || profile.id || "");
+              const smartValue = String(proxySmartInput[profile.id] || "");
+              const parsedSmart = parseProxyString(smartValue);
+              const parsedUrl = parseProxyString(String(editor.proxy_url || ""));
+              const parsed = parsedSmart || parsedUrl;
+              return (
+                <div className="byop-field byop-profile-row" key={profile.id}>
+                  <div className="byop-profile-row-meta">
+                    <input
+                      className="proxy-field proxy-field-name"
+                      type="text"
+                      value={profileName}
+                      onChange={(e) => handleProxyProfileChange(profile.id, "name", e.target.value)}
+                      placeholder="Nazev profilu"
+                      autoComplete="off"
+                    />
+                    <div className="proxy-kind-pill">Proxy</div>
+                  </div>
+                  <div className="proxy-smart-paste-row">
+                    <input
+                      className="proxy-field proxy-field-smart"
+                      type="text"
+                      value={smartValue}
+                      onChange={(e) => handleSmartInputChange(profile.id, e.target.value)}
+                      placeholder="Curl: curl --proxy http://user:pass@host:port https://api.ipify.org"
+                      autoComplete="off"
+                      spellCheck={false}
+                    />
+                    <button
+                      type="button"
+                      className="theme-toggle"
+                      disabled={proxySaving || proxyLoading}
+                      onClick={() => handleSmartPasteApply(profile.id)}
+                    >
+                      Automatic
+                    </button>
+                  </div>
+                  <span className="byop-hint">Priklad: curl --proxy http://user:pass@host:port https://api.ipify.org</span>
+                  <input
+                    className="proxy-field proxy-field-url"
+                    type="text"
+                    value={String(editor.proxy_url || "")}
+                    onChange={(e) => handleProxyProfileChange(profile.id, "proxy_url", e.target.value)}
+                    placeholder="http://user:pass@host:port nebo socks5h://user:pass@host:port"
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                  {parsed ? (
+                    <div className="proxy-parts-preview">
+                      <span>Host: {parsed.host || "-"}</span>
+                      <span>Port: {parsed.port || "-"}</span>
+                      <span>Jmeno: {parsed.username || "-"}</span>
+                      <span>Heslo: {parsed.password ? "******" : "-"}</span>
+                    </div>
+                  ) : null}
+                  <span className="byop-hint">
+                    Stav: {profile.has_proxy_url ? `nastaven (${profile.proxy_preview || "maskovano"})` : "nenastaven"}
+                  </span>
+                  <div className="byop-inline-actions">
+                    <button
+                      type="button"
+                      className="theme-toggle"
+                      disabled={proxySaving || proxyLoading}
+                      onClick={() => handleClearProxyProfileUrl(profile.id)}
+                    >
+                      Vymazat URL
+                    </button>
+                    <button
+                      type="button"
+                      className="theme-toggle"
+                      disabled={proxySaving || proxyLoading || profile.id === DEFAULT_FREE_PROXY_PROFILE_ID || profile.id === DEFAULT_PAID_PROXY_PROFILE_ID}
+                      onClick={() => handleRemoveProxyProfile(profile.id)}
+                    >
+                      Odebrat profil
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+
+          </div>
+
+          <div className="byop-actions">
+            <button
+              type="button"
+              className="theme-toggle"
+              disabled={proxySaving || proxyLoading}
+              onClick={handleAddProxyProfile}
+            >
+              + Pridat profil
+            </button>
+            <button type="submit" className="btn-primary" disabled={proxySaving || proxyLoading}>
+              {proxySaving ? "Testuji a ukladam..." : "Otestovat a ulozit"}
+            </button>
+            {proxyLoading ? <span className="muted">Nacitam konfiguraci...</span> : null}
+            {proxyTestStatus.state === "testing" ? <span className="muted">{proxyTestStatus.message}</span> : null}
+            {proxyTestStatus.state === "success" ? <span className="proxy-test-success">OK {proxyTestStatus.message}</span> : null}
+            {proxyTestStatus.state === "error" ? <span className="proxy-test-error">{proxyTestStatus.message}</span> : null}
+          </div>
+        </form>
+      </section>
     );
   }
 
@@ -647,6 +1273,7 @@ export default function App() {
         return (
           <ProjectSetup
             project={currentProject}
+            proxyProfiles={proxyConfig.profiles || []}
             brandOptions={brandOptions}
             bodyOptions={bodyOptions}
             equipmentOptions={equipmentOptions}
@@ -703,6 +1330,8 @@ export default function App() {
     }
   }
 
+  const helpProvider = providerCards.find((p) => p.id === helpProviderId) || providerCards[0];
+
   return (
     <>
       <div className="app">
@@ -726,6 +1355,14 @@ export default function App() {
             title="Otevřít pricing"
           >
             <BadgeEuro className="ui-icon" aria-hidden="true" /> Pricing
+          </button>
+          <button
+            type="button"
+            className={`topbar-link-btn ${currentPage === "proxy" ? "active" : ""}`}
+            onClick={() => navigateTo("proxy")}
+            title="Otevrit nastaveni proxy"
+          >
+            Proxy
           </button>
           <button
             type="button"
@@ -782,8 +1419,8 @@ export default function App() {
         <div className="main-content">
           {currentPage === "dashboard" && !isAuthenticated ? (
             <div className="auth-dashboard-cta">
-              <h2>Přihlášení je potřeba</h2>
-              <p>Nastaveni projektu funguje bez loginu. Pro cloud run je login + platba, local free run funguje na localhostu.</p>
+              <h2>Prihlaseni je volitelne</h2>
+              <p>Nastaveni i spusteni projektu funguje bez loginu. Prihlaseni je potreba hlavne pro checkout a billing.</p>
               <button
                 type="button"
                 className="btn-primary"
@@ -797,7 +1434,7 @@ export default function App() {
               </button>
             </div>
           ) : null}
-          {currentPage === "pricing" ? renderPricingPage() : renderProjectContent()}
+          {currentPage === "pricing" ? renderPricingPage() : currentPage === "proxy" ? renderProxyPage() : renderProjectContent()}
         </div>
 
         {/* Terminal bar */}
@@ -953,6 +1590,51 @@ export default function App() {
               </button>
               <button className="btn-sm danger" onClick={handleStop}>
                 Full stop
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showProxyHelpModal && (
+        <div className="log-popup-overlay" onClick={() => setShowProxyHelpModal(false)}>
+          <div className="log-popup byop-help-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="log-popup-head">
+              <strong>Proxy navod: {helpProvider.name}</strong>
+              <button className="debug-modal-close" onClick={() => setShowProxyHelpModal(false)}>
+                <X className="ui-icon" aria-hidden="true" />
+              </button>
+            </div>
+            <div className="byop-help-body">
+              <p>
+                Nechceme, aby onboarding bolel: tady je presne co na webu poskytovatele hledat a co zkopirovat.
+              </p>
+              <div className="proxy-help-shot" aria-hidden="true">
+                <div className="proxy-help-shot-top">{helpProvider.name} dashboard</div>
+                <div className="proxy-help-shot-body">
+                  <span className="proxy-help-pill">Proxy list</span>
+                  <span className="proxy-help-pill">Endpoint</span>
+                  <span className="proxy-help-pill proxy-help-pill-danger">Copy string</span>
+                </div>
+                <div className="proxy-help-circle">Zkopiruj tento retezec</div>
+              </div>
+              <h4>Co presne hledat</h4>
+              <ol>
+                <li>Otevri: {helpProvider.whereToFind}.</li>
+                <li>Zkopiruj endpoint ve tvaru `IP:PORT:USER:PASS` nebo `http://user:pass@host:port`.</li>
+                <li>Vloz string do Smart paste pole a klikni na `Rozparsovat`.</li>
+                <li>Pouzij `Otestovat a ulozit` a pak vyber profil ve Scraping Settings.</li>
+              </ol>
+              <h4>Dulezite</h4>
+              <ul>
+                <li>Podporovane schema: `http`, `https`, `socks5h`.</li>
+                <li>Localhost a privatni IP nejsou z bezpecnostnich duvodu povolene.</li>
+                <li>Aplikace proxy neprodava, jen ji bezpecne orchestruje.</li>
+              </ul>
+            </div>
+            <div className="log-popup-foot">
+              <button className="btn-sm secondary" onClick={() => setShowProxyHelpModal(false)}>
+                Zavrit
               </button>
             </div>
           </div>

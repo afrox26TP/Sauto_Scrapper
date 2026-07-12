@@ -1,6 +1,6 @@
 // ── API wrapper ──
 const RAW_API_BASE = String(import.meta.env.VITE_API_BASE_URL || "").trim();
-const API_BASE = RAW_API_BASE.replace(/\/+$/, "") || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "");
+const API_BASE = RAW_API_BASE.replace(/\/+$/, "");
 const AUTH_TOKEN_KEY = "sauto_auth_token";
 
 export function getAuthToken() {
@@ -97,8 +97,16 @@ export async function fetchLogs(limit = 160) {
   return data.lines || [];
 }
 
-export async function runScraper(outputFile = "data/sauto_interesting.json", projectId = "default", runMode = "cloud_paid") {
-  const data = await request("POST", "/api/run", { output_file: outputFile, project_id: projectId, run_mode: runMode });
+export async function runScraper(
+  outputFile = "data/sauto_interesting.json",
+  projectId = "default",
+  runMode = "free_proxy",
+  proxyProfileId = ""
+) {
+  const payload = { output_file: outputFile, project_id: projectId, run_mode: runMode };
+  const selectedProfileId = String(proxyProfileId || "").trim();
+  if (selectedProfileId) payload.proxy_profile_id = selectedProfileId;
+  const data = await request("POST", "/api/run", payload);
   return data;
 }
 
@@ -108,6 +116,40 @@ export async function fetchBillingAccess() {
 
 export async function createCheckoutSession(payload = {}) {
   return request("POST", "/api/billing/checkout-session", payload || {});
+}
+
+export async function fetchProxyConfig() {
+  return request("GET", "/api/proxy/config");
+}
+
+export async function saveProxyConfig(payload = {}) {
+  const body = {};
+  if (Array.isArray(payload.profiles)) {
+    body.profiles = payload.profiles.map((item) => {
+      const profile = {
+        id: String(item?.id || "").trim(),
+        name: String(item?.name || "").trim(),
+        kind: String(item?.kind || "free_proxy").trim() === "paid_proxy" ? "paid_proxy" : "free_proxy",
+      };
+      if (Object.prototype.hasOwnProperty.call(item || {}, "proxy_url")) {
+        profile.proxy_url = String(item?.proxy_url || "").trim();
+      }
+      return profile;
+    });
+  }
+  if (Object.prototype.hasOwnProperty.call(payload, "free_proxy_url")) {
+    body.free_proxy_url = String(payload.free_proxy_url || "").trim();
+  }
+  if (Object.prototype.hasOwnProperty.call(payload, "paid_proxy_url")) {
+    body.paid_proxy_url = String(payload.paid_proxy_url || "").trim();
+  }
+  return request("PUT", "/api/proxy/config", body);
+}
+
+export async function testProxyConnection(proxyUrl) {
+  return request("POST", "/api/proxy/test", {
+    proxy_url: String(proxyUrl || "").trim(),
+  });
 }
 
 export async function pauseScraper() {
