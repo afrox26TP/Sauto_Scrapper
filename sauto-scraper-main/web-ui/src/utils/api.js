@@ -134,6 +134,9 @@ export async function saveProxyConfig(payload = {}) {
       if (Object.prototype.hasOwnProperty.call(item || {}, "proxy_url")) {
         profile.proxy_url = String(item?.proxy_url || "").trim();
       }
+      if (Object.prototype.hasOwnProperty.call(item || {}, "proxy_curl")) {
+        profile.proxy_curl = String(item?.proxy_curl || "").trim();
+      }
       return profile;
     });
   }

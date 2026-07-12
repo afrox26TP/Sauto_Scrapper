@@ -17,22 +17,33 @@
         "id": "free_proxy_default",
         "name": "test",
         "kind": "free_proxy",
-        "proxy_url": "http://iclfibis:jy4oowbe7772@31.59.20.176:6754",
+        "proxy_url": "",
+        "proxy_curl": "",
         "created_at": 1783817521.7563438,
-        "updated_at": 1783818845.1039183
+        "updated_at": 1783820420.582722
+      },
+      {
+        "id": "profile_mrh4b2vr_u98gh",
+        "name": "profile_mrh4b2vr_u98gh",
+        "kind": "free_proxy",
+        "proxy_url": "http://iclfibis:jy4oowbe7772@31.59.20.176:6754",
+        "proxy_curl": "curl --proxy \"http://iclfibis:jy4oowbe7772@31.59.20.176:6754/\" https://ipv4.webshare.io/",
+        "created_at": 1783819897.4945676,
+        "updated_at": 1783820420.5826797
       },
       {
         "id": "paid_proxy_default",
         "name": "Proxy profil B",
         "kind": "paid_proxy",
         "proxy_url": "",
+        "proxy_curl": "",
         "created_at": 1783817521.7563438,
-        "updated_at": 1783818845.1039402
+        "updated_at": 1783820420.582722
       }
     ],
-    "free_proxy_url": "http://iclfibis:jy4oowbe7772@31.59.20.176:6754",
+    "free_proxy_url": "",
     "paid_proxy_url": "",
-    "proxy_updated_at": 1783818845.1039443
+    "proxy_updated_at": 1783820420.582727
   },
   {
     "id": "usr_66e9479d0f37",

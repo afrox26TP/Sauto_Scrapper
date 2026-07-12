@@ -115,6 +115,8 @@ export default function App() {
         name: String(item?.name || "").trim(),
         kind: String(item?.kind || "free_proxy").trim() === "paid_proxy" ? "paid_proxy" : "free_proxy",
         has_proxy_url: Boolean(item?.has_proxy_url),
+        proxy_url: String(item?.proxy_url || "").trim(),
+        proxy_curl: String(item?.proxy_curl || ""),
         proxy_preview: String(item?.proxy_preview || ""),
       }))
       .filter((item) => {
@@ -131,6 +133,8 @@ export default function App() {
     name: "",
     kind: "free_proxy",
     has_proxy_url: false,
+    proxy_url: "",
+    proxy_curl: "",
     proxy_preview: "",
   }), []);
 
@@ -156,12 +160,18 @@ export default function App() {
           {
             name: profile.name || profile.id,
             kind: profile.kind,
-            proxy_url: "",
+            proxy_url: String(profile.proxy_url || profile.proxy_preview || ""),
             dirty_url: false,
           },
         ])
       )
     );
+    setProxySmartInput((prev) => Object.fromEntries(
+      profiles.map((profile) => [
+        profile.id,
+        String(profile.proxy_curl || prev?.[profile.id] || profile.proxy_url || ""),
+      ])
+    ));
   }, [DEFAULT_FREE_PROXY_PROFILE_ID, DEFAULT_PAID_PROXY_PROFILE_ID, createDraftProxyProfile, normalizeProxyProfiles]);
 
   const {
@@ -315,7 +325,6 @@ export default function App() {
     fetchProxyConfig()
       .then((data) => {
         applyProxyConfigResponse(data);
-        setProxySmartInput({});
         setProxyTestStatus({ state: "idle", message: "" });
       })
       .catch((err) => {
@@ -621,6 +630,13 @@ export default function App() {
     return `${scheme}://${authPart}${String(parts.host || "").trim()}:${String(parts.port || "").trim()}`;
   }, []);
 
+  const isMaskedProxyValue = useCallback((value) => {
+    const raw = String(value || "").trim();
+    if (!raw) return false;
+    if (raw === "<configured>") return true;
+    return raw.includes("***@");
+  }, []);
+
   const handleSmartPasteApply = useCallback((profileId) => {
     const id = String(profileId || "");
     if (!id) return;
@@ -745,48 +761,138 @@ export default function App() {
     }
     if (proxySaving) return;
 
-    const profiles = (proxyConfig.profiles || []).map((profile) => {
-      const editor = proxyEditors[profile.id] || {};
-      const item = {
-        id: profile.id,
-        name: String(editor.name || profile.name || profile.id || "").trim() || String(profile.id || ""),
-        kind: editor.kind === "paid_proxy" ? "paid_proxy" : profile.kind === "paid_proxy" ? "paid_proxy" : "free_proxy",
-      };
-      if (editor.dirty_url) {
-        item.proxy_url = String(editor.proxy_url || "").trim();
-      }
-      return item;
-    });
+    const validationErrors = [];
+    for (const profile of (proxyConfig.profiles || [])) {
+      const id = String(profile?.id || "").trim();
+      if (!id) continue;
+      const editor = proxyEditors[id] || {};
+      const smartRaw = String(proxySmartInput[id] || "").trim();
+      const nameRaw = String(editor.name || profile.name || "").trim();
+      const urlRaw = String(editor.proxy_url || "").trim();
+      const profileLabel = nameRaw || id;
 
-    if (!profiles.length) {
-      showToast("Pridat alespon jeden proxy profil.", "error");
+      const hasExplicitUrl = urlRaw.length > 0 && !isMaskedProxyValue(urlRaw);
+      const hasAnyInput = smartRaw.length > 0 || nameRaw.length > 0 || hasExplicitUrl;
+      if (!hasAnyInput) continue;
+
+      if (smartRaw && !parseProxyString(smartRaw) && !hasExplicitUrl) {
+        validationErrors.push(`Profil '${profileLabel}': pole Curl nema validni format.`);
+        continue;
+      }
+
+      if (nameRaw && !hasExplicitUrl && !profile.has_proxy_url) {
+        validationErrors.push(`Profil '${profileLabel}': chybi Proxy URL.`);
+      }
+    }
+
+    if (validationErrors.length > 0) {
+      const message = validationErrors[0];
+      setProxyTestStatus({ state: "error", message });
+      showToast(message, "error");
       return;
     }
+
+    const profiles = (proxyConfig.profiles || []).map((profile) => {
+      const editor = proxyEditors[profile.id] || {};
+      const explicitName = String(editor.name || profile.name || "").trim();
+      const explicitUrl = String(editor.proxy_url || "").trim();
+      const item = {
+        id: profile.id,
+        name: explicitName || String(profile.id || ""),
+        kind: editor.kind === "paid_proxy" ? "paid_proxy" : profile.kind === "paid_proxy" ? "paid_proxy" : "free_proxy",
+        proxy_curl: String(proxySmartInput[profile.id] || "").trim(),
+      };
+      if (editor.dirty_url) {
+        item.proxy_url = explicitUrl;
+      }
+      return item;
+    }).filter((item) => {
+      const editor = proxyEditors[item.id] || {};
+      const rawName = String(editor.name || "").trim();
+      const rawUrl = String(editor.proxy_url || "").trim();
+      const hasExplicitUrlInput = rawUrl.length > 0 && !isMaskedProxyValue(rawUrl);
+      const hasUrlInput = hasExplicitUrlInput || String(item.proxy_url || "").trim().length > 0;
+      const hasNameInput = rawName.length > 0;
+
+      // Skip local empty draft rows so "delete all" can be persisted.
+      if (!hasNameInput && !hasUrlInput) {
+        return false;
+      }
+      return true;
+    });
 
     setProxySaving(true);
     setProxyTestStatus({ state: "testing", message: "Testuji pripojeni proxy..." });
     try {
-      const profilesToTest = profiles.filter((item) => Object.prototype.hasOwnProperty.call(item, "proxy_url"));
+      const profilesToTest = profiles.filter((item) => {
+        if (!Object.prototype.hasOwnProperty.call(item, "proxy_url")) return false;
+        return String(item.proxy_url || "").trim().length > 0;
+      });
+      const testOutputs = [];
       for (const profile of profilesToTest) {
         const url = String(profile.proxy_url || "").trim();
         if (!url) continue;
-        await testProxyConnection(url);
+        try {
+          const result = await testProxyConnection(url);
+          const profileLabel = String(profile.name || profile.id || "profil").trim();
+          const externalIp = String(result?.external_ip || "").trim();
+          if (externalIp) {
+            testOutputs.push(`${profileLabel}: OK, vystupni IP ${externalIp}`);
+          } else {
+            testOutputs.push(`${profileLabel}: OK`);
+          }
+        } catch (err) {
+          const profileLabel = String(profile.name || profile.id || "profil").trim();
+          throw new Error(`Test profilu '${profileLabel}' selhal: ${String(err?.message || "neznamy duvod")}`);
+        }
       }
 
       const data = await saveProxyConfig({ profiles });
       applyProxyConfigResponse(data);
-      setProxyTestStatus({
-        state: "success",
-        message: "Uspesne pripojeno! Tva identita je skryta a jsi pripraven bezpecne stahovat data.",
-      });
-      showToast("Proxy konfigurace byla otestovana a ulozena.", "info");
+      if (profilesToTest.length > 0) {
+        setProxyTestStatus({
+          state: "success",
+          message: testOutputs.length
+            ? `Vysledek testu: ${testOutputs.join(" | ")}`
+            : "Proxy byla otestovana a ulozena.",
+        });
+        showToast("Proxy konfigurace byla otestovana a ulozena.", "info");
+      } else {
+        const hasStoredProxy = profiles.some((item) => {
+          const sourceProfile = (proxyConfig.profiles || []).find((p) => String(p.id || "") === String(item.id || ""));
+          return Boolean(sourceProfile?.has_proxy_url);
+        });
+
+        if (hasStoredProxy) {
+          setProxyTestStatus({
+            state: "success",
+            message: "URL uz je ulozena (maskovana), ale nebyla znovu testovana, protoze neni dostupna v plnem tvaru.",
+          });
+          showToast("Ulozeno. Existujici URL zustala beze zmen (maskovana).", "info");
+        } else {
+          setProxyTestStatus({
+            state: "success",
+            message: "Neni vyplnena zadna Proxy URL, proto nebylo co testovat.",
+          });
+          showToast("Neni vyplnena zadna Proxy URL, ulozeni probehlo bez testu.", "info");
+        }
+      }
     } catch (err) {
       setProxyTestStatus({ state: "error", message: String(err?.message || "Proxy test nebo ulozeni selhalo.") });
       showToast(err?.message || "Ulozeni konfigurace proxy selhalo.", "error");
     } finally {
       setProxySaving(false);
     }
-  }, [isAuthenticated, proxySaving, proxyConfig.profiles, proxyEditors, applyProxyConfigResponse]);
+  }, [
+    isAuthenticated,
+    proxySaving,
+    proxyConfig.profiles,
+    proxyEditors,
+    proxySmartInput,
+    isMaskedProxyValue,
+    parseProxyString,
+    applyProxyConfigResponse,
+  ]);
 
   useEffect(() => {
     selectedBrands.forEach((brand) => {

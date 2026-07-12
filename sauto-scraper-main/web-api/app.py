@@ -272,12 +272,14 @@ class ProxyProfilePayload(BaseModel):
     name: str = ""
     kind: str = "free_proxy"
     proxy_url: str = ""
+    proxy_curl: str = ""
 
 
 class ProxyProfileUpdatePayload(BaseModel):
     name: str | None = None
     kind: str | None = None
     proxy_url: str | None = None
+    proxy_curl: str | None = None
 
 
 class ProxyTestPayload(BaseModel):
@@ -1235,6 +1237,7 @@ def _normalize_user_proxy_profiles(user: dict[str, Any]) -> list[dict[str, Any]]
                     "name": str(entry.get("name") or "").strip() or profile_id,
                     "kind": _normalize_proxy_kind(str(entry.get("kind") or "free_proxy")),
                     "proxy_url": str(entry.get("proxy_url") or "").strip(),
+                    "proxy_curl": str(entry.get("proxy_curl") or "").strip(),
                     "created_at": float(entry.get("created_at") or now),
                     "updated_at": float(entry.get("updated_at") or now),
                 }
@@ -1253,6 +1256,7 @@ def _normalize_user_proxy_profiles(user: dict[str, Any]) -> list[dict[str, Any]]
             "name": "Proxy profil A",
             "kind": "free_proxy",
             "proxy_url": free_proxy_url,
+            "proxy_curl": "",
             "created_at": now,
             "updated_at": now,
         }
@@ -1267,6 +1271,7 @@ def _normalize_user_proxy_profiles(user: dict[str, Any]) -> list[dict[str, Any]]
             "name": "Proxy profil B",
             "kind": "paid_proxy",
             "proxy_url": paid_proxy_url,
+            "proxy_curl": "",
             "created_at": now,
             "updated_at": now,
         }
@@ -1291,6 +1296,8 @@ def _public_proxy_profiles(profiles: list[dict[str, Any]]) -> list[dict[str, Any
                 "name": str(profile.get("name") or ""),
                 "kind": _normalize_proxy_kind(str(profile.get("kind") or "free_proxy")),
                 "has_proxy_url": bool(proxy_url),
+                "proxy_url": proxy_url,
+                "proxy_curl": str(profile.get("proxy_curl") or "").strip(),
                 "proxy_preview": _mask_proxy_url(proxy_url),
             }
         )
@@ -2027,6 +2034,7 @@ def set_proxy_config(payload: ProxyConfigPayload, request: Request) -> dict[str,
                 "name": getattr(item, "name", ""),
                 "kind": getattr(item, "kind", "free_proxy"),
                 "proxy_url": getattr(item, "proxy_url", None),
+                "proxy_curl": getattr(item, "proxy_curl", None),
             }
 
             profile_id = str(item_data.get("id") or "").strip()
@@ -2049,6 +2057,11 @@ def set_proxy_config(payload: ProxyConfigPayload, request: Request) -> dict[str,
             else:
                 proxy_url = str(item_data.get("proxy_url") or "").strip()
 
+            if item_data.get("proxy_curl") is None:
+                proxy_curl = str(previous.get("proxy_curl") or "").strip()
+            else:
+                proxy_curl = str(item_data.get("proxy_curl") or "").strip()
+
             if proxy_url:
                 try:
                     proxy_url = _validate_proxy_url(proxy_url)
@@ -2064,6 +2077,7 @@ def set_proxy_config(payload: ProxyConfigPayload, request: Request) -> dict[str,
                     "name": name,
                     "kind": kind,
                     "proxy_url": proxy_url,
+                    "proxy_curl": proxy_curl,
                     "created_at": float(previous.get("created_at") or now),
                     "updated_at": now,
                 }
@@ -2081,6 +2095,7 @@ def set_proxy_config(payload: ProxyConfigPayload, request: Request) -> dict[str,
                 "name": str(previous.get("name") or "").strip() or "Proxy profil A",
                 "kind": "free_proxy",
                 "proxy_url": str(previous.get("proxy_url") or "").strip(),
+                "proxy_curl": str(previous.get("proxy_curl") or "").strip(),
                 "created_at": float(previous.get("created_at") or now),
                 "updated_at": now,
             },
@@ -2095,6 +2110,7 @@ def set_proxy_config(payload: ProxyConfigPayload, request: Request) -> dict[str,
                 "name": str(previous.get("name") or "").strip() or "Proxy profil B",
                 "kind": "paid_proxy",
                 "proxy_url": str(previous.get("proxy_url") or "").strip(),
+                "proxy_curl": str(previous.get("proxy_curl") or "").strip(),
                 "created_at": float(previous.get("created_at") or now),
                 "updated_at": now,
             }
