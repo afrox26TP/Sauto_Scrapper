@@ -1,9 +1,5 @@
 {
   "category_id": "838",
   "limit": "100",
-  "offset": "0",
-  "manufacturer_seo_name": "alfa-romeo",
-  "model_seo_name": "giulietta",
-  "exclude_manufacturer_seo_name": "",
-  "exclude_model_seo_name": ""
+  "offset": "0"
 }

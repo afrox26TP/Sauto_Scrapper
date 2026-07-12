@@ -50,8 +50,10 @@ export default function App() {
   });
   const [proxyLoading, setProxyLoading] = useState(false);
   const [proxySaving, setProxySaving] = useState(false);
+  const [proxySavingProfileId, setProxySavingProfileId] = useState("");
+  const [proxyStatusByProfile, setProxyStatusByProfile] = useState({});
+  const [expandedProxyProfileId, setExpandedProxyProfileId] = useState("");
   const [showProxyHelpModal, setShowProxyHelpModal] = useState(false);
-  const [selectedProviderId, setSelectedProviderId] = useState("webshare");
   const [proxySmartInput, setProxySmartInput] = useState({});
   const [proxyTestStatus, setProxyTestStatus] = useState({ state: "idle", message: "" });
   const [helpProviderId, setHelpProviderId] = useState("webshare");
@@ -172,6 +174,10 @@ export default function App() {
         String(profile.proxy_curl || prev?.[profile.id] || profile.proxy_url || ""),
       ])
     ));
+    setExpandedProxyProfileId((prev) => {
+      if (prev && profiles.some((p) => String(p.id || "") === prev)) return prev;
+      return String(profiles[0]?.id || "");
+    });
   }, [DEFAULT_FREE_PROXY_PROFILE_ID, DEFAULT_PAID_PROXY_PROFILE_ID, createDraftProxyProfile, normalizeProxyProfiles]);
 
   const {
@@ -316,6 +322,9 @@ export default function App() {
       setProxyEditors({});
       setProxySmartInput({});
       setProxyTestStatus({ state: "idle", message: "" });
+      setProxyStatusByProfile({});
+      setProxySavingProfileId("");
+      setExpandedProxyProfileId("");
       setProxyLoading(false);
       setProxySaving(false);
       return;
@@ -326,6 +335,8 @@ export default function App() {
       .then((data) => {
         applyProxyConfigResponse(data);
         setProxyTestStatus({ state: "idle", message: "" });
+        setProxyStatusByProfile({});
+        setProxySavingProfileId("");
       })
       .catch((err) => {
         setProxyConfig({
@@ -338,6 +349,9 @@ export default function App() {
         setProxyEditors({});
         setProxySmartInput({});
         setProxyTestStatus({ state: "idle", message: "" });
+        setProxyStatusByProfile({});
+        setProxySavingProfileId("");
+        setExpandedProxyProfileId("");
         showToast(err?.message || "Nacteni konfigurace proxy selhalo.", "error");
       })
       .finally(() => {
@@ -705,6 +719,7 @@ export default function App() {
         dirty_url: false,
       },
     }));
+    setExpandedProxyProfileId(profile.id);
   }, [createDraftProxyProfile]);
 
   const handleRemoveProxyProfile = useCallback((profileId) => {
@@ -736,7 +751,22 @@ export default function App() {
       }
       return next;
     });
-  }, [DEFAULT_FREE_PROXY_PROFILE_ID, DEFAULT_PAID_PROXY_PROFILE_ID, createDraftProxyProfile]);
+    setProxySmartInput((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    setProxyStatusByProfile((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    setExpandedProxyProfileId((prev) => {
+      if (prev !== id) return prev;
+      const remaining = (proxyConfig.profiles || []).filter((profile) => profile.id !== id);
+      return String(remaining[0]?.id || "");
+    });
+  }, [DEFAULT_FREE_PROXY_PROFILE_ID, DEFAULT_PAID_PROXY_PROFILE_ID, createDraftProxyProfile, proxyConfig.profiles]);
 
   const handleClearProxyProfileUrl = useCallback((profileId) => {
     const id = String(profileId || "");
@@ -751,8 +781,19 @@ export default function App() {
     }));
   }, []);
 
-  const handleSaveProxyConfig = useCallback(async (event) => {
-    event.preventDefault();
+  const setProxyProfileStatus = useCallback((profileId, state, message) => {
+    const id = String(profileId || "");
+    if (!id) return;
+    setProxyStatusByProfile((prev) => ({
+      ...prev,
+      [id]: { state, message: String(message || "") },
+    }));
+  }, []);
+
+  const handleSaveProxyConfig = useCallback(async (targetProfileId) => {
+    const activeProfileId = String(targetProfileId || "").trim();
+    if (!activeProfileId) return;
+
     if (!isAuthenticated) {
       setAuthMode("login");
       setAuthError("Nejdřív se přihlas, pak nastav proxy profily.");
@@ -761,33 +802,24 @@ export default function App() {
     }
     if (proxySaving) return;
 
-    const validationErrors = [];
-    for (const profile of (proxyConfig.profiles || [])) {
-      const id = String(profile?.id || "").trim();
-      if (!id) continue;
-      const editor = proxyEditors[id] || {};
-      const smartRaw = String(proxySmartInput[id] || "").trim();
-      const nameRaw = String(editor.name || profile.name || "").trim();
-      const urlRaw = String(editor.proxy_url || "").trim();
-      const profileLabel = nameRaw || id;
+    const selectedProfile = (proxyConfig.profiles || []).find((p) => String(p.id || "") === activeProfileId);
+    const selectedEditor = proxyEditors[activeProfileId] || {};
+    const selectedSmart = String(proxySmartInput[activeProfileId] || "").trim();
+    const selectedName = String(selectedEditor.name || selectedProfile?.name || "").trim();
+    const selectedUrl = String(selectedEditor.proxy_url || selectedProfile?.proxy_url || "").trim();
+    const selectedLabel = selectedName || activeProfileId;
+    const selectedHasExplicitUrl = selectedUrl.length > 0 && !isMaskedProxyValue(selectedUrl);
 
-      const hasExplicitUrl = urlRaw.length > 0 && !isMaskedProxyValue(urlRaw);
-      const hasAnyInput = smartRaw.length > 0 || nameRaw.length > 0 || hasExplicitUrl;
-      if (!hasAnyInput) continue;
-
-      if (smartRaw && !parseProxyString(smartRaw) && !hasExplicitUrl) {
-        validationErrors.push(`Profil '${profileLabel}': pole Curl nema validni format.`);
-        continue;
-      }
-
-      if (nameRaw && !hasExplicitUrl && !profile.has_proxy_url) {
-        validationErrors.push(`Profil '${profileLabel}': chybi Proxy URL.`);
-      }
+    if (selectedSmart && !parseProxyString(selectedSmart) && !selectedHasExplicitUrl) {
+      const message = `Profil '${selectedLabel}': pole Curl nema validni format.`;
+      setProxyProfileStatus(activeProfileId, "error", message);
+      showToast(message, "error");
+      return;
     }
 
-    if (validationErrors.length > 0) {
-      const message = validationErrors[0];
-      setProxyTestStatus({ state: "error", message });
+    if (selectedName && !selectedHasExplicitUrl && !selectedProfile?.has_proxy_url) {
+      const message = `Profil '${selectedLabel}': chybi Proxy URL.`;
+      setProxyProfileStatus(activeProfileId, "error", message);
       showToast(message, "error");
       return;
     }
@@ -822,66 +854,51 @@ export default function App() {
     });
 
     setProxySaving(true);
-    setProxyTestStatus({ state: "testing", message: "Testuji pripojeni proxy..." });
+    setProxySavingProfileId(activeProfileId);
+    setProxyProfileStatus(activeProfileId, "testing", "Testuji pripojeni proxy...");
     try {
-      const profilesToTest = profiles.filter((item) => {
-        if (!Object.prototype.hasOwnProperty.call(item, "proxy_url")) return false;
-        return String(item.proxy_url || "").trim().length > 0;
-      });
-      const testOutputs = [];
-      for (const profile of profilesToTest) {
-        const url = String(profile.proxy_url || "").trim();
-        if (!url) continue;
+      const targetProfilePayload = profiles.find((item) => String(item.id || "") === activeProfileId) || null;
+      const targetUrl = String(
+        targetProfilePayload?.proxy_url ||
+        selectedEditor.proxy_url ||
+        selectedProfile?.proxy_url ||
+        ""
+      ).trim();
+
+      let profileTestMessage = "";
+      if (targetUrl && !isMaskedProxyValue(targetUrl)) {
         try {
-          const result = await testProxyConnection(url);
-          const profileLabel = String(profile.name || profile.id || "profil").trim();
+          const result = await testProxyConnection(targetUrl);
           const externalIp = String(result?.external_ip || "").trim();
-          if (externalIp) {
-            testOutputs.push(`${profileLabel}: OK, vystupni IP ${externalIp}`);
-          } else {
-            testOutputs.push(`${profileLabel}: OK`);
-          }
+          profileTestMessage = externalIp
+            ? `Vysledek testu: ${selectedLabel}: OK, vystupni IP ${externalIp}`
+            : `Vysledek testu: ${selectedLabel}: OK`;
         } catch (err) {
-          const profileLabel = String(profile.name || profile.id || "profil").trim();
-          throw new Error(`Test profilu '${profileLabel}' selhal: ${String(err?.message || "neznamy duvod")}`);
+          throw new Error(`Test profilu '${selectedLabel}' selhal: ${String(err?.message || "neznamy duvod")}`);
         }
       }
 
       const data = await saveProxyConfig({ profiles });
       applyProxyConfigResponse(data);
-      if (profilesToTest.length > 0) {
-        setProxyTestStatus({
-          state: "success",
-          message: testOutputs.length
-            ? `Vysledek testu: ${testOutputs.join(" | ")}`
-            : "Proxy byla otestovana a ulozena.",
-        });
-        showToast("Proxy konfigurace byla otestovana a ulozena.", "info");
-      } else {
-        const hasStoredProxy = profiles.some((item) => {
-          const sourceProfile = (proxyConfig.profiles || []).find((p) => String(p.id || "") === String(item.id || ""));
-          return Boolean(sourceProfile?.has_proxy_url);
-        });
 
-        if (hasStoredProxy) {
-          setProxyTestStatus({
-            state: "success",
-            message: "URL uz je ulozena (maskovana), ale nebyla znovu testovana, protoze neni dostupna v plnem tvaru.",
-          });
-          showToast("Ulozeno. Existujici URL zustala beze zmen (maskovana).", "info");
+      if (profileTestMessage) {
+        setProxyProfileStatus(activeProfileId, "success", profileTestMessage);
+        showToast("Profil byl otestovan a ulozen.", "info");
+      } else {
+        if (targetUrl) {
+          setProxyProfileStatus(activeProfileId, "success", "Profil byl ulozen. URL nebyla testovana, protoze neni v testovatelnem tvaru.");
+          showToast("Profil byl ulozen bez testu.", "info");
         } else {
-          setProxyTestStatus({
-            state: "success",
-            message: "Neni vyplnena zadna Proxy URL, proto nebylo co testovat.",
-          });
-          showToast("Neni vyplnena zadna Proxy URL, ulozeni probehlo bez testu.", "info");
+          setProxyProfileStatus(activeProfileId, "success", "Profil ulozen bez Proxy URL.");
+          showToast("Profil ulozen bez Proxy URL.", "info");
         }
       }
     } catch (err) {
-      setProxyTestStatus({ state: "error", message: String(err?.message || "Proxy test nebo ulozeni selhalo.") });
+      setProxyProfileStatus(activeProfileId, "error", String(err?.message || "Proxy test nebo ulozeni selhalo."));
       showToast(err?.message || "Ulozeni konfigurace proxy selhalo.", "error");
     } finally {
       setProxySaving(false);
+      setProxySavingProfileId("");
     }
   }, [
     isAuthenticated,
@@ -891,6 +908,7 @@ export default function App() {
     proxySmartInput,
     isMaskedProxyValue,
     parseProxyString,
+    setProxyProfileStatus,
     applyProxyConfigResponse,
   ]);
 
@@ -1180,7 +1198,6 @@ export default function App() {
       <div className="pricing-page">
         <div className="pricing-head">
           <h2>Proxy</h2>
-          <p>Sprava proxy profilu je oddelena od dashboardu, aby zustal landing cisty.</p>
         </div>
         {renderProxyConfigPanel()}
       </div>
@@ -1188,8 +1205,6 @@ export default function App() {
   }
 
   function renderProxyConfigPanel() {
-    const selectedProvider = providerCards.find((p) => p.id === selectedProviderId) || providerCards[0];
-
     return (
       <section className="byop-config-card" id="proxy-profiles">
         <div className="byop-config-head">
@@ -1197,7 +1212,7 @@ export default function App() {
             type="button"
             className="byop-help-corner"
             onClick={() => {
-              setHelpProviderId(selectedProvider.id);
+              setHelpProviderId("webshare");
               setShowProxyHelpModal(true);
             }}
             title="Proc je proxy potreba a jak ji nastavit"
@@ -1206,107 +1221,46 @@ export default function App() {
           </button>
           <h3>Proxy Profily</h3>
           <p>
-            Transparentne: dáváme ti svobodu a platis jen za data, ktera realne spotrebujes u sveho providera.
+            Nemas vlastni Proxy? Klikni na `?` a dostanes rychly navod vcetne odkazu.
           </p>
         </div>
 
-        <div className="proxy-provider-cards" role="radiogroup" aria-label="Vyber providera">
-          {providerCards.map((provider) => {
-            const active = provider.id === selectedProvider.id;
-            return (
-              <button
-                key={provider.id}
-                type="button"
-                className={`proxy-provider-card ${active ? "active" : ""}`}
-                onClick={() => setSelectedProviderId(provider.id)}
-                role="radio"
-                aria-checked={active}
-              >
-                <span className="proxy-provider-logo">{provider.logo}</span>
-                <span className="proxy-provider-name">{provider.name}</span>
-                {provider.recommended ? <span className="proxy-provider-badge">Doporuceno</span> : null}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="proxy-provider-steps">
-          <a
-            className="btn-primary proxy-provider-cta"
-            href={selectedProvider.url}
-            target={selectedProvider.url.startsWith("#") ? "_self" : "_blank"}
-            rel={selectedProvider.url.startsWith("#") ? undefined : "noreferrer"}
-          >
-            {selectedProvider.ctaLabel}
-          </a>
-          <ol>
-            <li>Zaloz si ucet pres toto tlacitko.</li>
-            <li>Aktivuj zakladni balicek.</li>
-            <li>Zkopiruj vygenerovane udaje o proxy.</li>
-          </ol>
-          <button
-            type="button"
-            className="theme-toggle"
-            onClick={() => {
-              setHelpProviderId(selectedProvider.id);
-              setShowProxyHelpModal(true);
-            }}
-          >
-            Kde tyto udaje najdu?
-          </button>
-        </div>
-
-        <form className="byop-config-form" onSubmit={handleSaveProxyConfig}>
+        <div className="byop-config-form">
           <div className="byop-config-grid byop-profile-list">
             {(proxyConfig.profiles || []).map((profile) => {
               const editor = proxyEditors[profile.id] || {};
               const profileName = String(editor.name || profile.name || profile.id || "");
               const smartValue = String(proxySmartInput[profile.id] || "");
               const parsedSmart = parseProxyString(smartValue);
-              const parsedUrl = parseProxyString(String(editor.proxy_url || ""));
+              const parsedUrl = parseProxyString(String(editor.proxy_url || profile.proxy_url || ""));
               const parsed = parsedSmart || parsedUrl;
+              const isExpanded = String(expandedProxyProfileId || "") === String(profile.id || "");
+              const isSavingThis = proxySaving && String(proxySavingProfileId || "") === String(profile.id || "");
+              const profileStatus = proxyStatusByProfile[profile.id] || null;
               return (
                 <div className="byop-field byop-profile-row" key={profile.id}>
                   <div className="byop-profile-row-meta">
-                    <input
-                      className="proxy-field proxy-field-name"
-                      type="text"
-                      value={profileName}
-                      onChange={(e) => handleProxyProfileChange(profile.id, "name", e.target.value)}
-                      placeholder="Nazev profilu"
-                      autoComplete="off"
-                    />
+                    {isExpanded ? (
+                      <input
+                        className="proxy-field proxy-field-name"
+                        type="text"
+                        value={profileName}
+                        onChange={(e) => handleProxyProfileChange(profile.id, "name", e.target.value)}
+                        placeholder="Nazev profilu"
+                        autoComplete="off"
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        className="theme-toggle"
+                        onClick={() => setExpandedProxyProfileId(profile.id)}
+                        title="Otevrit detail profilu"
+                      >
+                        {profileName || "Bez nazvu"}
+                      </button>
+                    )}
                     <div className="proxy-kind-pill">Proxy</div>
                   </div>
-                  <div className="proxy-smart-paste-row">
-                    <input
-                      className="proxy-field proxy-field-smart"
-                      type="text"
-                      value={smartValue}
-                      onChange={(e) => handleSmartInputChange(profile.id, e.target.value)}
-                      placeholder="Curl: curl --proxy http://user:pass@host:port https://api.ipify.org"
-                      autoComplete="off"
-                      spellCheck={false}
-                    />
-                    <button
-                      type="button"
-                      className="theme-toggle"
-                      disabled={proxySaving || proxyLoading}
-                      onClick={() => handleSmartPasteApply(profile.id)}
-                    >
-                      Automatic
-                    </button>
-                  </div>
-                  <span className="byop-hint">Priklad: curl --proxy http://user:pass@host:port https://api.ipify.org</span>
-                  <input
-                    className="proxy-field proxy-field-url"
-                    type="text"
-                    value={String(editor.proxy_url || "")}
-                    onChange={(e) => handleProxyProfileChange(profile.id, "proxy_url", e.target.value)}
-                    placeholder="http://user:pass@host:port nebo socks5h://user:pass@host:port"
-                    autoComplete="off"
-                    spellCheck={false}
-                  />
                   {parsed ? (
                     <div className="proxy-parts-preview">
                       <span>Host: {parsed.host || "-"}</span>
@@ -1315,27 +1269,90 @@ export default function App() {
                       <span>Heslo: {parsed.password ? "******" : "-"}</span>
                     </div>
                   ) : null}
-                  <span className="byop-hint">
-                    Stav: {profile.has_proxy_url ? `nastaven (${profile.proxy_preview || "maskovano"})` : "nenastaven"}
-                  </span>
-                  <div className="byop-inline-actions">
-                    <button
-                      type="button"
-                      className="theme-toggle"
-                      disabled={proxySaving || proxyLoading}
-                      onClick={() => handleClearProxyProfileUrl(profile.id)}
-                    >
-                      Vymazat URL
-                    </button>
-                    <button
-                      type="button"
-                      className="theme-toggle"
-                      disabled={proxySaving || proxyLoading || profile.id === DEFAULT_FREE_PROXY_PROFILE_ID || profile.id === DEFAULT_PAID_PROXY_PROFILE_ID}
-                      onClick={() => handleRemoveProxyProfile(profile.id)}
-                    >
-                      Odebrat profil
-                    </button>
-                  </div>
+
+                  {isExpanded ? (
+                    <>
+                      <div className="proxy-smart-paste-row">
+                        <input
+                          className="proxy-field proxy-field-smart"
+                          type="text"
+                          value={smartValue}
+                          onChange={(e) => handleSmartInputChange(profile.id, e.target.value)}
+                          placeholder="Curl: curl --proxy http://user:pass@host:port https://api.ipify.org"
+                          autoComplete="off"
+                          spellCheck={false}
+                        />
+                        <button
+                          type="button"
+                          className="theme-toggle"
+                          disabled={proxySaving || proxyLoading}
+                          onClick={() => handleSmartPasteApply(profile.id)}
+                        >
+                          Automatic
+                        </button>
+                      </div>
+                      <span className="byop-hint">Priklad: curl --proxy http://user:pass@host:port https://api.ipify.org</span>
+                      <input
+                        className="proxy-field proxy-field-url"
+                        type="text"
+                        value={String(editor.proxy_url || "")}
+                        onChange={(e) => handleProxyProfileChange(profile.id, "proxy_url", e.target.value)}
+                        placeholder="http://user:pass@host:port nebo socks5h://user:pass@host:port"
+                        autoComplete="off"
+                        spellCheck={false}
+                      />
+                      <span className="byop-hint">
+                        Stav: {profile.has_proxy_url ? `nastaven (${profile.proxy_preview || "maskovano"})` : "nenastaven"}
+                      </span>
+                      <div className="byop-inline-actions">
+                        <button
+                          type="button"
+                          className="theme-toggle"
+                          disabled={proxySaving || proxyLoading}
+                          onClick={() => handleClearProxyProfileUrl(profile.id)}
+                        >
+                          Vymazat URL
+                        </button>
+                        <button
+                          type="button"
+                          className="theme-toggle"
+                          disabled={proxySaving || proxyLoading || profile.id === DEFAULT_FREE_PROXY_PROFILE_ID || profile.id === DEFAULT_PAID_PROXY_PROFILE_ID}
+                          onClick={() => handleRemoveProxyProfile(profile.id)}
+                        >
+                          Odebrat profil
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-primary"
+                          disabled={proxySaving || proxyLoading}
+                          onClick={() => handleSaveProxyConfig(profile.id)}
+                        >
+                          {isSavingThis ? "Testuji a ukladam..." : "Otestovat a ulozit profil"}
+                        </button>
+                        <button
+                          type="button"
+                          className="theme-toggle"
+                          disabled={proxySaving || proxyLoading}
+                          onClick={() => setExpandedProxyProfileId("")}
+                        >
+                          Minimalizovat
+                        </button>
+                      </div>
+                      {profileStatus?.state === "testing" ? <span className="muted">{profileStatus.message}</span> : null}
+                      {profileStatus?.state === "success" ? <span className="proxy-test-success">OK {profileStatus.message}</span> : null}
+                      {profileStatus?.state === "error" ? <span className="proxy-test-error">{profileStatus.message}</span> : null}
+                    </>
+                  ) : (
+                    <div className="byop-inline-actions">
+                      <button
+                        type="button"
+                        className="theme-toggle"
+                        onClick={() => setExpandedProxyProfileId(profile.id)}
+                      >
+                        Otevrit detail
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -1351,15 +1368,9 @@ export default function App() {
             >
               + Pridat profil
             </button>
-            <button type="submit" className="btn-primary" disabled={proxySaving || proxyLoading}>
-              {proxySaving ? "Testuji a ukladam..." : "Otestovat a ulozit"}
-            </button>
             {proxyLoading ? <span className="muted">Nacitam konfiguraci...</span> : null}
-            {proxyTestStatus.state === "testing" ? <span className="muted">{proxyTestStatus.message}</span> : null}
-            {proxyTestStatus.state === "success" ? <span className="proxy-test-success">OK {proxyTestStatus.message}</span> : null}
-            {proxyTestStatus.state === "error" ? <span className="proxy-test-error">{proxyTestStatus.message}</span> : null}
           </div>
-        </form>
+        </div>
       </section>
     );
   }
@@ -1706,15 +1717,23 @@ export default function App() {
         <div className="log-popup-overlay" onClick={() => setShowProxyHelpModal(false)}>
           <div className="log-popup byop-help-modal" onClick={(e) => e.stopPropagation()}>
             <div className="log-popup-head">
-              <strong>Proxy navod: {helpProvider.name}</strong>
+              <strong>Proxy navod (nemam vlastni Proxy)</strong>
               <button className="debug-modal-close" onClick={() => setShowProxyHelpModal(false)}>
                 <X className="ui-icon" aria-hidden="true" />
               </button>
             </div>
             <div className="byop-help-body">
               <p>
-                Nechceme, aby onboarding bolel: tady je presne co na webu poskytovatele hledat a co zkopirovat.
+                Nechceme, aby onboarding bolel: pokud nemas vlastni Proxy, pouzij doporuceny flow pres Webshare.
               </p>
+              <a
+                className="btn-primary"
+                href="https://www.webshare.io/?referral_code=jixav3l993nd"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Nemam vlastni Proxy - ziskat proxy u Webshare
+              </a>
               <div className="proxy-help-shot" aria-hidden="true">
                 <div className="proxy-help-shot-top">{helpProvider.name} dashboard</div>
                 <div className="proxy-help-shot-body">
@@ -1728,8 +1747,9 @@ export default function App() {
               <ol>
                 <li>Otevri: {helpProvider.whereToFind}.</li>
                 <li>Zkopiruj endpoint ve tvaru `IP:PORT:USER:PASS` nebo `http://user:pass@host:port`.</li>
-                <li>Vloz string do Smart paste pole a klikni na `Rozparsovat`.</li>
-                <li>Pouzij `Otestovat a ulozit` a pak vyber profil ve Scraping Settings.</li>
+                <li>Do pole `Curl` vloz cely prikaz, napr.: `curl --proxy "http://user:pass@host:port/" https://ipv4.webshare.io/`.</li>
+                <li>Klikni na `Automatic` - aplikace z prikazu vycte host, port, jmeno a heslo a vyplni URL.</li>
+                <li>Zkontroluj hodnoty a dej `Otestovat a ulozit profil` u konkretniho profilu.</li>
               </ol>
               <h4>Dulezite</h4>
               <ul>
