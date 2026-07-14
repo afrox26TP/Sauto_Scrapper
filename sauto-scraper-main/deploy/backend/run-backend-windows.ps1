@@ -39,11 +39,11 @@ if ($listener) {
 }
 
 Set-Location $ApiDir
-$proc = Start-Process -FilePath $PyExe \
-  -ArgumentList @("-m", "uvicorn", "app:app", "--host", $BindHost, "--port", "$Port") \
-  -WorkingDirectory $ApiDir \
-  -RedirectStandardOutput $OutLog \
-  -RedirectStandardError $ErrLog \
+$proc = Start-Process -FilePath $PyExe `
+  -ArgumentList @("-m", "uvicorn", "app:app", "--host", $BindHost, "--port", "$Port") `
+  -WorkingDirectory $ApiDir `
+  -RedirectStandardOutput $OutLog `
+  -RedirectStandardError $ErrLog `
   -PassThru
 
 Start-Sleep -Seconds 2

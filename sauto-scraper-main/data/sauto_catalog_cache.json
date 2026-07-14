@@ -225,7 +225,7 @@
       "collector_version": 7
     },
     "alpina": {
-      "updated_at": 1783633346,
+      "updated_at": 1784043815,
       "items": [
         {
           "value": "b3-s",
@@ -242,10 +242,6 @@
         {
           "value": "b6",
           "label": "B6"
-        },
-        {
-          "value": "b8",
-          "label": "B8"
         },
         {
           "value": "d3",
@@ -314,15 +310,23 @@
     }
   },
   "brands": {
-    "updated_at": 1783809968,
+    "updated_at": 1784020563,
     "items": [
+      {
+        "value": "abarth",
+        "label": "Abarth"
+      },
+      {
+        "value": "aixam",
+        "label": "Aixam"
+      },
       {
         "value": "alfa-romeo",
         "label": "Alfa Romeo"
       },
       {
-        "value": "aston-martin",
-        "label": "Aston Martin"
+        "value": "alpina",
+        "label": "Alpina"
       },
       {
         "value": "audi",
@@ -345,10 +349,6 @@
         "label": "Cadillac"
       },
       {
-        "value": "caterham",
-        "label": "Caterham"
-      },
-      {
         "value": "chevrolet",
         "label": "Chevrolet"
       },
@@ -367,6 +367,10 @@
       {
         "value": "dacia",
         "label": "Dacia"
+      },
+      {
+        "value": "daihatsu",
+        "label": "Daihatsu"
       },
       {
         "value": "dodge",
@@ -393,6 +397,10 @@
         "label": "Ford"
       },
       {
+        "value": "genesis",
+        "label": "Genesis"
+      },
+      {
         "value": "gmc",
         "label": "GMC"
       },
@@ -403,10 +411,6 @@
       {
         "value": "hongqi",
         "label": "Hongqi"
-      },
-      {
-        "value": "hummer",
-        "label": "Hummer"
       },
       {
         "value": "hyundai",
@@ -437,24 +441,36 @@
         "label": "Lamborghini"
       },
       {
+        "value": "lancia",
+        "label": "Lancia"
+      },
+      {
         "value": "land-rover",
         "label": "Land Rover"
+      },
+      {
+        "value": "leapmotor",
+        "label": "Leapmotor"
       },
       {
         "value": "lexus",
         "label": "Lexus"
       },
       {
+        "value": "lincoln",
+        "label": "Lincoln"
+      },
+      {
         "value": "maserati",
         "label": "Maserati"
       },
       {
-        "value": "maybach",
-        "label": "Maybach"
-      },
-      {
         "value": "mazda",
         "label": "Mazda"
+      },
+      {
+        "value": "mclaren",
+        "label": "McLaren"
       },
       {
         "value": "mercedes-benz",
@@ -485,16 +501,16 @@
         "label": "Opel"
       },
       {
+        "value": "ostatni",
+        "label": "Ostatní"
+      },
+      {
         "value": "peugeot",
         "label": "Peugeot"
       },
       {
         "value": "porsche",
         "label": "Porsche"
-      },
-      {
-        "value": "ram",
-        "label": "RAM"
       },
       {
         "value": "renault",
@@ -553,14 +569,18 @@
         "label": "Volvo"
       },
       {
-        "value": "voyah",
-        "label": "Voyah"
+        "value": "xpeng",
+        "label": "XPENG"
       }
     ]
   },
   "bodies": {
-    "updated_at": 1783807959,
+    "updated_at": 1784002946,
     "items": [
+      {
+        "value": "cuv",
+        "label": "CUV"
+      },
       {
         "value": "hatchback",
         "label": "Hatchback"
@@ -608,7 +628,7 @@
     ]
   },
   "equipment": {
-    "updated_at": 1783816485,
+    "updated_at": 1784043789,
     "items": [
       {
         "value": "abs",
