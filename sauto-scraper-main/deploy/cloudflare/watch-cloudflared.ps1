@@ -37,18 +37,11 @@ if (Get-Variable -Name PSNativeCommandUseErrorActionPreference -ErrorAction Sile
 }
 
 function Write-Log {
-  param(
-    [string]$Level,
-    [string]$Message
-  )
-
+  param([string]$Level, [string]$Message)
   $line = "{0} [{1}] {2}" -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss"), $Level.ToUpperInvariant(), $Message
   Write-Host $line
-
   $dir = Split-Path -Parent $LogPath
-  if ($dir -and -not (Test-Path $dir)) {
-    New-Item -ItemType Directory -Path $dir | Out-Null
-  }
+  if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir | Out-Null }
   Add-Content -Path $LogPath -Value $line
 }
 
@@ -61,12 +54,8 @@ function Resolve-Cloudflared {
 
 function Ensure-ServiceRunning {
   param([string]$Name)
-
   $svc = Get-Service -Name $Name -ErrorAction SilentlyContinue
-  if (-not $svc) {
-    return $false
-  }
-
+  if (-not $svc) { return $false }
   if ($svc.Status -ne "Running") {
     Write-Log "warn" "Service '$Name' is '$($svc.Status)'. Attempting start."
     try {
@@ -84,29 +73,18 @@ function Ensure-ServiceRunning {
       return $false
     }
   }
-
   return $true
 }
 
 function Ensure-ProcessRunning {
-  param(
-    [string]$ExePath,
-    [string]$CfgPath,
-    [string]$Name
-  )
-
+  param([string]$ExePath, [string]$CfgPath, [string]$Name)
   $procs = Get-CimInstance Win32_Process -Filter "name='cloudflared.exe'" -ErrorAction SilentlyContinue |
     Where-Object { $_.CommandLine -match [regex]::Escape("tunnel run $Name") }
-
-  if ($procs) {
-    return $true
-  }
-
+  if ($procs) { return $true }
   if (-not (Test-Path $CfgPath)) {
     Write-Log "error" "Config file not found: $CfgPath"
     return $false
   }
-
   Write-Log "warn" "No named tunnel process found. Starting detached cloudflared process."
   try {
     Start-Process -FilePath $ExePath -ArgumentList @("--config", $CfgPath, "tunnel", "run", $Name) | Out-Null
@@ -127,7 +105,6 @@ function Ensure-ProcessRunning {
 
 function Test-Endpoints {
   param([string[]]$Urls)
-
   foreach ($url in $Urls) {
     try {
       $resp = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 15
@@ -140,20 +117,12 @@ function Test-Endpoints {
       return $false
     }
   }
-
   return $true
 }
 
 function Restart-Cloudflared {
-  param(
-    [string]$Name,
-    [string]$ExePath,
-    [string]$CfgPath,
-    [string]$Tunnel
-  )
-
+  param([string]$Name, [string]$ExePath, [string]$CfgPath, [string]$Tunnel)
   Write-Log "warn" "Attempting cloudflared restart sequence."
-
   $svc = Get-Service -Name $Name -ErrorAction SilentlyContinue
   if ($svc) {
     try {
@@ -165,7 +134,6 @@ function Restart-Cloudflared {
       Write-Log "error" "Restart-Service failed: $($_.Exception.Message)"
     }
   }
-
   try {
     Get-Process cloudflared -ErrorAction SilentlyContinue | ForEach-Object {
       Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
@@ -174,42 +142,33 @@ function Restart-Cloudflared {
   } catch {
     Write-Log "warn" "Process cleanup warning: $($_.Exception.Message)"
   }
-
   $null = Ensure-ProcessRunning -ExePath $ExePath -CfgPath $CfgPath -Name $Tunnel
 }
 
 $resolvedCloudflared = Resolve-Cloudflared
 Write-Log "info" "Watchdog started. Interval=${IntervalSec}s MaxFailures=$MaxFailures RunOnce=$($RunOnce.IsPresent)"
-
 $failureCount = 0
 while ($true) {
   $serviceOk = Ensure-ServiceRunning -Name $ServiceName
   if (-not $serviceOk) {
     $null = Ensure-ProcessRunning -ExePath $resolvedCloudflared -CfgPath $ConfigPath -Name $TunnelName
   }
-
   $processOk = Ensure-ProcessRunning -ExePath $resolvedCloudflared -CfgPath $ConfigPath -Name $TunnelName
   $healthOk = Test-Endpoints -Urls $HealthUrls
-
   if ($processOk -and $healthOk) {
-    if ($failureCount -gt 0) {
-      Write-Log "info" "Tunnel recovered and checks are passing again."
-    }
+    if ($failureCount -gt 0) { Write-Log "info" "Tunnel recovered and checks are passing again." }
     $failureCount = 0
   } else {
     $failureCount++
     Write-Log "warn" "Watchdog failure count: $failureCount/$MaxFailures"
-
     if ($failureCount -ge $MaxFailures) {
       Restart-Cloudflared -Name $ServiceName -ExePath $resolvedCloudflared -CfgPath $ConfigPath -Tunnel $TunnelName
       $failureCount = 0
     }
   }
-
   if ($RunOnce) {
     Write-Log "info" "RunOnce enabled. Exiting watchdog."
     break
   }
-
   Start-Sleep -Seconds $IntervalSec
 }

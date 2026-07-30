@@ -147,7 +147,7 @@
       "collector_version": 7
     },
     "alfa-romeo": {
-      "updated_at": 1783816541,
+      "updated_at": 1784242955,
       "items": [
         {
           "value": "147",
@@ -225,7 +225,7 @@
       "collector_version": 7
     },
     "alpina": {
-      "updated_at": 1784043815,
+      "updated_at": 1784296600,
       "items": [
         {
           "value": "b3-s",
@@ -242,6 +242,14 @@
         {
           "value": "b6",
           "label": "B6"
+        },
+        {
+          "value": "b7",
+          "label": "B7"
+        },
+        {
+          "value": "b8",
+          "label": "B8"
         },
         {
           "value": "d3",
@@ -310,16 +318,8 @@
     }
   },
   "brands": {
-    "updated_at": 1784020563,
+    "updated_at": 1785413101,
     "items": [
-      {
-        "value": "abarth",
-        "label": "Abarth"
-      },
-      {
-        "value": "aixam",
-        "label": "Aixam"
-      },
       {
         "value": "alfa-romeo",
         "label": "Alfa Romeo"
@@ -329,8 +329,16 @@
         "label": "Alpina"
       },
       {
+        "value": "alpine",
+        "label": "Alpine"
+      },
+      {
         "value": "audi",
         "label": "Audi"
+      },
+      {
+        "value": "baic",
+        "label": "BAIC"
       },
       {
         "value": "bentley",
@@ -347,6 +355,10 @@
       {
         "value": "cadillac",
         "label": "Cadillac"
+      },
+      {
+        "value": "chery",
+        "label": "Chery"
       },
       {
         "value": "chevrolet",
@@ -367,10 +379,6 @@
       {
         "value": "dacia",
         "label": "Dacia"
-      },
-      {
-        "value": "daihatsu",
-        "label": "Daihatsu"
       },
       {
         "value": "dodge",
@@ -401,10 +409,6 @@
         "label": "Genesis"
       },
       {
-        "value": "gmc",
-        "label": "GMC"
-      },
-      {
         "value": "honda",
         "label": "Honda"
       },
@@ -415,6 +419,10 @@
       {
         "value": "hyundai",
         "label": "Hyundai"
+      },
+      {
+        "value": "isuzu",
+        "label": "Isuzu"
       },
       {
         "value": "jaecoo",
@@ -429,20 +437,12 @@
         "label": "Jeep"
       },
       {
-        "value": "kgm",
-        "label": "KGM"
-      },
-      {
         "value": "kia",
         "label": "Kia"
       },
       {
         "value": "lamborghini",
         "label": "Lamborghini"
-      },
-      {
-        "value": "lancia",
-        "label": "Lancia"
       },
       {
         "value": "land-rover",
@@ -455,10 +455,6 @@
       {
         "value": "lexus",
         "label": "Lexus"
-      },
-      {
-        "value": "lincoln",
-        "label": "Lincoln"
       },
       {
         "value": "maserati",
@@ -501,10 +497,6 @@
         "label": "Opel"
       },
       {
-        "value": "ostatni",
-        "label": "Ostatní"
-      },
-      {
         "value": "peugeot",
         "label": "Peugeot"
       },
@@ -513,16 +505,12 @@
         "label": "Porsche"
       },
       {
+        "value": "ram",
+        "label": "RAM"
+      },
+      {
         "value": "renault",
         "label": "Renault"
-      },
-      {
-        "value": "rolls-royce",
-        "label": "Rolls-Royce"
-      },
-      {
-        "value": "saab",
-        "label": "Saab"
       },
       {
         "value": "seat",
@@ -575,7 +563,7 @@
     ]
   },
   "bodies": {
-    "updated_at": 1784002946,
+    "updated_at": 1785413193,
     "items": [
       {
         "value": "cuv",
@@ -610,6 +598,10 @@
         "label": "Pick-up"
       },
       {
+        "value": "roadster",
+        "label": "Roadster"
+      },
+      {
         "value": "sedanlimuzina",
         "label": "Sedan/limuzína"
       },
@@ -628,7 +620,7 @@
     ]
   },
   "equipment": {
-    "updated_at": 1784043789,
+    "updated_at": 1785419105,
     "items": [
       {
         "value": "abs",
