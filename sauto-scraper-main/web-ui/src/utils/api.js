@@ -92,6 +92,11 @@ export async function fetchResults(path = undefined) {
   return data;
 }
 
+export async function fetchResultFiles() {
+  const data = await request("GET", "/api/results/files");
+  return Array.isArray(data?.files) ? data.files : [];
+}
+
 export async function fetchLogs(limit = 160) {
   const data = await request("GET", "/api/logs", null, { limit });
   return data.lines || [];

@@ -1,5 +1,5 @@
 {
-  "updated_at": 1783818947.3296866,
+  "updated_at": 1785495977.0559535,
   "rates": {
     "run_base_czk": 5.0,
     "item_czk": 0.02,
@@ -342,6 +342,22 @@
       },
       "total_czk": 0.0,
       "last_event_at": 1783818947.3296733
+    },
+    "proj_ms8u6gy4_75w0ni": {
+      "project_id": "proj_ms8u6gy4_75w0ni",
+      "runs_total": 1,
+      "runs_success": 0,
+      "runs_failed": 1,
+      "items_total": 14,
+      "api_calls": 0,
+      "costs": {
+        "runs_czk": 0.0,
+        "items_czk": 0.0,
+        "api_calls_czk": 0.0,
+        "proxy_czk": 0.0
+      },
+      "total_czk": 0.0,
+      "last_event_at": 1785495977.055944
     }
   },
   "events": [
@@ -751,6 +767,21 @@
       "job_id": "job_f532756d2096",
       "exit_code": -1,
       "item_count": 26,
+      "run_mode": "free_proxy",
+      "billable": false,
+      "charges": {
+        "run_base_czk": 0.0,
+        "items_czk": 0.0,
+        "proxy_czk": 0.0
+      }
+    },
+    {
+      "type": "run_usage_free",
+      "at": 1785495977.055944,
+      "project_id": "proj_ms8u6gy4_75w0ni",
+      "job_id": "job_7697580f6353",
+      "exit_code": -1,
+      "item_count": 14,
       "run_mode": "free_proxy",
       "billable": false,
       "charges": {

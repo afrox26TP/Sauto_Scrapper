@@ -1,1 +1,8 @@
-python -m scrapy crawl sauto -O data/sauto.json
+PowerShell unified startup (Autoidx + MailPilot) from c:\scraper\Sauto_Scrapper\sauto-scraper-main:
+	.\deploy\start-unified-services.ps1
+
+Optional with Autoidx watchdog:
+	.\deploy\start-unified-services.ps1 -AutoidxWithWatchdog
+
+Install autostart after PC boot (runs at user logon):
+	.\deploy\install-unified-autostart.ps1 -AutoidxWithWatchdog

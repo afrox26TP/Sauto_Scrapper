@@ -17,6 +17,7 @@ import {
   fetchBillingRates,
   saveParams,
   fetchParams,
+  fetchResultFiles,
 } from "../utils/api";
 
 export function useProjects(brandOptions, modelsByBrand, options = {}) {
@@ -62,20 +63,48 @@ export function useProjects(brandOptions, modelsByBrand, options = {}) {
     Promise.all([
       fetchParams().catch(() => null),
       fetchResults("data/sauto_interesting.json").catch(() => null),
-    ]).then(([params, resultsData]) => {
+      fetchResultFiles().catch(() => []),
+    ]).then(([params, resultsData, resultFiles]) => {
       const results = resultsData?.items || [];
       const markedIds = resultsData?.marked_ids || [];
-      const existingData = params || results.length > 0;
+      const files = Array.isArray(resultFiles) ? resultFiles : [];
+      const hasRecoverableFiles = files.length > 0;
+      const existingData = params || results.length > 0 || hasRecoverableFiles;
 
       if (existingData) {
-        const proj = createProject("Původní data (migrováno)", params || {});
-        proj.phase = results.length > 0 ? "done" : "config";
-        proj.results = results;
-        proj.markedIds = markedIds;
-        proj.resultsPath = "data/sauto_interesting.json";
-        proj.logs = ["[systém] Původní data načtena z params.json a sauto_interesting.json."];
-        setProjects([proj]);
-        setActiveProjectId(proj.id);
+        const recoveredProjects = [];
+
+        if (results.length > 0 || params) {
+          const baseProj = createProject("Původní data (migrováno)", params || {});
+          baseProj.phase = results.length > 0 ? "done" : "config";
+          baseProj.results = results;
+          baseProj.markedIds = markedIds;
+          baseProj.resultsPath = "data/sauto_interesting.json";
+          baseProj.logs = ["[systém] Původní data načtena z params.json a sauto_interesting.json."];
+          recoveredProjects.push(baseProj);
+        }
+
+        files.forEach((file, index) => {
+          const path = String(file?.path || "").trim();
+          if (!path || path === "data/sauto_interesting.json") return;
+          const name = String(file?.name || path.replace(/^data\//, "")).replace(/_results\.json$/i, "");
+          const proj = createProject(`Obnoveno ${index + 1}: ${name}`, {});
+          proj.phase = "done";
+          proj.resultsPath = path;
+          proj.results = [];
+          proj.markedIds = [];
+          proj.logs = ["[systém] Projekt obnoven ze souboru výsledků po resetu localStorage."];
+          recoveredProjects.push(proj);
+        });
+
+        if (recoveredProjects.length === 0) {
+          const fallback = createProject();
+          setProjects([fallback]);
+          setActiveProjectId(fallback.id);
+        } else {
+          setProjects(recoveredProjects);
+          setActiveProjectId(recoveredProjects[0].id);
+        }
       } else {
         const fresh = createProject();
         setProjects([fresh]);

@@ -52,6 +52,7 @@ PUBLIC_API_PATHS = {
     "/api/auth/signup",
     "/api/auth/login",
     "/api/results",
+    "/api/results/files",
     "/api/results/export",
     "/api/catalog/brands",
     "/api/catalog/models",
@@ -2529,6 +2530,43 @@ def get_results(path: str | None = None) -> dict[str, Any]:
         "marked_ids": sorted(marked_ids),
         "scraper_running": runner.is_running(),
     }
+
+
+@app.get("/api/results/files")
+def list_result_files() -> dict[str, Any]:
+    data_dir = ROOT_DIR / "data"
+    files: list[dict[str, Any]] = []
+
+    if data_dir.exists():
+        for entry in sorted(data_dir.glob("proj_*_results.json"), key=lambda p: p.stat().st_mtime, reverse=True):
+            try:
+                stat = entry.stat()
+            except OSError:
+                continue
+            files.append(
+                {
+                    "path": f"data/{entry.name}",
+                    "name": entry.name,
+                    "modified_at": int(stat.st_mtime),
+                    "size": int(stat.st_size),
+                }
+            )
+
+    if DEFAULT_RESULTS_PATH.exists():
+        try:
+            stat = DEFAULT_RESULTS_PATH.stat()
+            files.append(
+                {
+                    "path": "data/sauto_interesting.json",
+                    "name": "sauto_interesting.json",
+                    "modified_at": int(stat.st_mtime),
+                    "size": int(stat.st_size),
+                }
+            )
+        except OSError:
+            pass
+
+    return {"files": files}
 
 
 @app.get("/api/catalog/brands")
