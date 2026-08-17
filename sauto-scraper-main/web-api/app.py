@@ -22,10 +22,13 @@ from urllib.parse import urlencode, urlsplit
 from urllib.error import HTTPError
 from urllib.request import Request as UrlRequest, urlopen, build_opener, ProxyHandler
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from starlette.responses import JSONResponse
+
+load_dotenv(Path(__file__).with_name(".env"))
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "sauto" / "spiders"))
 from sauto_spider import CarEvaluator
