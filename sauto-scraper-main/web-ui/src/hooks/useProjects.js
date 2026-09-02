@@ -22,6 +22,8 @@ import {
 
 export function useProjects(brandOptions, modelsByBrand, options = {}) {
   const enabled = options.enabled !== false;
+  const onRunAccessChanged = options.onRunAccessChanged;
+  const onCreditsRequired = options.onCreditsRequired;
   const [projects, setProjects] = useState(() => loadProjects());
   const [activeProjectId, setActiveProjectId] = useState(() => {
     const loaded = loadProjects();
@@ -41,6 +43,7 @@ export function useProjects(brandOptions, modelsByBrand, options = {}) {
   const [statusReady, setStatusReady] = useState(false);
   const [migrated, setMigrated] = useState(false);
   const stopRequestedProjectIdRef = useRef(null);
+  const runAccessByProjectRef = useRef({});
 
   const projectsRef = useRef(projects);
   projectsRef.current = projects;
@@ -295,6 +298,11 @@ export function useProjects(brandOptions, modelsByBrand, options = {}) {
               if (stopRequestedProjectIdRef.current === p.id) {
                 stopRequestedProjectIdRef.current = null;
               }
+              const completedAccess = runAccessByProjectRef.current[p.id];
+              delete runAccessByProjectRef.current[p.id];
+              if (completedAccess?.kind === "trial" && completedAccess?.trial_runs_remaining === 0) {
+                onCreditsRequired?.();
+              }
               // After transition, check queue
               setTimeout(() => {
                 setProjects((curr) => {
@@ -360,7 +368,11 @@ export function useProjects(brandOptions, modelsByBrand, options = {}) {
         project.runMode || "free_proxy",
         project.proxyProfileId || ""
       ))
-      .then(() => {
+      .then((response) => {
+        if (response?.access) {
+          runAccessByProjectRef.current[projectId] = response.access;
+          onRunAccessChanged?.(response.access);
+        }
         setScraperRunning(true);
         setScraperPaused(false);
         setProjects((prev) =>
@@ -378,6 +390,7 @@ export function useProjects(brandOptions, modelsByBrand, options = {}) {
         );
       })
       .catch((err) => {
+        if (err.status === 402) onCreditsRequired?.();
         if (err.status === 409) {
           setProjects((prev) =>
             prev.map((p) =>
@@ -426,12 +439,16 @@ export function useProjects(brandOptions, modelsByBrand, options = {}) {
       if (!project) throw new Error("Projekt nenalezen.");
 
       await saveParams(project.config);
-      await runScraper(
+      const response = await runScraper(
         project.resultsPath,
         project.id,
         project.runMode || "free_proxy",
         project.proxyProfileId || ""
       );
+      if (response?.access) {
+        runAccessByProjectRef.current[projectId] = response.access;
+        onRunAccessChanged?.(response.access);
+      }
       setScraperRunning(true);
       setScraperPaused(false);
 
@@ -449,6 +466,7 @@ export function useProjects(brandOptions, modelsByBrand, options = {}) {
         )
       );
     } catch (err) {
+      if (err.status === 402) onCreditsRequired?.();
       if (err.status === 409) {
         // Scraper already running - add to queue
         setProjects((prev) => {
@@ -479,7 +497,7 @@ export function useProjects(brandOptions, modelsByBrand, options = {}) {
         );
       }
     }
-  }, []);
+  }, [onCreditsRequired, onRunAccessChanged]);
 
   // ── Actions ──
   const addProject = useCallback(

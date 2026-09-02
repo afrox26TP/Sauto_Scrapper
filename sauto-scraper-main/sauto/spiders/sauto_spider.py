@@ -801,6 +801,11 @@ class SautoSpider(scrapy.Spider):
             )
             self.logger.info(f"Project result output: {self.INTERESTING_OFFERS_FILE}")
 
+        requested_max_items = self._to_int(getattr(self, "max_items", 0), 0)
+        self.max_items = max(0, requested_max_items)
+        if self.max_items:
+            self.logger.info(f"Run item limit: {self.max_items}")
+
         self.notified_ids = set()
         if os.path.exists(self.NOTIFIED_FILE):
             try:
@@ -1508,6 +1513,8 @@ class SautoSpider(scrapy.Spider):
         results = data.get("results", []) or []
 
         for r in results:
+            if self.max_items and self.detail_requests_sent >= self.max_items:
+                break
             self.search_items_seen += 1
             if not self._passes_strict_filter(r):
                 continue
@@ -1545,6 +1552,10 @@ class SautoSpider(scrapy.Spider):
                 r["detail_fetch_ok"] = False
                 r["detail_raw"] = None
                 yield r
+
+        if self.max_items and self.detail_requests_sent >= self.max_items:
+            self.logger.info("Run item limit reached; další stránky se nebudou načítat.")
+            return
 
         params = (response.meta.get("params") or {}).copy()
         limit = max(1, self._to_int(params.get("limit", 35), 35))

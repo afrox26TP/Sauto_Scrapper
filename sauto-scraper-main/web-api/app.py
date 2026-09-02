@@ -28,13 +28,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from starlette.responses import JSONResponse
 
+ROOT_DIR = Path(__file__).resolve().parents[1]
 load_dotenv(Path(__file__).with_name(".env"))
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "sauto" / "spiders"))
-from sauto_spider import CarEvaluator
+sys.path.insert(0, str(ROOT_DIR))
+from sauto.spiders.sauto_spider import CarEvaluator
 
 
-ROOT_DIR = Path(__file__).resolve().parents[1]
 PARAMS_PATH = ROOT_DIR / "params.json"
 API_VERSION = "1.0.0"
 API_START_TIME = time.time()
@@ -45,6 +45,7 @@ MARKED_IDS_PATH = ROOT_DIR / "marked_ids.json"
 CATALOG_CACHE_PATH = ROOT_DIR / "data" / "sauto_catalog_cache.json"
 BILLING_LEDGER_PATH = ROOT_DIR / "data" / "billing_usage.json"
 USERS_DB_PATH = ROOT_DIR / "data" / "users.json"
+USERS_LOCK = threading.RLock()
 CATALOG_CACHE_TTL_S = 24 * 60 * 60
 SAUTO_SEARCH_API = "https://www.sauto.cz/api/v1/items/search"
 SAUTO_ITEM_DETAIL_API = "https://www.sauto.cz/api/v1/items/{}"
@@ -101,6 +102,9 @@ BILLING_RUN_BASE_CZK = float(os.getenv("BILLING_RUN_BASE_CZK", "5.0"))
 BILLING_ITEM_CZK = float(os.getenv("BILLING_ITEM_CZK", "0.02"))
 BILLING_API_CALL_CZK = float(os.getenv("BILLING_API_CALL_CZK", "0.05"))
 BILLING_PROXY_RUN_CZK = float(os.getenv("BILLING_PROXY_RUN_CZK", "0.0"))
+TRIAL_RUNS_INITIAL = max(0, int(os.getenv("TRIAL_RUNS_INITIAL", "2")))
+TRIAL_MAX_ITEMS = max(1, int(os.getenv("TRIAL_MAX_ITEMS", "100")))
+BASIC_BUNDLE_CREDITS = max(1, int(os.getenv("BASIC_BUNDLE_CREDITS", "10")))
 PAYMENT_PROVIDER = (os.getenv("PAYMENT_PROVIDER", "stripe") or "stripe").strip().lower()
 STRIPE_SECRET_KEY = (os.getenv("STRIPE_SECRET_KEY") or "").strip()
 STRIPE_PRICE_ID = (os.getenv("STRIPE_PRICE_ID") or "").strip()
@@ -401,7 +405,13 @@ class ScraperRunner:
         with self.lock:
             return self._status_unlocked()
 
-    def start(self, output_file: str, run_mode: str = "free_proxy", proxy_url: str = "") -> dict[str, Any]:
+    def start(
+        self,
+        output_file: str,
+        run_mode: str = "free_proxy",
+        proxy_url: str = "",
+        max_items: int | None = None,
+    ) -> dict[str, Any]:
         with self.lock:
             if self.process is not None and self.process.poll() is None:
                 raise RuntimeError("Scraper is already running.")
@@ -419,6 +429,8 @@ class ScraperRunner:
                 "-O",
                 str(RAW_OUTPUT_PATH.relative_to(ROOT_DIR)),
             ]
+            if max_items is not None:
+                command.extend(["-a", f"max_items={max(1, int(max_items))}"])
 
             run_mode_norm = "paid_proxy" if str(run_mode or "").strip().lower() == "paid_proxy" else "free_proxy"
             selected_url = str(proxy_url or "").strip()
@@ -766,7 +778,17 @@ class RunQueue:
         self._active_job_id: str | None = None
         self.on_job_finished: Callable[[dict[str, Any]], None] | None = None
 
-    def _new_job(self, output_file: str, project_id: str, run_mode: str, billable: bool, proxy_url: str) -> dict[str, Any]:
+    def _new_job(
+        self,
+        output_file: str,
+        project_id: str,
+        run_mode: str,
+        billable: bool,
+        proxy_url: str,
+        user_id: str,
+        access_kind: str,
+        max_items: int | None,
+    ) -> dict[str, Any]:
         now = time.time()
         job = {
             "job_id": f"job_{uuid.uuid4().hex[:12]}",
@@ -775,6 +797,9 @@ class RunQueue:
             "run_mode": run_mode,
             "proxy_url": str(proxy_url or ""),
             "billable": bool(billable),
+            "user_id": str(user_id or ""),
+            "access_kind": str(access_kind or "credit"),
+            "max_items": max_items,
             "status": "queued",
             "created_at": now,
             "started_at": None,
@@ -791,6 +816,7 @@ class RunQueue:
         safe = dict(job)
         if "proxy_url" in safe:
             safe["proxy_url"] = "***" if str(safe.get("proxy_url") or "").strip() else ""
+        safe.pop("user_id", None)
         return safe
 
     def enqueue(
@@ -800,6 +826,9 @@ class RunQueue:
         run_mode: str = "free_proxy",
         billable: bool = True,
         proxy_url: str = "",
+        user_id: str = "",
+        access_kind: str = "credit",
+        max_items: int | None = None,
     ) -> dict[str, Any]:
         with self._lock:
             job = self._new_job(
@@ -808,6 +837,9 @@ class RunQueue:
                 run_mode=run_mode,
                 billable=billable,
                 proxy_url=proxy_url,
+                user_id=user_id,
+                access_kind=access_kind,
+                max_items=max_items,
             )
             self._pending.append(job)
             started_now = self._try_start_next_unlocked()
@@ -837,6 +869,7 @@ class RunQueue:
                     output_file=job["output_file"],
                     run_mode=str(job.get("run_mode") or "free_proxy"),
                     proxy_url=str(job.get("proxy_url") or ""),
+                    max_items=job.get("max_items"),
                 )
                 return True
             except Exception as exc:
@@ -972,7 +1005,8 @@ class BillingLedger:
     def record_job_usage(self, job: dict[str, Any]) -> None:
         project_id = str(job.get("project_id") or "default")
         output_rel = str(job.get("output_file") or "data/sauto_interesting.json")
-        exit_code = int(job.get("exit_code") or -1)
+        raw_exit_code = job.get("exit_code")
+        exit_code = int(raw_exit_code) if raw_exit_code is not None else -1
         run_mode = str(job.get("run_mode") or "free_proxy")
         billable = bool(job.get("billable", True))
 
@@ -1169,6 +1203,68 @@ def _save_users(users: list[dict[str, Any]]) -> None:
     dump_json(USERS_DB_PATH, users)
 
 
+def _trial_runs_remaining(user: dict[str, Any]) -> int:
+    try:
+        return max(0, int(user.get("trial_runs_remaining", TRIAL_RUNS_INITIAL)))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _run_credits(user: dict[str, Any]) -> int:
+    try:
+        legacy_default = BASIC_BUNDLE_CREDITS if (
+            "run_credits" not in user
+            and _is_paid_status(str(user.get("payment_status") or "none"))
+        ) else 0
+        return max(0, int(user.get("run_credits", legacy_default)))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _mutate_user(user_id: str, mutator: Callable[[dict[str, Any]], Any]) -> tuple[dict[str, Any] | None, Any]:
+    target = str(user_id or "").strip()
+    if not target:
+        return None, None
+    with USERS_LOCK:
+        users = _load_users()
+        for idx, current in enumerate(users):
+            if str(current.get("id") or "").strip() != target:
+                continue
+            result = mutator(current)
+            users[idx] = current
+            _save_users(users)
+            return current, result
+    return None, None
+
+
+def _reserve_run_access(user_id: str) -> dict[str, Any] | None:
+    def reserve(user: dict[str, Any]) -> dict[str, Any] | None:
+        trials = _trial_runs_remaining(user)
+        credits = _run_credits(user)
+        if trials > 0:
+            user["trial_runs_remaining"] = trials - 1
+            user.setdefault("trial_runs_reserved_at", []).append(time.time())
+            return {"kind": "trial", "max_items": TRIAL_MAX_ITEMS}
+        if credits > 0:
+            user["run_credits"] = credits - 1
+            user.setdefault("credit_runs_reserved_at", []).append(time.time())
+            return {"kind": "credit", "max_items": None}
+        return None
+
+    _, access = _mutate_user(user_id, reserve)
+    return access if isinstance(access, dict) else None
+
+
+def _refund_run_access(user_id: str, access_kind: str) -> None:
+    def refund(user: dict[str, Any]) -> None:
+        if access_kind == "trial":
+            user["trial_runs_remaining"] = _trial_runs_remaining(user) + 1
+        elif access_kind == "credit":
+            user["run_credits"] = _run_credits(user) + 1
+
+    _mutate_user(user_id, refund)
+
+
 def _find_user_by_email(email: str) -> dict[str, Any] | None:
     target = str(email or "").strip().lower()
     if not target:
@@ -1195,12 +1291,13 @@ def _update_user(updated_user: dict[str, Any]) -> None:
     target_id = str(updated_user.get("id") or "").strip()
     if not target_id:
         return
-    users = _load_users()
-    for idx, user in enumerate(users):
-        if str(user.get("id") or "").strip() == target_id:
-            users[idx] = updated_user
-            _save_users(users)
-            return
+    with USERS_LOCK:
+        users = _load_users()
+        for idx, user in enumerate(users):
+            if str(user.get("id") or "").strip() == target_id:
+                users[idx] = updated_user
+                _save_users(users)
+                return
 
 
 def _mask_proxy_url(value: str) -> str:
@@ -1343,7 +1440,13 @@ def _auth_user_public(user: dict[str, Any]) -> dict[str, Any]:
         "email": str(user.get("email") or "").lower(),
         "created_at": user.get("created_at"),
         "payment_status": payment_status,
-        "cloud_access": _is_paid_status(payment_status),
+        "cloud_access": _trial_runs_remaining(user) > 0 or _run_credits(user) > 0,
+        "trial_runs_remaining": _trial_runs_remaining(user),
+        "trial_runs_initial": TRIAL_RUNS_INITIAL,
+        "trial_max_items": TRIAL_MAX_ITEMS,
+        "run_credits": _run_credits(user),
+        "basic_bundle_credits": BASIC_BUNDLE_CREDITS,
+        "basic_bundle_price_czk": STRIPE_DEFAULT_AMOUNT_CENTS / 100,
         "free_proxy_access": bool(user.get("local_free_access", True)),
         "local_free_access": bool(user.get("local_free_access", True)),
         "has_free_proxy_config": bool(free_proxy_url),
@@ -1905,7 +2008,20 @@ async def api_key_guard(request: Request, call_next):
 runner = ScraperRunner()
 run_queue = RunQueue(runner)
 billing_ledger = BillingLedger(BILLING_LEDGER_PATH)
-run_queue.on_job_finished = billing_ledger.record_job_usage
+
+
+def _record_completed_job(job: dict[str, Any]) -> None:
+    billing_ledger.record_job_usage(job)
+    raw_exit_code = job.get("exit_code")
+    exit_code = int(raw_exit_code) if raw_exit_code is not None else -1
+    if exit_code != 0:
+        _refund_run_access(
+            str(job.get("user_id") or ""),
+            str(job.get("access_kind") or ""),
+        )
+
+
+run_queue.on_job_finished = _record_completed_job
 
 
 @app.get("/api/health")
@@ -1940,6 +2056,8 @@ def auth_signup(payload: SignupPayload) -> dict[str, Any]:
         "password_salt": salt_hex,
         "created_at": time.time(),
         "payment_status": "none",
+        "trial_runs_remaining": TRIAL_RUNS_INITIAL,
+        "run_credits": 0,
         "local_free_access": True,
         "free_proxy_url": "",
         "paid_proxy_url": "",
@@ -1949,9 +2067,10 @@ def auth_signup(payload: SignupPayload) -> dict[str, Any]:
         "stripe_last_event_at": None,
     }
 
-    users = _load_users()
-    users.append(user)
-    _save_users(users)
+    with USERS_LOCK:
+        users = _load_users()
+        users.append(user)
+        _save_users(users)
 
     token = _issue_auth_token(user)
     return {"token": token, "user": _auth_user_public(user)}
@@ -2240,7 +2359,7 @@ def _resolve_request_user(request: Request) -> dict[str, Any] | None:
 def _user_has_cloud_access(user: dict[str, Any] | None) -> bool:
     if not isinstance(user, dict):
         return False
-    return _is_paid_status(str(user.get("payment_status") or "none"))
+    return _trial_runs_remaining(user) > 0 or _run_credits(user) > 0
 
 
 @app.get("/api/billing/access")
@@ -2255,6 +2374,12 @@ def get_billing_access(request: Request) -> dict[str, Any]:
         "can_run_free_proxy": bool(user.get("local_free_access", True)),
         "can_run_local_free": bool(user.get("local_free_access", True)),
         "payment_status": str(user.get("payment_status") or "none"),
+        "trial_runs_remaining": _trial_runs_remaining(user),
+        "trial_runs_initial": TRIAL_RUNS_INITIAL,
+        "trial_max_items": TRIAL_MAX_ITEMS,
+        "run_credits": _run_credits(user),
+        "basic_bundle_credits": BASIC_BUNDLE_CREDITS,
+        "basic_bundle_price_czk": STRIPE_DEFAULT_AMOUNT_CENTS / 100,
         "checkout_available": bool(STRIPE_PAYMENT_LINK_URL or (STRIPE_SECRET_KEY and (STRIPE_PRICE_ID or STRIPE_DEFAULT_AMOUNT_CENTS > 0))),
     }
 
@@ -2266,7 +2391,9 @@ def create_checkout_session(payload: CheckoutSessionPayload, request: Request) -
         raise HTTPException(status_code=401, detail="Missing or invalid auth token.")
 
     if STRIPE_PAYMENT_LINK_URL:
-        return {"url": STRIPE_PAYMENT_LINK_URL, "provider": "stripe", "mode": "payment_link"}
+        separator = "&" if "?" in STRIPE_PAYMENT_LINK_URL else "?"
+        payment_url = f"{STRIPE_PAYMENT_LINK_URL}{separator}{urlencode({'client_reference_id': str(user.get('id') or '')})}"
+        return {"url": payment_url, "provider": "stripe", "mode": "payment_link"}
 
     if PAYMENT_PROVIDER != "stripe":
         raise HTTPException(status_code=501, detail="Payment provider is not configured.")
@@ -2282,6 +2409,8 @@ def create_checkout_session(payload: CheckoutSessionPayload, request: Request) -
         "cancel_url": cancel_url,
         "client_reference_id": str(user.get("id") or ""),
         "customer_email": str(user.get("email") or ""),
+        "metadata[bundle]": "basic",
+        "metadata[credits]": str(BASIC_BUNDLE_CREDITS),
     }
     if STRIPE_PRICE_ID:
         stripe_payload["line_items[0][price]"] = STRIPE_PRICE_ID
@@ -2289,7 +2418,7 @@ def create_checkout_session(payload: CheckoutSessionPayload, request: Request) -
     else:
         stripe_payload["line_items[0][price_data][currency]"] = STRIPE_DEFAULT_CURRENCY
         stripe_payload["line_items[0][price_data][unit_amount]"] = str(max(100, STRIPE_DEFAULT_AMOUNT_CENTS))
-        stripe_payload["line_items[0][price_data][product_data][name]"] = "Sauto Scraper Cloud credit"
+        stripe_payload["line_items[0][price_data][product_data][name]"] = "Sauto Scraper Basic bundle"
         stripe_payload["line_items[0][quantity]"] = "1"
 
     try:
@@ -2346,6 +2475,7 @@ async def stripe_webhook(request: Request) -> dict[str, Any]:
 
     paid_event_types = {
         "checkout.session.completed",
+        "checkout.session.async_payment_succeeded",
         "invoice.payment_succeeded",
         "customer.subscription.created",
         "customer.subscription.updated",
@@ -2355,18 +2485,41 @@ async def stripe_webhook(request: Request) -> dict[str, Any]:
         "customer.subscription.deleted",
     }
 
-    if event_type in paid_event_types:
-        user["payment_status"] = "paid"
-    elif event_type in unpaid_event_types:
-        user["payment_status"] = "none"
-
-    if customer_id:
-        user["stripe_customer_id"] = customer_id
     subscription_id = str(obj.get("subscription") or obj.get("id") or "").strip()
-    if subscription_id and event_type.startswith("customer.subscription"):
-        user["stripe_subscription_id"] = subscription_id
-    user["stripe_last_event_at"] = time.time()
-    _update_user(user)
+    checkout_session_id = str(obj.get("id") or "").strip() if event_type.startswith("checkout.session.") else ""
+
+    def apply_stripe_event(current: dict[str, Any]) -> None:
+        checkout_is_paid = (
+            event_type == "checkout.session.async_payment_succeeded"
+            or str(obj.get("payment_status") or "").strip().lower() == "paid"
+        )
+        if event_type in paid_event_types and (not event_type.startswith("checkout.session.") or checkout_is_paid):
+            current["payment_status"] = "paid"
+        elif event_type in unpaid_event_types:
+            current["payment_status"] = "none"
+        if customer_id:
+            current["stripe_customer_id"] = customer_id
+        if subscription_id and event_type.startswith("customer.subscription"):
+            current["stripe_subscription_id"] = subscription_id
+
+        if checkout_session_id and checkout_is_paid and event_type in {
+            "checkout.session.completed",
+            "checkout.session.async_payment_succeeded",
+        }:
+            credited_sessions = current.setdefault("credited_checkout_sessions", [])
+            if checkout_session_id not in credited_sessions:
+                metadata = obj.get("metadata") if isinstance(obj.get("metadata"), dict) else {}
+                try:
+                    purchased_credits = max(1, int(metadata.get("credits", BASIC_BUNDLE_CREDITS)))
+                except (TypeError, ValueError):
+                    purchased_credits = BASIC_BUNDLE_CREDITS
+                current["run_credits"] = _run_credits(current) + purchased_credits
+                credited_sessions.append(checkout_session_id)
+                if len(credited_sessions) > 100:
+                    del credited_sessions[:-100]
+        current["stripe_last_event_at"] = time.time()
+
+    _mutate_user(str(user.get("id") or ""), apply_stripe_event)
 
     return {"ok": True}
 
@@ -2408,27 +2561,56 @@ def run_scraper(payload: RunPayload, request: Request) -> dict[str, Any]:
     if user is None:
         raise HTTPException(status_code=401, detail="Login is required for scraping jobs.")
 
+    user_id = str(user.get("id") or "").strip()
+    access = _reserve_run_access(user_id)
+    if access is None:
+        raise HTTPException(
+            status_code=402,
+            detail="Trial byl vyčerpán. Pro pokračování si kup Basic bundle nebo další kredity.",
+        )
+
     selected_profile = _get_user_proxy_profile(user, run_mode, payload.proxy_profile_id or "")
     if selected_profile is None:
+        _refund_run_access(user_id, str(access["kind"]))
         raise HTTPException(status_code=400, detail="Nelze spustit úlohu: Vybraný proxy profil neexistuje.")
 
     run_mode = _normalize_proxy_kind(str(selected_profile.get("kind") or run_mode))
     selected_proxy = str(selected_profile.get("proxy_url") or "").strip()
     if not selected_proxy:
+        _refund_run_access(user_id, str(access["kind"]))
         raise HTTPException(status_code=400, detail="Nelze spustit úlohu: Chybí konfigurace proxy.")
 
     try:
         validated_proxy = _validate_proxy_url(selected_proxy)
     except ValueError as exc:
+        _refund_run_access(user_id, str(access["kind"]))
         raise HTTPException(status_code=400, detail=f"Invalid proxy configuration: {exc}") from exc
 
-    return run_queue.enqueue(
-        output_file=output_file,
-        project_id=project_id,
-        run_mode=run_mode,
-        billable=False,
-        proxy_url=validated_proxy,
-    )
+    try:
+        response = run_queue.enqueue(
+            output_file=output_file,
+            project_id=project_id,
+            run_mode=run_mode,
+            billable=access["kind"] == "credit",
+            proxy_url=validated_proxy,
+            user_id=user_id,
+            access_kind=str(access["kind"]),
+            max_items=access["max_items"],
+        )
+    except Exception:
+        _refund_run_access(user_id, str(access["kind"]))
+        raise
+    job = response.get("job") if isinstance(response, dict) else None
+    if isinstance(job, dict) and job.get("status") == "failed":
+        _refund_run_access(user_id, str(access["kind"]))
+    current_user = _find_user_by_id(user_id) or user
+    response["access"] = {
+        "kind": access["kind"],
+        "max_items": access["max_items"],
+        "trial_runs_remaining": _trial_runs_remaining(current_user),
+        "run_credits": _run_credits(current_user),
+    }
+    return response
 
 
 @app.post("/api/pause")

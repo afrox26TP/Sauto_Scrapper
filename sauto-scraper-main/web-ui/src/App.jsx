@@ -70,6 +70,7 @@ export default function App() {
   const [showLogsModal, setShowLogsModal] = useState(false);
   const [popupLog, setPopupLog] = useState(null);
   const [showStopConfirmModal, setShowStopConfirmModal] = useState(false);
+  const [showCreditsModal, setShowCreditsModal] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState("");
   const toastTimer = useRef(null);
@@ -180,6 +181,34 @@ export default function App() {
     });
   }, [DEFAULT_FREE_PROXY_PROFILE_ID, DEFAULT_PAID_PROXY_PROFILE_ID, createDraftProxyProfile, normalizeProxyProfiles]);
 
+  const handleRunAccessChanged = useCallback((access) => {
+    if (!access) return;
+    setAuthUser((current) => current ? {
+      ...current,
+      trial_runs_remaining: Number(access.trial_runs_remaining ?? current.trial_runs_remaining ?? 0),
+      run_credits: Number(access.run_credits ?? current.run_credits ?? 0),
+    } : current);
+    setBillingAccess((current) => current ? {
+      ...current,
+      can_run_cloud: Number(access.trial_runs_remaining || 0) > 0 || Number(access.run_credits || 0) > 0,
+      trial_runs_remaining: Number(access.trial_runs_remaining ?? current.trial_runs_remaining ?? 0),
+      run_credits: Number(access.run_credits ?? current.run_credits ?? 0),
+    } : current);
+  }, []);
+
+  const handleCreditsRequired = useCallback(() => {
+    window.setTimeout(() => {
+      fetchCurrentUser()
+        .then((user) => {
+          if (user) setAuthUser(user);
+          const trials = Number(user?.trial_runs_remaining || 0);
+          const credits = Number(user?.run_credits || 0);
+          if (trials <= 0 && credits <= 0) setShowCreditsModal(true);
+        })
+        .catch(() => setShowCreditsModal(true));
+    }, 250);
+  }, []);
+
   const {
     projects,
     scraperRunning,
@@ -196,7 +225,11 @@ export default function App() {
     resumeRunningProject,
     stopRunningProject,
     setProjects,
-  } = useProjects(brandOptions, modelsByBrand, { enabled: true });
+  } = useProjects(brandOptions, modelsByBrand, {
+    enabled: true,
+    onRunAccessChanged: handleRunAccessChanged,
+    onCreditsRequired: handleCreditsRequired,
+  });
 
   const [uiActiveProjectId, setUiActiveProjectId] = useState(null);
   const [displayProjectId, setDisplayProjectId] = useState(null);
@@ -1067,29 +1100,34 @@ export default function App() {
   }
 
   function renderPricingPage() {
-    const runBase = Number(billingRates?.run_base_czk ?? 5.0);
-    const item = Number(billingRates?.item_czk ?? 0.02);
     const apiCall = Number(billingRates?.api_call_czk ?? 0.05);
-    const proxyRun = Number(billingRates?.proxy_run_czk ?? 0.0);
-    const exampleItems = 120;
-    const exampleApiCalls = 250;
-    const exampleScraperCost = runBase + (exampleItems * item) + proxyRun;
-    const exampleIntegrationCost = exampleApiCalls * apiCall;
-    const exampleTotalCost = exampleScraperCost + exampleIntegrationCost;
 
     return (
       <div className="pricing-page">
         <div className="pricing-head">
           <h2>Pricing</h2>
-          <p>Platíš jen za skutečné použití. Žádné měsíční plány, žádné minimální commit ceny.</p>
+          <p>Po registraci získáš 2 trial runy zdarma. Potom pokračuješ pomocí předplacených kreditů.</p>
         </div>
 
         <div className="pricing-grid">
           <article className="pricing-card">
-            <h3>Scraper Usage</h3>
-            <p className="pricing-line"><strong>{fmtCzk(runBase)}</strong> za každý dokončený run</p>
-            <p className="pricing-line"><strong>{fmtCzk(item)}</strong> za každý výsledný inzerát v outputu</p>
-            <p className="pricing-line"><strong>{fmtCzk(proxyRun)}</strong> proxy příplatek za run při zapnutých proxy</p>
+            <h3>Basic bundle</h3>
+            <p className="pricing-line">
+              <strong>{fmtCzk(billingAccess?.basic_bundle_price_czk ?? authUser?.basic_bundle_price_czk ?? 99)}</strong>
+              {" "}za {billingAccess?.basic_bundle_credits ?? authUser?.basic_bundle_credits ?? 10} kreditů
+            </p>
+            <p className="pricing-note">1 kredit = 1 dokončený scraping run. Kredity můžeš kdykoliv dokoupit.</p>
+            {isAuthenticated ? (
+              <p className="pricing-note">
+                Aktuálně: {billingAccess?.trial_runs_remaining ?? authUser?.trial_runs_remaining ?? 0} trial runů a {billingAccess?.run_credits ?? authUser?.run_credits ?? 0} kreditů.
+              </p>
+            ) : null}
+          </article>
+
+          <article className="pricing-card">
+            <h3>Free trial</h3>
+            <p className="pricing-line"><strong>2 runy zdarma</strong> po vytvoření účtu</p>
+            <p className="pricing-note">Každý trial run zpracuje maximálně 100 aut. Po vyčerpání je potřeba alespoň Basic bundle.</p>
           </article>
 
           <article className="pricing-card">
@@ -1099,9 +1137,9 @@ export default function App() {
           </article>
 
           <article className="pricing-card pricing-card-wide">
-            <h3>Jak se počítá cena</h3>
+            <h3>Jak fungují kredity</h3>
             <p className="pricing-formula">
-              Cena runu = <code>run_base</code> + (<code>počet výsledků * item_rate</code>) + <code>proxy_run</code>
+              1 spuštění scraperu = <code>1 kredit</code>
             </p>
             <p className="pricing-formula">
               Cena integrace = <code>počet API callů * api_call_rate</code>
@@ -1109,18 +1147,9 @@ export default function App() {
             <div className="pricing-example">
               <h4>Příklad</h4>
               <p className="pricing-formula">
-                1 run s <strong>{exampleItems}</strong> výsledky: <code>{fmtCzk(runBase)}</code> + ({exampleItems} * <code>{fmtCzk(item)}</code>) + <code>{fmtCzk(proxyRun)}</code> = <strong>{fmtCzk(exampleScraperCost)}</strong>
-              </p>
-              <p className="pricing-formula">
-                Integrace <strong>{exampleApiCalls}</strong> API callů: {exampleApiCalls} * <code>{fmtCzk(apiCall)}</code> = <strong>{fmtCzk(exampleIntegrationCost)}</strong>
-              </p>
-              <p className="pricing-formula pricing-total">
-                Celkem v příkladu: <strong>{fmtCzk(exampleTotalCost)}</strong>
+                Basic bundle s <strong>{billingAccess?.basic_bundle_credits ?? authUser?.basic_bundle_credits ?? 10} kredity</strong> umožní stejný počet dalších spuštění scraperu.
               </p>
             </div>
-            <p className="pricing-note">
-              Aktuální sazby načítáme z backendu přes <code>/api/billing/rates</code>.
-            </p>
             <p className="pricing-note">
               Rezimy s vlastni proxy pouzivaji endpointy, ktere si uzivatel doda sam. Prenos a GB se uctuji u tveho proxy providera, ne v teto aplikaci.
             </p>
@@ -1623,6 +1652,39 @@ export default function App() {
               {authMode === "signup" ? "Máš účet? Přihlas se" : "Nemáš účet? Vytvoř ho"}
             </button>
           </form>
+        </div>
+      )}
+
+      {showCreditsModal && (
+        <div className="log-popup-overlay" onClick={() => setShowCreditsModal(false)}>
+          <div className="log-popup stop-confirm-popup" onClick={(e) => e.stopPropagation()}>
+            <div className="log-popup-head">
+              <strong>Free trial byl vyčerpán</strong>
+              <button className="debug-modal-close" onClick={() => setShowCreditsModal(false)}>
+                <X className="ui-icon" aria-hidden="true" />
+              </button>
+            </div>
+            <div className="stop-confirm-body">
+              <p>Využil jsi oba bezplatné běhy, každý omezený na 100 aut.</p>
+              <p className="stop-confirm-warning">
+                Pro další scraping potřebuješ alespoň Basic bundle. Další kredity můžeš kdykoliv dokoupit.
+              </p>
+            </div>
+            <div className="log-popup-foot">
+              <button className="btn-sm secondary" onClick={() => setShowCreditsModal(false)}>
+                Později
+              </button>
+              <button
+                className="btn-sm"
+                onClick={() => {
+                  setShowCreditsModal(false);
+                  navigateTo("pricing");
+                }}
+              >
+                Zobrazit Basic bundle
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

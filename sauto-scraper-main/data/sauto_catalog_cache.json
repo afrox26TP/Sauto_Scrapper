@@ -147,7 +147,7 @@
       "collector_version": 7
     },
     "alfa-romeo": {
-      "updated_at": 1785495163,
+      "updated_at": 1786941823,
       "items": [
         {
           "value": "147",
@@ -318,11 +318,15 @@
     }
   },
   "brands": {
-    "updated_at": 1785531614,
+    "updated_at": 1786938140,
     "items": [
       {
         "value": "abarth",
         "label": "Abarth"
+      },
+      {
+        "value": "aixam",
+        "label": "Aixam"
       },
       {
         "value": "alfa-romeo",
@@ -337,10 +341,6 @@
         "label": "Audi"
       },
       {
-        "value": "baic",
-        "label": "BAIC"
-      },
-      {
         "value": "bentley",
         "label": "Bentley"
       },
@@ -349,12 +349,12 @@
         "label": "BMW"
       },
       {
-        "value": "byd",
-        "label": "BYD"
-      },
-      {
         "value": "cadillac",
         "label": "Cadillac"
+      },
+      {
+        "value": "caterham",
+        "label": "Caterham"
       },
       {
         "value": "chevrolet",
@@ -379,10 +379,6 @@
       {
         "value": "dodge",
         "label": "Dodge"
-      },
-      {
-        "value": "dongfeng",
-        "label": "Dongfeng"
       },
       {
         "value": "ds",
@@ -413,10 +409,6 @@
         "label": "Infiniti"
       },
       {
-        "value": "isuzu",
-        "label": "Isuzu"
-      },
-      {
         "value": "jaguar",
         "label": "Jaguar"
       },
@@ -429,20 +421,32 @@
         "label": "Kia"
       },
       {
-        "value": "land-rover",
-        "label": "Land Rover"
+        "value": "lada",
+        "label": "Lada"
       },
       {
-        "value": "leapmotor",
-        "label": "Leapmotor"
+        "value": "lamborghini",
+        "label": "Lamborghini"
+      },
+      {
+        "value": "land-rover",
+        "label": "Land Rover"
       },
       {
         "value": "lexus",
         "label": "Lexus"
       },
       {
+        "value": "maserati",
+        "label": "Maserati"
+      },
+      {
         "value": "mazda",
         "label": "Mazda"
+      },
+      {
+        "value": "mclaren",
+        "label": "McLaren"
       },
       {
         "value": "mercedes-benz",
@@ -477,12 +481,12 @@
         "label": "Peugeot"
       },
       {
-        "value": "polestar",
-        "label": "Polestar"
-      },
-      {
         "value": "porsche",
         "label": "Porsche"
+      },
+      {
+        "value": "ram",
+        "label": "RAM"
       },
       {
         "value": "renault",
@@ -499,6 +503,10 @@
       {
         "value": "skoda",
         "label": "Škoda"
+      },
+      {
+        "value": "smart",
+        "label": "Smart"
       },
       {
         "value": "ssangyong",
@@ -521,6 +529,10 @@
         "label": "Toyota"
       },
       {
+        "value": "triumph",
+        "label": "Triumph"
+      },
+      {
         "value": "volkswagen",
         "label": "Volkswagen"
       },
@@ -529,17 +541,17 @@
         "label": "Volvo"
       },
       {
-        "value": "xpeng",
-        "label": "XPENG"
+        "value": "voyah",
+        "label": "Voyah"
       },
       {
-        "value": "zeekr",
-        "label": "Zeekr"
+        "value": "xiaomi",
+        "label": "Xiaomi"
       }
     ]
   },
   "bodies": {
-    "updated_at": 1785503394,
+    "updated_at": 1787324117,
     "items": [
       {
         "value": "hatchback",
@@ -578,17 +590,13 @@
         "label": "SUV"
       },
       {
-        "value": "terenni",
-        "label": "Terénní"
-      },
-      {
         "value": "van",
         "label": "VAN"
       }
     ]
   },
   "equipment": {
-    "updated_at": 1785532757,
+    "updated_at": 1786938213,
     "items": [
       {
         "value": "abs",
