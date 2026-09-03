@@ -68,6 +68,22 @@ export async function fetchCurrentUser() {
   return data?.user || null;
 }
 
+export async function fetchPersonalApiKeyStatus() {
+  return request("GET", "/api/auth/api-key/status");
+}
+
+export async function createPersonalApiKey() {
+  return request("POST", "/api/auth/api-key", {});
+}
+
+export async function rotatePersonalApiKey() {
+  return request("POST", "/api/auth/api-key/rotate", {});
+}
+
+export async function revokePersonalApiKey() {
+  return request("DELETE", "/api/auth/api-key");
+}
+
 export async function fetchParams() {
   const data = await request("GET", "/api/params");
   return data.params || {};

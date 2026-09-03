@@ -8,7 +8,7 @@ import ProjectQueued from "./components/ProjectQueued";
 import ProjectResults from "./components/ProjectResults";
 import TerminalBar from "./components/TerminalBar";
 import { useProjects } from "./hooks/useProjects";
-import { clearAuthToken, createCheckoutSession, fetchBillingAccess, fetchBillingRates, fetchBrands, fetchBodies, fetchCurrentUser, fetchModels, fetchModelCounts, fetchResults, fetchEquipment, fetchProxyConfig, saveProxyConfig, testProxyConnection, getAuthToken, login, signup } from "./utils/api";
+import { clearAuthToken, createCheckoutSession, createPersonalApiKey, fetchBillingAccess, fetchBillingRates, fetchBrands, fetchBodies, fetchCurrentUser, fetchModels, fetchModelCounts, fetchPersonalApiKeyStatus, fetchResults, fetchEquipment, fetchProxyConfig, revokePersonalApiKey, rotatePersonalApiKey, saveProxyConfig, testProxyConnection, getAuthToken, login, signup } from "./utils/api";
 import { csvToArray, uniq } from "./utils/scoring";
 
 export default function App() {
@@ -58,6 +58,9 @@ export default function App() {
   const [proxyTestStatus, setProxyTestStatus] = useState({ state: "idle", message: "" });
   const [helpProviderId, setHelpProviderId] = useState("webshare");
   const [checkoutBusy, setCheckoutBusy] = useState(false);
+  const [apiKeyStatus, setApiKeyStatus] = useState(null);
+  const [revealedApiKey, setRevealedApiKey] = useState("");
+  const [apiKeyBusy, setApiKeyBusy] = useState(false);
   const [brandOptions, setBrandOptions] = useState([]);
   const [bodyOptions, setBodyOptions] = useState([]);
   const [equipmentOptions, setEquipmentOptions] = useState([]);
@@ -186,12 +189,14 @@ export default function App() {
     setAuthUser((current) => current ? {
       ...current,
       trial_runs_remaining: Number(access.trial_runs_remaining ?? current.trial_runs_remaining ?? 0),
+      credit_balance: Number(access.credit_balance ?? current.credit_balance ?? 0),
       run_credits: Number(access.run_credits ?? current.run_credits ?? 0),
     } : current);
     setBillingAccess((current) => current ? {
       ...current,
-      can_run_cloud: Number(access.trial_runs_remaining || 0) > 0 || Number(access.run_credits || 0) > 0,
+      can_run_cloud: Number(access.trial_runs_remaining || 0) > 0 || Number(access.credit_balance || 0) >= Number(current.scrape_run_credit_cost || 100),
       trial_runs_remaining: Number(access.trial_runs_remaining ?? current.trial_runs_remaining ?? 0),
+      credit_balance: Number(access.credit_balance ?? current.credit_balance ?? 0),
       run_credits: Number(access.run_credits ?? current.run_credits ?? 0),
     } : current);
   }, []);
@@ -202,7 +207,7 @@ export default function App() {
         .then((user) => {
           if (user) setAuthUser(user);
           const trials = Number(user?.trial_runs_remaining || 0);
-          const credits = Number(user?.run_credits || 0);
+          const credits = Number(user?.credit_balance || 0);
           if (trials <= 0 && credits <= 0) setShowCreditsModal(true);
         })
         .catch(() => setShowCreditsModal(true));
@@ -226,7 +231,7 @@ export default function App() {
     stopRunningProject,
     setProjects,
   } = useProjects(brandOptions, modelsByBrand, {
-    enabled: true,
+    enabled: isAuthenticated,
     onRunAccessChanged: handleRunAccessChanged,
     onCreditsRequired: handleCreditsRequired,
   });
@@ -345,6 +350,15 @@ export default function App() {
 
   useEffect(() => {
     if (!isAuthenticated) {
+      setApiKeyStatus(null);
+      setRevealedApiKey("");
+      return;
+    }
+    fetchPersonalApiKeyStatus().then(setApiKeyStatus).catch(() => setApiKeyStatus(null));
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
       setProxyConfig({
         has_free_proxy_config: false,
         has_paid_proxy_config: false,
@@ -439,12 +453,13 @@ export default function App() {
     return `${phases[tickerStep]} ${dots[tickerStep]}`;
   }
 
-  // Fetch catalog data on mount
+  // Protected catalog endpoints are loaded only after authentication.
   useEffect(() => {
+    if (!isAuthenticated) return;
     fetchBrands().then(setBrandOptions).catch(() => {});
     fetchBodies().then(setBodyOptions).catch(() => {});
     fetchEquipment().then(setEquipmentOptions).catch(() => {});
-  }, []);
+  }, [isAuthenticated]);
 
   // Fetch models for selected brands
   const currentProject = useMemo(() => {
@@ -473,7 +488,7 @@ export default function App() {
   }, [currentProject]);
 
   useEffect(() => {
-    if (isAuthenticated) return;
+    if (!isAuthenticated) return;
     if (!currentProject?.id || !currentProject?.resultsPath) return;
     fetchResults(currentProject.resultsPath)
       .then((data) => {
@@ -569,6 +584,41 @@ export default function App() {
       setCheckoutBusy(false);
     }
   }, [checkoutBusy, isAuthenticated]);
+
+  const handleCreateOrRotateApiKey = useCallback(async () => {
+    if (apiKeyBusy || !isAuthenticated) return;
+    const rotating = Boolean(apiKeyStatus?.enabled);
+    if (rotating && !window.confirm("Rotací se starý API klíč okamžitě zruší. Pokračovat?")) return;
+    setApiKeyBusy(true);
+    try {
+      const data = rotating ? await rotatePersonalApiKey() : await createPersonalApiKey();
+      setRevealedApiKey(String(data?.api_key || ""));
+      setApiKeyStatus({ enabled: true, created_at: data?.created_at || Date.now() / 1000 });
+      setAuthUser((current) => current ? { ...current, has_personal_api_key: true } : current);
+      showToast(rotating ? "API klíč byl bezpečně otočen." : "API klíč byl vytvořen.", "info");
+    } catch (err) {
+      showToast(err?.message || "API klíč se nepodařilo vytvořit.", "error");
+    } finally {
+      setApiKeyBusy(false);
+    }
+  }, [apiKeyBusy, apiKeyStatus?.enabled, isAuthenticated]);
+
+  const handleRevokeApiKey = useCallback(async () => {
+    if (apiKeyBusy || !apiKeyStatus?.enabled) return;
+    if (!window.confirm("Opravdu zrušit API klíč? Všechny integrace s tímto klíčem okamžitě přestanou fungovat.")) return;
+    setApiKeyBusy(true);
+    try {
+      await revokePersonalApiKey();
+      setApiKeyStatus({ enabled: false });
+      setRevealedApiKey("");
+      setAuthUser((current) => current ? { ...current, has_personal_api_key: false } : current);
+      showToast("API klíč byl zrušen.", "info");
+    } catch (err) {
+      showToast(err?.message || "API klíč se nepodařilo zrušit.", "error");
+    } finally {
+      setApiKeyBusy(false);
+    }
+  }, [apiKeyBusy, apiKeyStatus?.enabled]);
 
   const handleProxyProfileChange = useCallback((profileId, field, value) => {
     const id = String(profileId || "");
@@ -946,6 +996,7 @@ export default function App() {
   ]);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     selectedBrands.forEach((brand) => {
       const b = String(brand || "").trim();
       const hasLoadedModels = Object.prototype.hasOwnProperty.call(modelsByBrand, b);
@@ -972,9 +1023,10 @@ export default function App() {
           setLoadingModelsByBrand((prev) => ({ ...prev, [b]: false }));
         });
     });
-  }, [selectedBrands, modelsByBrand]);
+  }, [isAuthenticated, selectedBrands, modelsByBrand]);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     selectedBrands.forEach((brand) => {
       const b = String(brand || "").trim();
       const models = modelsByBrand[b];
@@ -1016,7 +1068,7 @@ export default function App() {
           setLoadingModelCountsByBrand((prev) => ({ ...prev, [b]: false }));
         });
     });
-  }, [selectedBrands, modelsByBrand, loadingModelCountsByBrand, modelCountsKeyByBrand, modelCountsRequestKey, currentProject?.config]);
+  }, [isAuthenticated, selectedBrands, modelsByBrand, loadingModelCountsByBrand, modelCountsKeyByBrand, modelCountsRequestKey, currentProject?.config]);
 
   // Refresh project results
   const refreshProjectResults = useCallback(async () => {
@@ -1100,13 +1152,16 @@ export default function App() {
   }
 
   function renderPricingPage() {
-    const apiCall = Number(billingRates?.api_call_czk ?? 0.05);
+    const bundleCredits = Number(billingAccess?.basic_bundle_credits ?? authUser?.basic_bundle_credits ?? 1000);
+    const runCreditCost = Number(billingAccess?.scrape_run_credit_cost ?? authUser?.scrape_run_credit_cost ?? 100);
+    const apiCallCreditCost = Number(billingAccess?.integration_api_call_credit_cost ?? authUser?.integration_api_call_credit_cost ?? 1);
+    const creditBalance = Number(billingAccess?.credit_balance ?? authUser?.credit_balance ?? 0);
 
     return (
       <div className="pricing-page">
         <div className="pricing-head">
           <h2>Pricing</h2>
-          <p>Po registraci získáš 2 trial runy zdarma. Potom pokračuješ pomocí předplacených kreditů.</p>
+          <p>Jeden společný kreditní zůstatek pro scraper i integrační API. Žádné skryté poplatky.</p>
         </div>
 
         <div className="pricing-grid">
@@ -1114,12 +1169,12 @@ export default function App() {
             <h3>Basic bundle</h3>
             <p className="pricing-line">
               <strong>{fmtCzk(billingAccess?.basic_bundle_price_czk ?? authUser?.basic_bundle_price_czk ?? 99)}</strong>
-              {" "}za {billingAccess?.basic_bundle_credits ?? authUser?.basic_bundle_credits ?? 10} kreditů
+              {" "}za {bundleCredits} kreditů
             </p>
-            <p className="pricing-note">1 kredit = 1 dokončený scraping run. Kredity můžeš kdykoliv dokoupit.</p>
+            <p className="pricing-note">Balíček vystačí až na {Math.floor(bundleCredits / runCreditCost)} scraping runů nebo {Math.floor(bundleCredits / apiCallCreditCost)} API callů.</p>
             {isAuthenticated ? (
               <p className="pricing-note">
-                Aktuálně: {billingAccess?.trial_runs_remaining ?? authUser?.trial_runs_remaining ?? 0} trial runů a {billingAccess?.run_credits ?? authUser?.run_credits ?? 0} kreditů.
+                Aktuální zůstatek: <strong>{creditBalance} kreditů</strong> · trial runy: {billingAccess?.trial_runs_remaining ?? authUser?.trial_runs_remaining ?? 0}
               </p>
             ) : null}
           </article>
@@ -1132,22 +1187,22 @@ export default function App() {
 
           <article className="pricing-card">
             <h3>API Integrace</h3>
-            <p className="pricing-line"><strong>{fmtCzk(apiCall)}</strong> za každý API call s hlavičkou <code>x-api-key</code></p>
-            <p className="pricing-note">Bez <code>x-api-key</code> se call nepočítá jako integrační usage.</p>
+            <p className="pricing-line"><strong>{apiCallCreditCost} kredit</strong> za každý API call s osobním <code>x-api-key</code></p>
+            <p className="pricing-note">Kredit se atomicky odečte před zpracováním požadavku. Bez dostatečného zůstatku API vrátí HTTP 402.</p>
           </article>
 
           <article className="pricing-card pricing-card-wide">
             <h3>Jak fungují kredity</h3>
             <p className="pricing-formula">
-              1 spuštění scraperu = <code>1 kredit</code>
+              1 spuštění scraperu = <code>{runCreditCost} kreditů</code>
             </p>
             <p className="pricing-formula">
-              Cena integrace = <code>počet API callů * api_call_rate</code>
+              Integrační API = <code>{apiCallCreditCost} kredit × počet callů</code>
             </p>
             <div className="pricing-example">
               <h4>Příklad</h4>
               <p className="pricing-formula">
-                Basic bundle s <strong>{billingAccess?.basic_bundle_credits ?? authUser?.basic_bundle_credits ?? 10} kredity</strong> umožní stejný počet dalších spuštění scraperu.
+                Basic bundle s <strong>{bundleCredits} kredity</strong> umožní například {Math.floor(bundleCredits / runCreditCost)} runů nebo {Math.floor(bundleCredits / apiCallCreditCost)} API callů.
               </p>
             </div>
             <p className="pricing-note">
@@ -1180,6 +1235,39 @@ export default function App() {
                 <ArrowLeft className="ui-icon" aria-hidden="true" /> Zpět na dashboard
               </button>
             </div>
+          </article>
+
+          <article className="pricing-card pricing-card-wide">
+            <h3>Osobní API klíč</h3>
+            {!isAuthenticated ? (
+              <p className="pricing-note">Pro vytvoření osobního API klíče se nejdřív přihlas.</p>
+            ) : (
+              <>
+                <p className="pricing-note">
+                  Klíč je svázaný s tvým účtem. Na serveru se ukládá pouze jeho HMAC hash; celý klíč se zobrazí jen jednou.
+                </p>
+                {revealedApiKey ? (
+                  <div className="api-key-reveal">
+                    <strong>Ulož klíč nyní — znovu se nezobrazí:</strong>
+                    <input value={revealedApiKey} readOnly aria-label="Nový osobní API klíč" />
+                    <button className="btn-sm" onClick={() => navigator.clipboard.writeText(revealedApiKey)}>
+                      Kopírovat
+                    </button>
+                  </div>
+                ) : null}
+                <div className="pricing-actions">
+                  <button className="btn-primary" onClick={handleCreateOrRotateApiKey} disabled={apiKeyBusy}>
+                    {apiKeyBusy ? "Zpracovávám..." : apiKeyStatus?.enabled ? "Rotovat API klíč" : "Vytvořit API klíč"}
+                  </button>
+                  {apiKeyStatus?.enabled ? (
+                    <button className="btn-sm danger" onClick={handleRevokeApiKey} disabled={apiKeyBusy}>
+                      Zrušit API klíč
+                    </button>
+                  ) : null}
+                </div>
+                <p className="pricing-note">Použití: hlavička <code>x-api-key: autoidx_sk_...</code>. Rotace okamžitě zneplatní starý klíč.</p>
+              </>
+            )}
           </article>
 
           <article className="pricing-card pricing-card-wide">
@@ -1430,6 +1518,7 @@ export default function App() {
             onUpdateProject={updateActiveProject}
             onRun={handleRunProject}
             isRunning={scraperRunning}
+            runsEnabled={false}
           />
         );
       case "running":
@@ -1527,7 +1616,13 @@ export default function App() {
             )}
           </button>
           {authBooting ? <span className="auth-user-chip">Auth...</span> : null}
-          {!authBooting && isAuthenticated ? <span className="auth-user-chip">{authUser?.email || "user"}</span> : null}
+          {!authBooting && isAuthenticated ? (
+            <span className="auth-user-chip">
+              {authUser?.email || "user"} · {Number(authUser?.trial_runs_remaining || 0) > 0
+                ? `Trial ${authUser.trial_runs_remaining}/${authUser?.trial_runs_initial ?? 2}`
+                : `${authUser?.credit_balance ?? 0} kreditů`}
+            </span>
+          ) : null}
           {!authBooting && isAuthenticated ? (
             <button type="button" className="theme-toggle" onClick={handleLogout} title="Odhlásit">
               Logout
@@ -1565,18 +1660,40 @@ export default function App() {
         <div className="main-content">
           {currentPage === "dashboard" && !isAuthenticated ? (
             <div className="auth-dashboard-cta">
-              <h2>Prihlaseni je volitelne</h2>
-              <p>Nastaveni i spusteni projektu funguje bez loginu. Prihlaseni je potreba hlavne pro checkout a billing.</p>
+              <h2>Vyzkoušej 2 scraping runy zdarma</h2>
+              <p>Po vytvoření účtu získáš 2 trial runy, každý maximálně pro 100 aut. Potom můžeš pokračovat pomocí kreditů.</p>
               <button
                 type="button"
                 className="btn-primary"
                 onClick={() => {
-                  setAuthMode("login");
+                  setAuthMode("signup");
                   setAuthError("");
                   setShowAuthModal(true);
                 }}
               >
-                Otevřít login
+                Vytvořit účet a získat trial
+              </button>
+            </div>
+          ) : null}
+          {currentPage === "dashboard" && isAuthenticated ? (
+            <div className="auth-dashboard-cta trial-dashboard-cta">
+              {Number(authUser?.trial_runs_remaining || 0) > 0 ? (
+                <>
+                  <h2>Free trial: zbývá {authUser.trial_runs_remaining} z {authUser?.trial_runs_initial ?? 2} runů</h2>
+                  <p>Každý trial run zpracuje maximálně {authUser?.trial_max_items ?? 100} aut.</p>
+                </>
+              ) : (
+                <>
+                  <h2>Kreditní zůstatek: {authUser?.credit_balance ?? 0}</h2>
+                  <p>{Number(authUser?.credit_balance || 0) >= Number(authUser?.scrape_run_credit_cost || 100)
+                    ? `Jeden scraping run stojí ${authUser?.scrape_run_credit_cost ?? 100} kreditů.`
+                    : "Trial je vyčerpaný. Pro další scraping potřebuješ Basic bundle."}</p>
+                </>
+              )}
+              <button type="button" className="btn-primary" onClick={() => navigateTo("pricing")}>
+                {Number(authUser?.trial_runs_remaining || 0) > 0 || Number(authUser?.credit_balance || 0) >= Number(authUser?.scrape_run_credit_cost || 100)
+                  ? "Zobrazit kredity"
+                  : "Koupit Basic bundle"}
               </button>
             </div>
           ) : null}

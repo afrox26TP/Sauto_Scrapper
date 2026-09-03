@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import { Play, LoaderCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { Play, LoaderCircle, ChevronDown, ChevronUp, CircleX } from "lucide-react";
 import ProjectNameInput from "./ProjectNameInput";
 import BrandSelector from "./BrandSelector";
 import ModelSelector from "./ModelSelector";
@@ -98,6 +98,7 @@ export default function ProjectSetup({
   onUpdateProject,
   onRun,
   isRunning,
+  runsEnabled = true,
 }) {
   const config = project.config || {};
   const runMode = project?.runMode === "paid_proxy" ? "paid_proxy" : "free_proxy";
@@ -210,9 +211,22 @@ export default function ProjectSetup({
   return (
 <div className="project-setup">
       <div className={`project-header-sticky ${isScrolled ? 'scrolled' : ''}`}>
-        <button className="btn-primary btn-run" onClick={() => onRun(project.id)} disabled={busy}>
-          {busy ? <><LoaderCircle className="ui-icon icon-spin" /> Pracuji…</> : <><Play className="ui-icon" /> Spustit scraper</>}
-        </button>
+        <span
+          className="run-button-tooltip"
+          title={runsEnabled ? "" : "Krátkodobě mimo provoz – dokončujeme kreditní systém."}
+        >
+          <button
+            className={`btn-primary btn-run${runsEnabled ? "" : " btn-run-unavailable"}`}
+            onClick={() => onRun(project.id)}
+            disabled={busy || !runsEnabled}
+          >
+            {!runsEnabled
+              ? <><CircleX className="ui-icon" /> Krátkodobě mimo provoz</>
+              : busy
+                ? <><LoaderCircle className="ui-icon icon-spin" /> Pracuji…</>
+                : <><Play className="ui-icon" /> Spustit scraper</>}
+          </button>
+        </span>
         <div className="project-title-mode-wrap">
           <ProjectNameInput
             name={project.name}

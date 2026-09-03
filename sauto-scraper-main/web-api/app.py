@@ -55,18 +55,13 @@ PUBLIC_API_PATHS = {
     "/api/health",
     "/api/auth/signup",
     "/api/auth/login",
-    "/api/results",
-    "/api/results/files",
-    "/api/results/export",
-    "/api/catalog/brands",
-    "/api/catalog/models",
-    "/api/catalog/model-counts",
-    "/api/catalog/estimate",
-    "/api/catalog/equipment",
-    "/api/catalog/bodies",
+    "/api/billing/webhook/stripe",
 }
 AUTH_REQUIRED_PATHS = {
     "/api/auth/me",
+    "/api/auth/api-key",
+    "/api/auth/api-key/rotate",
+    "/api/auth/api-key/status",
     "/api/pause",
     "/api/resume",
     "/api/stop",
@@ -104,7 +99,12 @@ BILLING_API_CALL_CZK = float(os.getenv("BILLING_API_CALL_CZK", "0.05"))
 BILLING_PROXY_RUN_CZK = float(os.getenv("BILLING_PROXY_RUN_CZK", "0.0"))
 TRIAL_RUNS_INITIAL = max(0, int(os.getenv("TRIAL_RUNS_INITIAL", "2")))
 TRIAL_MAX_ITEMS = max(1, int(os.getenv("TRIAL_MAX_ITEMS", "100")))
-BASIC_BUNDLE_CREDITS = max(1, int(os.getenv("BASIC_BUNDLE_CREDITS", "10")))
+BASIC_BUNDLE_CREDITS = max(1, int(os.getenv("BASIC_BUNDLE_CREDITS", "1000")))
+SCRAPE_RUN_CREDIT_COST = max(1, int(os.getenv("SCRAPE_RUN_CREDIT_COST", "100")))
+INTEGRATION_API_CALL_CREDIT_COST = max(1, int(os.getenv("INTEGRATION_API_CALL_CREDIT_COST", "1")))
+SCRAPER_RUNS_ENABLED = (os.getenv("SCRAPER_RUNS_ENABLED", "true") or "true").strip().lower() in {
+    "1", "true", "yes", "on",
+}
 PAYMENT_PROVIDER = (os.getenv("PAYMENT_PROVIDER", "stripe") or "stripe").strip().lower()
 STRIPE_SECRET_KEY = (os.getenv("STRIPE_SECRET_KEY") or "").strip()
 STRIPE_PRICE_ID = (os.getenv("STRIPE_PRICE_ID") or "").strip()
@@ -1119,8 +1119,18 @@ def load_json(path: Path, fallback: Any) -> Any:
 
 def dump_json(path: Path, data: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as file:
-        json.dump(data, file, ensure_ascii=False, indent=2)
+    temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+    try:
+        with temporary.open("w", encoding="utf-8") as file:
+            json.dump(data, file, ensure_ascii=False, indent=2)
+            file.flush()
+            os.fsync(file.fileno())
+        os.replace(temporary, path)
+    finally:
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 def _b64url_encode(raw: bytes) -> str:
@@ -1210,15 +1220,43 @@ def _trial_runs_remaining(user: dict[str, Any]) -> int:
         return 0
 
 
-def _run_credits(user: dict[str, Any]) -> int:
+def _legacy_run_credits(user: dict[str, Any]) -> int:
     try:
-        legacy_default = BASIC_BUNDLE_CREDITS if (
+        legacy_default = max(1, BASIC_BUNDLE_CREDITS // SCRAPE_RUN_CREDIT_COST) if (
             "run_credits" not in user
             and _is_paid_status(str(user.get("payment_status") or "none"))
         ) else 0
         return max(0, int(user.get("run_credits", legacy_default)))
     except (TypeError, ValueError):
         return 0
+
+
+def _credit_balance(user: dict[str, Any]) -> int:
+    try:
+        if "credit_balance" in user:
+            return max(0, int(user.get("credit_balance", 0)))
+        return _legacy_run_credits(user) * SCRAPE_RUN_CREDIT_COST
+    except (TypeError, ValueError):
+        return 0
+
+
+def _api_key_digest(api_key: str) -> str:
+    return hmac.new(
+        AUTH_SECRET.encode("utf-8"),
+        str(api_key or "").strip().encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+
+
+def _find_user_by_api_key(api_key: str) -> dict[str, Any] | None:
+    candidate = _api_key_digest(api_key)
+    if not api_key or not candidate:
+        return None
+    for user in _load_users():
+        stored = str(user.get("personal_api_key_hash") or "").strip()
+        if stored and hmac.compare_digest(candidate, stored):
+            return user
+    return None
 
 
 def _mutate_user(user_id: str, mutator: Callable[[dict[str, Any]], Any]) -> tuple[dict[str, Any] | None, Any]:
@@ -1240,15 +1278,16 @@ def _mutate_user(user_id: str, mutator: Callable[[dict[str, Any]], Any]) -> tupl
 def _reserve_run_access(user_id: str) -> dict[str, Any] | None:
     def reserve(user: dict[str, Any]) -> dict[str, Any] | None:
         trials = _trial_runs_remaining(user)
-        credits = _run_credits(user)
+        credits = _credit_balance(user)
         if trials > 0:
             user["trial_runs_remaining"] = trials - 1
             user.setdefault("trial_runs_reserved_at", []).append(time.time())
             return {"kind": "trial", "max_items": TRIAL_MAX_ITEMS}
-        if credits > 0:
-            user["run_credits"] = credits - 1
+        if credits >= SCRAPE_RUN_CREDIT_COST:
+            user["credit_balance"] = credits - SCRAPE_RUN_CREDIT_COST
+            user.pop("run_credits", None)
             user.setdefault("credit_runs_reserved_at", []).append(time.time())
-            return {"kind": "credit", "max_items": None}
+            return {"kind": "credit", "max_items": None, "credit_cost": SCRAPE_RUN_CREDIT_COST}
         return None
 
     _, access = _mutate_user(user_id, reserve)
@@ -1260,9 +1299,41 @@ def _refund_run_access(user_id: str, access_kind: str) -> None:
         if access_kind == "trial":
             user["trial_runs_remaining"] = _trial_runs_remaining(user) + 1
         elif access_kind == "credit":
-            user["run_credits"] = _run_credits(user) + 1
+            user["credit_balance"] = _credit_balance(user) + SCRAPE_RUN_CREDIT_COST
+            user.pop("run_credits", None)
 
     _mutate_user(user_id, refund)
+
+
+def _consume_api_call_credit(user_id: str, path: str, method: str) -> tuple[bool, int]:
+    event_id = f"api_{uuid.uuid4().hex}"
+
+    def consume(user: dict[str, Any]) -> tuple[bool, int]:
+        balance = _credit_balance(user)
+        if balance < INTEGRATION_API_CALL_CREDIT_COST:
+            return False, balance
+        new_balance = balance - INTEGRATION_API_CALL_CREDIT_COST
+        user["credit_balance"] = new_balance
+        user.pop("run_credits", None)
+        user["personal_api_key_last_used_at"] = time.time()
+        events = user.setdefault("credit_events", [])
+        events.append({
+            "id": event_id,
+            "type": "integration_api_call",
+            "amount": -INTEGRATION_API_CALL_CREDIT_COST,
+            "balance_after": new_balance,
+            "path": path,
+            "method": method,
+            "at": time.time(),
+        })
+        if len(events) > 500:
+            del events[:-500]
+        return True, new_balance
+
+    _, result = _mutate_user(user_id, consume)
+    if isinstance(result, tuple):
+        return bool(result[0]), int(result[1])
+    return False, 0
 
 
 def _find_user_by_email(email: str) -> dict[str, Any] | None:
@@ -1440,13 +1511,17 @@ def _auth_user_public(user: dict[str, Any]) -> dict[str, Any]:
         "email": str(user.get("email") or "").lower(),
         "created_at": user.get("created_at"),
         "payment_status": payment_status,
-        "cloud_access": _trial_runs_remaining(user) > 0 or _run_credits(user) > 0,
+        "cloud_access": _trial_runs_remaining(user) > 0 or _credit_balance(user) >= SCRAPE_RUN_CREDIT_COST,
         "trial_runs_remaining": _trial_runs_remaining(user),
         "trial_runs_initial": TRIAL_RUNS_INITIAL,
         "trial_max_items": TRIAL_MAX_ITEMS,
-        "run_credits": _run_credits(user),
+        "credit_balance": _credit_balance(user),
+        "run_credits": _credit_balance(user) // SCRAPE_RUN_CREDIT_COST,
         "basic_bundle_credits": BASIC_BUNDLE_CREDITS,
         "basic_bundle_price_czk": STRIPE_DEFAULT_AMOUNT_CENTS / 100,
+        "scrape_run_credit_cost": SCRAPE_RUN_CREDIT_COST,
+        "integration_api_call_credit_cost": INTEGRATION_API_CALL_CREDIT_COST,
+        "has_personal_api_key": bool(str(user.get("personal_api_key_hash") or "").strip()),
         "free_proxy_access": bool(user.get("local_free_access", True)),
         "local_free_access": bool(user.get("local_free_access", True)),
         "has_free_proxy_config": bool(free_proxy_url),
@@ -1976,32 +2051,50 @@ async def api_key_guard(request: Request, call_next):
     if method == "OPTIONS":
         return await call_next(request)
 
-    if path in AUTH_REQUIRED_PATHS:
-        token = ""
-        if auth_header.lower().startswith("bearer "):
-            token = auth_header[7:].strip()
-        claims = _decode_auth_token(token)
-        if claims is None:
-            return _cors_json(401, {"detail": "Missing or invalid auth token."})
-        request.state.auth_user = claims
+    integration_user: dict[str, Any] | None = None
+    integration_balance: int | None = None
+    if api_key:
+        integration_user = _find_user_by_api_key(api_key)
+        if integration_user is None:
+            return _cors_json(401, {"detail": "Neplatný nebo zrušený osobní API klíč."})
+        user_id = str(integration_user.get("id") or "")
+        if path.startswith("/api/") and path != "/api/billing/webhook/stripe":
+            consumed, integration_balance = _consume_api_call_credit(user_id, path, method)
+            if not consumed:
+                return _cors_json(402, {
+                    "detail": "Nedostatek kreditů pro API call.",
+                    "credit_balance": integration_balance,
+                    "required_credits": INTEGRATION_API_CALL_CREDIT_COST,
+                })
+        request.state.auth_user = {
+            "sub": user_id,
+            "email": str(integration_user.get("email") or ""),
+            "integration": True,
+        }
 
-    if not API_KEYS:
-        response = await call_next(request)
-    else:
-        if path.startswith("/api/") and method in WRITE_HTTP_METHODS and path != "/api/billing/webhook/stripe":
-            if api_key not in API_KEYS:
-                return _cors_json(401, {"detail": "Missing or invalid API key."})
-        response = await call_next(request)
+    if path.startswith("/api/") and path not in PUBLIC_API_PATHS:
+        claims = getattr(request.state, "auth_user", None)
+        if not isinstance(claims, dict):
+            token = ""
+            if auth_header.lower().startswith("bearer "):
+                token = auth_header[7:].strip()
+            claims = _decode_auth_token(token)
+            if claims is None:
+                return _cors_json(401, {"detail": "Missing or invalid auth token."})
+            request.state.auth_user = claims
 
-    # Bill only integration traffic: requests that carry x-api-key.
-    if path.startswith("/api/") and api_key:
-        project_id = project_header or f"integration-{api_key[:10]}"
+    response = await call_next(request)
+
+    if path.startswith("/api/") and integration_user is not None:
+        project_id = project_header or f"integration-{integration_user.get('id', 'user')}"
         billing_ledger.record_api_call(
             project_id=project_id,
             path=path,
             method=method,
             status_code=int(response.status_code),
         )
+        if integration_balance is not None:
+            response.headers["X-Credit-Balance"] = str(integration_balance)
 
     return response
 
@@ -2057,7 +2150,7 @@ def auth_signup(payload: SignupPayload) -> dict[str, Any]:
         "created_at": time.time(),
         "payment_status": "none",
         "trial_runs_remaining": TRIAL_RUNS_INITIAL,
-        "run_credits": 0,
+        "credit_balance": 0,
         "local_free_access": True,
         "free_proxy_url": "",
         "paid_proxy_url": "",
@@ -2116,6 +2209,73 @@ def auth_me(request: Request) -> dict[str, Any]:
             "local_free_access": True,
         }
     }
+
+
+def _replace_personal_api_key(user_id: str) -> dict[str, Any]:
+    plaintext = f"autoidx_sk_{secrets.token_urlsafe(32)}"
+    created_at = time.time()
+
+    def replace(user: dict[str, Any]) -> None:
+        user["personal_api_key_hash"] = _api_key_digest(plaintext)
+        user["personal_api_key_created_at"] = created_at
+        user["personal_api_key_last_used_at"] = None
+
+    updated, _ = _mutate_user(user_id, replace)
+    if updated is None:
+        raise HTTPException(status_code=404, detail="User not found.")
+    return {
+        "api_key": plaintext,
+        "created_at": created_at,
+        "notice": "Ulož si klíč nyní. Backend uchovává pouze hash a klíč už znovu nezobrazí.",
+    }
+
+
+@app.get("/api/auth/api-key/status")
+def personal_api_key_status(request: Request) -> dict[str, Any]:
+    user = _resolve_request_user(request)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Missing or invalid auth token.")
+    return {
+        "enabled": bool(str(user.get("personal_api_key_hash") or "").strip()),
+        "created_at": user.get("personal_api_key_created_at"),
+        "last_used_at": user.get("personal_api_key_last_used_at"),
+        "credit_balance": _credit_balance(user),
+        "cost_per_call": INTEGRATION_API_CALL_CREDIT_COST,
+    }
+
+
+@app.post("/api/auth/api-key")
+def create_personal_api_key(request: Request) -> dict[str, Any]:
+    user = _resolve_request_user(request)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Missing or invalid auth token.")
+    if str(user.get("personal_api_key_hash") or "").strip():
+        raise HTTPException(status_code=409, detail="API klíč už existuje. Použij rotaci, která starý klíč okamžitě zruší.")
+    return _replace_personal_api_key(str(user.get("id") or ""))
+
+
+@app.post("/api/auth/api-key/rotate")
+def rotate_personal_api_key(request: Request) -> dict[str, Any]:
+    user = _resolve_request_user(request)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Missing or invalid auth token.")
+    result = _replace_personal_api_key(str(user.get("id") or ""))
+    result["previous_key_revoked"] = True
+    return result
+
+
+@app.delete("/api/auth/api-key")
+def revoke_personal_api_key(request: Request) -> dict[str, Any]:
+    user = _resolve_request_user(request)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Missing or invalid auth token.")
+
+    def revoke(current: dict[str, Any]) -> None:
+        current.pop("personal_api_key_hash", None)
+        current["personal_api_key_revoked_at"] = time.time()
+
+    _mutate_user(str(user.get("id") or ""), revoke)
+    return {"revoked": True}
 
 
 @app.get("/api/proxy/config")
@@ -2359,7 +2519,7 @@ def _resolve_request_user(request: Request) -> dict[str, Any] | None:
 def _user_has_cloud_access(user: dict[str, Any] | None) -> bool:
     if not isinstance(user, dict):
         return False
-    return _trial_runs_remaining(user) > 0 or _run_credits(user) > 0
+    return _trial_runs_remaining(user) > 0 or _credit_balance(user) >= SCRAPE_RUN_CREDIT_COST
 
 
 @app.get("/api/billing/access")
@@ -2377,9 +2537,13 @@ def get_billing_access(request: Request) -> dict[str, Any]:
         "trial_runs_remaining": _trial_runs_remaining(user),
         "trial_runs_initial": TRIAL_RUNS_INITIAL,
         "trial_max_items": TRIAL_MAX_ITEMS,
-        "run_credits": _run_credits(user),
+        "credit_balance": _credit_balance(user),
+        "run_credits": _credit_balance(user) // SCRAPE_RUN_CREDIT_COST,
         "basic_bundle_credits": BASIC_BUNDLE_CREDITS,
         "basic_bundle_price_czk": STRIPE_DEFAULT_AMOUNT_CENTS / 100,
+        "scrape_run_credit_cost": SCRAPE_RUN_CREDIT_COST,
+        "integration_api_call_credit_cost": INTEGRATION_API_CALL_CREDIT_COST,
+        "has_personal_api_key": bool(str(user.get("personal_api_key_hash") or "").strip()),
         "checkout_available": bool(STRIPE_PAYMENT_LINK_URL or (STRIPE_SECRET_KEY and (STRIPE_PRICE_ID or STRIPE_DEFAULT_AMOUNT_CENTS > 0))),
     }
 
@@ -2513,7 +2677,8 @@ async def stripe_webhook(request: Request) -> dict[str, Any]:
                     purchased_credits = max(1, int(metadata.get("credits", BASIC_BUNDLE_CREDITS)))
                 except (TypeError, ValueError):
                     purchased_credits = BASIC_BUNDLE_CREDITS
-                current["run_credits"] = _run_credits(current) + purchased_credits
+                current["credit_balance"] = _credit_balance(current) + purchased_credits
+                current.pop("run_credits", None)
                 credited_sessions.append(checkout_session_id)
                 if len(credited_sessions) > 100:
                     del credited_sessions[:-100]
@@ -2545,6 +2710,12 @@ def update_params(payload: ParamsPayload) -> dict[str, Any]:
 
 @app.post("/api/run")
 def run_scraper(payload: RunPayload, request: Request) -> dict[str, Any]:
+    if not SCRAPER_RUNS_ENABLED:
+        raise HTTPException(
+            status_code=503,
+            detail="Spouštění scraperu je dočasně pozastavené, dokud nedokončíme kreditní systém.",
+        )
+
     output_file = payload.output_file.strip() or "data/sauto_interesting.json"
     project_id = (payload.project_id or "default").strip() or "default"
     requested_mode = str(payload.run_mode or "free_proxy").strip().lower()
@@ -2608,7 +2779,8 @@ def run_scraper(payload: RunPayload, request: Request) -> dict[str, Any]:
         "kind": access["kind"],
         "max_items": access["max_items"],
         "trial_runs_remaining": _trial_runs_remaining(current_user),
-        "run_credits": _run_credits(current_user),
+        "credit_balance": _credit_balance(current_user),
+        "run_credits": _credit_balance(current_user) // SCRAPE_RUN_CREDIT_COST,
     }
     return response
 
@@ -2651,6 +2823,7 @@ def get_status() -> dict[str, Any]:
     runner_status = runner.status()
     return {
         **runner_status,
+        "runs_enabled": SCRAPER_RUNS_ENABLED,
         "runner": runner_status,
         "queue": run_queue.summary(),
     }

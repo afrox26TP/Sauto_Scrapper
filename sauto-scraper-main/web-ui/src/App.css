@@ -859,6 +859,17 @@ button:disabled {
   padding: 10px 20px;
 }
 
+.run-button-tooltip {
+  display: inline-flex;
+  cursor: not-allowed;
+}
+
+.btn-run-unavailable:disabled {
+  opacity: 0.78;
+  color: #fff;
+  background: #64748b;
+}
+
 .link-btn {
   background: transparent;
   color: var(--accent);
@@ -2330,4 +2341,31 @@ tr.row-selected.row-score-lo td { background: rgba(220, 38, 38, 0.07); border-bo
   .run-mode-select-inline {
     max-width: none;
   }
+}
+
+.trial-dashboard-cta {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+
+.api-key-reveal {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+
+.api-key-reveal strong {
+  grid-column: 1 / -1;
+}
+
+.api-key-reveal input {
+  min-width: 0;
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
